@@ -768,11 +768,28 @@ body {
   gap: 0.25rem;
 }
 
-.admin-image-item .delete-btn {
+.image-actions {
+  padding: 0.5rem;
+  padding-top: 0;
+}
+
+.admin-delete-image-btn {
   width: 100%;
-  margin-top: 0.5rem;
   padding: 0.5rem;
   font-size: 0.8125rem;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  transition: background 0.15s;
+  display: block;
+}
+
+.admin-delete-image-btn:hover {
+  background: #b91c1c;
 }
 
 .empty-state {
