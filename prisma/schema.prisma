@@ -8,16 +8,19 @@ datasource db {
 }
 
 model LogMessage {
-  id         Int             @id @default(autoincrement())
-  title      String          @default("")
-  message    String
-  author     String
-  version    String
-  pinned     Boolean         @default(false)
-  createdAt  DateTime        @default(now())
-  signatures ReadSignature[]
-  comments   Comment[]
-  reactions  Reaction[]
+  id          Int             @id @default(autoincrement())
+  title       String          @default("")
+  message     String
+  author      String
+  version     String
+  pinned      Boolean         @default(false)
+  archived    Boolean         @default(false)
+  archivedAt  DateTime?
+  unpinnedAt  DateTime?
+  createdAt   DateTime        @default(now())
+  signatures  ReadSignature[]
+  comments    Comment[]
+  reactions   Reaction[]
 }
 
 model Reaction {

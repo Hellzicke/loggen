@@ -2,6 +2,15 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.4.1] - 2025-11-29
+
+### Tillagt
+- Automatisk arkivering efter 30 dagar (pinnade undantagna)
+- Arkiv-sektion i headern för att se arkiverade inlägg
+- Återställ arkiverade inlägg
+- Manuell arkivering via arkiv-knapp
+- Popup vid avnålning av gammalt inlägg — välj arkivera eller behåll 30 dagar till
+
 ## [0.3.2] - 2025-11-29
 
 ### Ändrat

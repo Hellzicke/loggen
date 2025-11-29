@@ -3,6 +3,8 @@ import Header from './components/Header'
 import LogForm from './components/LogForm'
 import LogList from './components/LogList'
 import ChangelogModal from './components/ChangelogModal'
+import ArchiveModal from './components/ArchiveModal'
+import UnpinModal from './components/UnpinModal'
 
 export interface ReadSignature {
   id: number
@@ -36,6 +38,9 @@ export interface LogMessage {
   author: string
   version: string
   pinned: boolean
+  archived: boolean
+  archivedAt: string | null
+  unpinnedAt: string | null
   createdAt: string
   signatures: ReadSignature[]
   comments: Comment[]
@@ -44,10 +49,13 @@ export interface LogMessage {
 
 export default function App() {
   const [logs, setLogs] = useState<LogMessage[]>([])
+  const [archivedLogs, setArchivedLogs] = useState<LogMessage[]>([])
   const [version, setVersion] = useState('')
   const [loading, setLoading] = useState(true)
   const [showChangelog, setShowChangelog] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [showArchive, setShowArchive] = useState(false)
+  const [unpinPrompt, setUnpinPrompt] = useState<LogMessage | null>(null)
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -67,6 +75,18 @@ export default function App() {
     }
   }, [])
 
+  const fetchArchivedLogs = useCallback(async () => {
+    try {
+      const res = await fetch('/api/logs/archived')
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setArchivedLogs(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch archived logs:', error)
+    }
+  }, [])
+
   useEffect(() => {
     fetch('/api/version')
       .then(res => res.json())
@@ -75,6 +95,12 @@ export default function App() {
 
     fetchLogs()
   }, [fetchLogs])
+
+  useEffect(() => {
+    if (showArchive) {
+      fetchArchivedLogs()
+    }
+  }, [showArchive, fetchArchivedLogs])
 
   const handleNewLog = (log: LogMessage) => {
     setLogs(prev => [log, ...prev])
@@ -90,6 +116,22 @@ export default function App() {
   }
 
   const handlePin = async (logId: number) => {
+    const log = logs.find(l => l.id === logId)
+    if (!log) return
+
+    // If unpinning, check if it's an old post
+    if (log.pinned) {
+      const daysSinceCreated = (Date.now() - new Date(log.createdAt).getTime()) / (24 * 60 * 60 * 1000)
+      if (daysSinceCreated >= 30) {
+        setUnpinPrompt(log)
+        return
+      }
+    }
+
+    await togglePin(logId)
+  }
+
+  const togglePin = async (logId: number) => {
     try {
       const res = await fetch(`/api/logs/${logId}/pin`, { method: 'POST' })
       if (res.ok) {
@@ -101,12 +143,55 @@ export default function App() {
     }
   }
 
+  const handleUnpinAndArchive = async (logId: number) => {
+    try {
+      // First unpin
+      await fetch(`/api/logs/${logId}/pin`, { method: 'POST' })
+      // Then archive
+      const res = await fetch(`/api/logs/${logId}/archive`, { method: 'POST' })
+      if (res.ok) {
+        setLogs(prev => prev.filter(log => log.id !== logId))
+      }
+    } catch (error) {
+      console.error('Failed to archive:', error)
+    }
+    setUnpinPrompt(null)
+  }
+
+  const handleUnpinKeep = async (logId: number) => {
+    await togglePin(logId)
+    setUnpinPrompt(null)
+  }
+
+  const handleArchive = async (logId: number) => {
+    try {
+      const res = await fetch(`/api/logs/${logId}/archive`, { method: 'POST' })
+      if (res.ok) {
+        setLogs(prev => prev.filter(log => log.id !== logId))
+      }
+    } catch (error) {
+      console.error('Failed to archive:', error)
+    }
+  }
+
+  const handleUnarchive = async (logId: number) => {
+    try {
+      const res = await fetch(`/api/logs/${logId}/unarchive`, { method: 'POST' })
+      if (res.ok) {
+        const restored = await res.json()
+        setArchivedLogs(prev => prev.filter(log => log.id !== logId))
+        setLogs(prev => [restored, ...prev])
+      }
+    } catch (error) {
+      console.error('Failed to unarchive:', error)
+    }
+  }
+
   const handleComment = (logId: number, comment: Comment, parentId?: number) => {
     setLogs(prev => prev.map(log => {
       if (log.id !== logId) return log
       
       if (parentId) {
-        // Add reply to existing comment
         return {
           ...log,
           comments: log.comments.map(c => 
@@ -116,7 +201,6 @@ export default function App() {
           )
         }
       } else {
-        // Add new top-level comment
         return { ...log, comments: [...log.comments, { ...comment, replies: [] }] }
       }
     }))
@@ -145,7 +229,6 @@ export default function App() {
         setLogs(prev => prev.map(log => {
           if (log.id !== logId) return log
           if (parentId) {
-            // Remove reply from parent comment
             return {
               ...log,
               comments: log.comments.map(c => 
@@ -155,7 +238,6 @@ export default function App() {
               )
             }
           } else {
-            // Remove entire comment (including its replies)
             return {
               ...log,
               comments: log.comments.filter(c => c.id !== commentId)
@@ -198,7 +280,9 @@ export default function App() {
     <>
       <Header 
         version={version} 
-        onVersionClick={() => setShowChangelog(true)} 
+        onVersionClick={() => setShowChangelog(true)}
+        onArchiveClick={() => setShowArchive(true)}
+        archiveCount={archivedLogs.length}
       />
       <main className="main">
         <div className="create-trigger">
@@ -216,6 +300,7 @@ export default function App() {
           onEditLog={handleEditLog}
           onDeleteComment={handleDeleteComment}
           onReaction={handleReaction}
+          onArchive={handleArchive}
         />
       </main>
       {showForm && (
@@ -223,6 +308,21 @@ export default function App() {
       )}
       {showChangelog && (
         <ChangelogModal onClose={() => setShowChangelog(false)} />
+      )}
+      {showArchive && (
+        <ArchiveModal 
+          logs={archivedLogs}
+          onClose={() => setShowArchive(false)}
+          onUnarchive={handleUnarchive}
+        />
+      )}
+      {unpinPrompt && (
+        <UnpinModal
+          log={unpinPrompt}
+          onArchive={() => handleUnpinAndArchive(unpinPrompt.id)}
+          onKeep={() => handleUnpinKeep(unpinPrompt.id)}
+          onCancel={() => setUnpinPrompt(null)}
+        />
       )}
     </>
   )

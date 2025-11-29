@@ -11,6 +11,9 @@ const app = express()
 const prisma = new PrismaClient()
 const PORT = process.env.PORT || 3001
 
+const ARCHIVE_DAYS = 30
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
 // Determine root directory (works in both dev and production)
 const rootDir = process.env.NODE_ENV === 'production' 
   ? resolve(__dirname, '..') 
@@ -26,13 +29,47 @@ if (existsSync(distDir)) {
 }
 
 // Get package.json version
-let version = '0.2.0'
+let version = '0.4.1'
 try {
   const packageJsonPath = join(rootDir, 'package.json')
   const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
   version = packageJson.version
 } catch (e) {
   console.error('Could not read package.json:', e)
+}
+
+// Helper: Check if a post should be auto-archived
+function shouldAutoArchive(log: { pinned: boolean; archived: boolean; createdAt: Date; unpinnedAt: Date | null }): boolean {
+  if (log.pinned || log.archived) return false
+  
+  const now = new Date()
+  const referenceDate = log.unpinnedAt || log.createdAt
+  const daysSince = (now.getTime() - new Date(referenceDate).getTime()) / MS_PER_DAY
+  
+  return daysSince >= ARCHIVE_DAYS
+}
+
+// Helper: Auto-archive old posts
+async function autoArchiveOldPosts() {
+  const cutoffDate = new Date(Date.now() - ARCHIVE_DAYS * MS_PER_DAY)
+  
+  // Archive posts that are:
+  // 1. Not pinned, not archived, and created more than 30 days ago (with no unpinnedAt)
+  // 2. Not pinned, not archived, and unpinned more than 30 days ago
+  await prisma.logMessage.updateMany({
+    where: {
+      archived: false,
+      pinned: false,
+      OR: [
+        { unpinnedAt: null, createdAt: { lt: cutoffDate } },
+        { unpinnedAt: { lt: cutoffDate } }
+      ]
+    },
+    data: {
+      archived: true,
+      archivedAt: new Date()
+    }
+  })
 }
 
 // Get changelog
@@ -50,10 +87,14 @@ app.get('/api/version', (_req, res) => {
   res.json({ version })
 })
 
-// Get all log messages with signatures, comments and reactions
+// Get all active (non-archived) log messages
 app.get('/api/logs', async (_req, res) => {
   try {
+    // Auto-archive old posts first
+    await autoArchiveOldPosts()
+    
     const logs = await prisma.logMessage.findMany({
+      where: { archived: false },
       orderBy: { createdAt: 'desc' },
       include: {
         signatures: {
@@ -80,6 +121,37 @@ app.get('/api/logs', async (_req, res) => {
   }
 })
 
+// Get archived log messages
+app.get('/api/logs/archived', async (_req, res) => {
+  try {
+    const logs = await prisma.logMessage.findMany({
+      where: { archived: true },
+      orderBy: { archivedAt: 'desc' },
+      include: {
+        signatures: {
+          orderBy: { createdAt: 'asc' }
+        },
+        comments: {
+          where: { parentId: null },
+          orderBy: { createdAt: 'asc' },
+          include: {
+            replies: {
+              orderBy: { createdAt: 'asc' }
+            }
+          }
+        },
+        reactions: {
+          orderBy: { createdAt: 'asc' }
+        }
+      }
+    })
+    res.json(logs)
+  } catch (error) {
+    console.error('Error fetching archived logs:', error)
+    res.status(500).json({ error: 'Failed to fetch archived logs' })
+  }
+})
+
 // Create a new log message
 app.post('/api/logs', async (req, res) => {
   const { title, message, author } = req.body
@@ -98,7 +170,8 @@ app.post('/api/logs', async (req, res) => {
       },
       include: {
         signatures: true,
-        comments: true
+        comments: true,
+        reactions: true
       }
     })
     res.status(201).json(log)
@@ -129,7 +202,8 @@ app.put('/api/logs/:id', async (req, res) => {
         comments: {
           where: { parentId: null },
           include: { replies: true }
-        }
+        },
+        reactions: true
       }
     })
     res.json(updated)
@@ -149,21 +223,93 @@ app.post('/api/logs/:id/pin', async (req, res) => {
       return res.status(404).json({ error: 'Log not found' })
     }
 
+    const willBeUnpinned = log.pinned
+    const now = new Date()
+    
+    // Check if unpinning an old post (older than 30 days)
+    const daysSinceCreated = (now.getTime() - new Date(log.createdAt).getTime()) / MS_PER_DAY
+    const isOldPost = daysSinceCreated >= ARCHIVE_DAYS
+
     const updated = await prisma.logMessage.update({
       where: { id: logId },
-      data: { pinned: !log.pinned },
+      data: { 
+        pinned: !log.pinned,
+        unpinnedAt: willBeUnpinned ? now : null
+      },
       include: {
         signatures: true,
         comments: {
           where: { parentId: null },
           include: { replies: true }
-        }
+        },
+        reactions: true
+      }
+    })
+    
+    // Return extra info if unpinning an old post
+    res.json({
+      ...updated,
+      _unpinningOldPost: willBeUnpinned && isOldPost
+    })
+  } catch (error) {
+    console.error('Error toggling pin:', error)
+    res.status(500).json({ error: 'Failed to toggle pin' })
+  }
+})
+
+// Archive a log
+app.post('/api/logs/:id/archive', async (req, res) => {
+  const logId = parseInt(req.params.id)
+
+  try {
+    const updated = await prisma.logMessage.update({
+      where: { id: logId },
+      data: { 
+        archived: true,
+        archivedAt: new Date(),
+        pinned: false
+      },
+      include: {
+        signatures: true,
+        comments: {
+          where: { parentId: null },
+          include: { replies: true }
+        },
+        reactions: true
       }
     })
     res.json(updated)
   } catch (error) {
-    console.error('Error toggling pin:', error)
-    res.status(500).json({ error: 'Failed to toggle pin' })
+    console.error('Error archiving log:', error)
+    res.status(500).json({ error: 'Failed to archive log' })
+  }
+})
+
+// Unarchive a log
+app.post('/api/logs/:id/unarchive', async (req, res) => {
+  const logId = parseInt(req.params.id)
+
+  try {
+    const updated = await prisma.logMessage.update({
+      where: { id: logId },
+      data: { 
+        archived: false,
+        archivedAt: null,
+        unpinnedAt: new Date() // Reset the 30-day timer
+      },
+      include: {
+        signatures: true,
+        comments: {
+          where: { parentId: null },
+          include: { replies: true }
+        },
+        reactions: true
+      }
+    })
+    res.json(updated)
+  } catch (error) {
+    console.error('Error unarchiving log:', error)
+    res.status(500).json({ error: 'Failed to unarchive log' })
   }
 })
 
