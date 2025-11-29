@@ -764,6 +764,13 @@ body {
   margin-top: 0.5rem;
 }
 
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
 .image-preview {
   position: relative;
   border-radius: 8px;
