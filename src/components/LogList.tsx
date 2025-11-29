@@ -1,14 +1,10 @@
-interface LogMessage {
-  id: number
-  message: string
-  author: string
-  version: string
-  createdAt: string
-}
+import { useState } from 'react'
+import type { LogMessage, ReadSignature } from '../App'
 
 interface LogListProps {
   logs: LogMessage[]
   loading: boolean
+  onSign: (logId: number, signature: ReadSignature) => void
 }
 
 function formatDate(dateString: string): string {
@@ -47,7 +43,77 @@ function getAvatarColor(name: string): string {
   return colors[index]
 }
 
-export default function LogList({ logs, loading }: LogListProps) {
+interface SignFormProps {
+  logId: number
+  onSign: (logId: number, signature: ReadSignature) => void
+  onCancel: () => void
+}
+
+function SignForm({ logId, onSign, onCancel }: SignFormProps) {
+  const [name, setName] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async () => {
+    if (!name.trim()) return
+    
+    setSubmitting(true)
+    setError('')
+
+    try {
+      const res = await fetch(`/api/logs/${logId}/sign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() })
+      })
+
+      if (res.ok) {
+        const signature = await res.json()
+        onSign(logId, signature)
+        onCancel()
+      } else if (res.status === 409) {
+        setError('Du har redan signerat')
+      } else {
+        setError('Kunde inte signera')
+      }
+    } catch {
+      setError('Något gick fel')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="sign-form">
+      <input
+        type="text"
+        value={name}
+        onChange={e => setName(e.target.value)}
+        placeholder="Ditt namn"
+        className="sign-input"
+        autoFocus
+        onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+      />
+      <div className="sign-actions">
+        <button 
+          className="sign-submit" 
+          onClick={handleSubmit}
+          disabled={submitting || !name.trim()}
+        >
+          {submitting ? '...' : 'Signera'}
+        </button>
+        <button className="sign-cancel" onClick={onCancel}>
+          Avbryt
+        </button>
+      </div>
+      {error && <div className="sign-error">{error}</div>}
+    </div>
+  )
+}
+
+export default function LogList({ logs, loading, onSign }: LogListProps) {
+  const [signingId, setSigningId] = useState<number | null>(null)
+
   if (loading) {
     return <div className="loading">Laddar...</div>
   }
@@ -77,6 +143,34 @@ export default function LogList({ logs, loading }: LogListProps) {
             </div>
           </div>
           <p className="log-message">{log.message}</p>
+          
+          <div className="log-signatures">
+            {log.signatures.length > 0 && (
+              <div className="signatures-list">
+                <span className="signatures-label">Läst av:</span>
+                {log.signatures.map((sig, i) => (
+                  <span key={sig.id} className="signature-name">
+                    {sig.name}{i < log.signatures.length - 1 ? ', ' : ''}
+                  </span>
+                ))}
+              </div>
+            )}
+            
+            {signingId === log.id ? (
+              <SignForm 
+                logId={log.id} 
+                onSign={onSign}
+                onCancel={() => setSigningId(null)}
+              />
+            ) : (
+              <button 
+                className="sign-btn"
+                onClick={() => setSigningId(log.id)}
+              >
+                Signera som läst
+              </button>
+            )}
+          </div>
         </article>
       ))}
     </div>
