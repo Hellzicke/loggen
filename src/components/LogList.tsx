@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { LogMessage, ReadSignature, Comment } from '../App'
+import { formatText } from '../utils/formatText'
 
 interface LogListProps {
   logs: LogMessage[]
@@ -306,7 +307,7 @@ function CommentItem({ comment, logId, onComment, onDelete, parentId }: CommentI
           &times;
         </button>
       </div>
-      <p className="comment-message">{comment.message}</p>
+      <p className="comment-message">{formatText(comment.message)}</p>
       
       <div className="comment-footer">
         {!showReplyForm && (
@@ -444,7 +445,7 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                     </svg>
                   </button>
                 )}
-                <p className="log-message">{log.message}</p>
+                <p className="log-message">{formatText(log.message)}</p>
               </div>
             )}
             
