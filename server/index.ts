@@ -191,6 +191,29 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
   res.json({ url: `/uploads/${req.file.filename}` })
 })
 
+// Get all uploaded images
+app.get('/api/images', async (_req, res) => {
+  try {
+    const { readdirSync, statSync } = await import('fs')
+    const files = readdirSync(uploadsDir)
+      .filter(file => {
+        const filePath = join(uploadsDir, file)
+        return statSync(filePath).isFile() && /\.(jpg|jpeg|png|gif|webp)$/i.test(file)
+      })
+      .map(file => ({
+        filename: file,
+        url: `/uploads/${file}`,
+        uploadedAt: statSync(join(uploadsDir, file)).mtime
+      }))
+      .sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime())
+    
+    res.json(files)
+  } catch (error) {
+    console.error('Error fetching images:', error)
+    res.status(500).json({ error: 'Failed to fetch images' })
+  }
+})
+
 // Create a new log message
 app.post('/api/logs', async (req, res) => {
   const { title, message, author, imageUrl } = req.body
