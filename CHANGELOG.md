@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.7.5] - 2025-11-29
+
+### Ändrat
+- "Reagera"-texten ersatt med emoji (😊) som öppnar reaktionsmenyn
+
 ## [0.7.4] - 2025-11-29
 
 ### Ändrat
