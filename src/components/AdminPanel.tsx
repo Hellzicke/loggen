@@ -77,8 +77,31 @@ export default function AdminPanel() {
   }
 
   useEffect(() => {
+    setLoading(true)
     fetchData()
   }, [activeTab])
+
+  // Load images count on mount
+  useEffect(() => {
+    const loadImagesCount = async () => {
+      const token = getAuthToken()
+      if (!token) return
+
+      try {
+        const res = await fetch('/api/admin/images', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setImages(data)
+        }
+      } catch (error) {
+        console.error('Error loading images:', error)
+      }
+    }
+
+    loadImagesCount()
+  }, [])
 
   const handleDeleteLog = async (logId: number) => {
     if (!confirm('Är du säker på att du vill ta bort detta inlägg?')) return
@@ -218,26 +241,30 @@ export default function AdminPanel() {
           </div>
         ) : activeTab === 'images' ? (
           <div className="admin-images">
-            <div className="images-grid">
-              {images.map(img => (
-                <div key={img.filename} className="admin-image-item">
-                  <img src={img.url} alt={img.filename} />
-                  <div className="image-info">
-                    <div className="image-name">{img.filename}</div>
-                    <div className="image-meta">
-                      <span>{formatBytes(img.size)}</span>
-                      <span>{new Date(img.uploadedAt).toLocaleDateString('sv-SE')}</span>
+            {images.length === 0 ? (
+              <div className="empty-state">Inga bilder hittades</div>
+            ) : (
+              <div className="images-grid">
+                {images.map(img => (
+                  <div key={img.filename} className="admin-image-item">
+                    <img src={img.url} alt={img.filename} />
+                    <div className="image-info">
+                      <div className="image-name">{img.filename}</div>
+                      <div className="image-meta">
+                        <span>{formatBytes(img.size)}</span>
+                        <span>{new Date(img.uploadedAt).toLocaleDateString('sv-SE')}</span>
+                      </div>
                     </div>
+                    <button 
+                      className="delete-btn"
+                      onClick={() => handleDeleteImage(img.filename)}
+                    >
+                      Ta bort
+                    </button>
                   </div>
-                  <button 
-                    className="delete-btn"
-                    onClick={() => handleDeleteImage(img.filename)}
-                  >
-                    Ta bort
-                  </button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         ) : null}
       </div>
