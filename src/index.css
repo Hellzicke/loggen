@@ -909,6 +909,12 @@ body {
   white-space: pre-wrap;
 }
 
+.log-message ul {
+  margin-left: 2rem;
+  padding-left: 0;
+  list-style-position: inside;
+}
+
 /* Reactions */
 .reactions-display {
   display: flex;
