@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect } from 'react'
+import { useState, FormEvent, useEffect, useRef } from 'react'
 import type { LogMessage } from '../App'
 import RichTextEditor from './RichTextEditor'
 
@@ -11,7 +11,10 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
   const [author, setAuthor] = useState('')
   const [title, setTitle] = useState('')
   const [message, setMessage] = useState('')
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -20,6 +23,30 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
   }, [onClose])
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    const formData = new FormData()
+    formData.append('image', file)
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setImageUrl(data.url)
+      }
+    } catch (error) {
+      console.error('Failed to upload image:', error)
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -37,7 +64,8 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
         body: JSON.stringify({ 
           author: author.trim(), 
           title: title.trim(),
-          message: message.trim() 
+          message: message.trim(),
+          imageUrl
         })
       })
 
@@ -96,6 +124,45 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
                 onChange={setMessage}
                 placeholder="Vad vill du dela?"
               />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="input-group">
+              <label htmlFor="image">Bild (valfritt)</label>
+              <input
+                ref={fileInputRef}
+                id="image"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                style={{ display: 'none' }}
+              />
+              <div className="image-upload-area">
+                {imageUrl ? (
+                  <div className="image-preview">
+                    <img src={imageUrl} alt="Preview" />
+                    <button
+                      type="button"
+                      className="image-remove"
+                      onClick={() => {
+                        setImageUrl(null)
+                        if (fileInputRef.current) fileInputRef.current.value = ''
+                      }}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="image-upload-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? 'Laddar upp...' : '+ Lägg till bild'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           <div className="form-row">

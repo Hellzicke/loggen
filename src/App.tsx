@@ -42,6 +42,7 @@ export interface LogMessage {
   archived: boolean
   archivedAt: string | null
   unpinnedAt: string | null
+  imageUrl: string | null
   createdAt: string
   signatures: ReadSignature[]
   comments: Comment[]

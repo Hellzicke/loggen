@@ -17,6 +17,7 @@ model LogMessage {
   archived    Boolean         @default(false)
   archivedAt  DateTime?
   unpinnedAt  DateTime?
+  imageUrl    String?
   createdAt   DateTime        @default(now())
   signatures  ReadSignature[]
   comments    Comment[]

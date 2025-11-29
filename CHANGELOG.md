@@ -2,6 +2,14 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.6.1] - 2025-11-29
+
+### Tillagt
+- Punktlista i textredigeraren
+- Länk i textredigeraren
+- Bilduppladdning med förhandsvisning
+- Bilder visas i inlägg
+
 ## [0.5.3] - 2025-11-29
 
 ### Ändrat

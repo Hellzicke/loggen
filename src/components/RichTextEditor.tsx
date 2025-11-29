@@ -26,10 +26,21 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     }
   }
 
-  const execFormat = (command: string) => {
-    document.execCommand(command, false)
+  const execFormat = (command: string, value?: string) => {
+    document.execCommand(command, false, value)
     editorRef.current?.focus()
     handleInput()
+  }
+
+  const insertList = () => {
+    execFormat('insertUnorderedList')
+  }
+
+  const insertLink = () => {
+    const url = prompt('Ange länk URL:')
+    if (url) {
+      execFormat('createLink', url)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -74,6 +85,22 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
         >
           U
         </button>
+        <button 
+          type="button" 
+          className="format-btn format-btn--list"
+          onClick={insertList}
+          title="Punktlista"
+        >
+          •
+        </button>
+        <button 
+          type="button" 
+          className="format-btn format-btn--link"
+          onClick={insertLink}
+          title="Länk"
+        >
+          🔗
+        </button>
       </div>
       <div
         ref={editorRef}
@@ -87,4 +114,3 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     </div>
   )
 }
-
