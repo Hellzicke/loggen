@@ -26,7 +26,7 @@ if (existsSync(distDir)) {
 }
 
 // Get package.json version
-let version = '1.0.0'
+let version = '1.1.0'
 try {
   const packageJsonPath = join(rootDir, 'package.json')
   const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
@@ -50,11 +50,16 @@ app.get('/api/version', (_req, res) => {
   res.json({ version })
 })
 
-// Get all log messages
+// Get all log messages with signatures
 app.get('/api/logs', async (_req, res) => {
   try {
     const logs = await prisma.logMessage.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: {
+        signatures: {
+          orderBy: { createdAt: 'asc' }
+        }
+      }
     })
     res.json(logs)
   } catch (error) {
@@ -77,12 +82,42 @@ app.post('/api/logs', async (req, res) => {
         message,
         author,
         version
+      },
+      include: {
+        signatures: true
       }
     })
     res.status(201).json(log)
   } catch (error) {
     console.error('Error creating log:', error)
     res.status(500).json({ error: 'Failed to create log' })
+  }
+})
+
+// Add signature to a log
+app.post('/api/logs/:id/sign', async (req, res) => {
+  const logId = parseInt(req.params.id)
+  const { name } = req.body
+
+  if (!name) {
+    return res.status(400).json({ error: 'Name is required' })
+  }
+
+  try {
+    const signature = await prisma.readSignature.create({
+      data: {
+        name: name.trim(),
+        logId
+      }
+    })
+    res.status(201).json(signature)
+  } catch (error: unknown) {
+    // Check if it's a unique constraint violation (already signed)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      return res.status(409).json({ error: 'Already signed' })
+    }
+    console.error('Error creating signature:', error)
+    res.status(500).json({ error: 'Failed to sign' })
   }
 })
 

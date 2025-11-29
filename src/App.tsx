@@ -4,12 +4,20 @@ import LogForm from './components/LogForm'
 import LogList from './components/LogList'
 import ChangelogModal from './components/ChangelogModal'
 
-interface LogMessage {
+export interface ReadSignature {
+  id: number
+  name: string
+  logId: number
+  createdAt: string
+}
+
+export interface LogMessage {
   id: number
   message: string
   author: string
   version: string
   createdAt: string
+  signatures: ReadSignature[]
 }
 
 export default function App() {
@@ -51,6 +59,14 @@ export default function App() {
     setShowForm(false)
   }
 
+  const handleSign = (logId: number, signature: ReadSignature) => {
+    setLogs(prev => prev.map(log => 
+      log.id === logId 
+        ? { ...log, signatures: [...log.signatures, signature] }
+        : log
+    ))
+  }
+
   return (
     <>
       <Header 
@@ -64,7 +80,7 @@ export default function App() {
             Vad vill du dela?
           </button>
         </div>
-        <LogList logs={logs} loading={loading} />
+        <LogList logs={logs} loading={loading} onSign={handleSign} />
       </main>
       {showForm && (
         <LogForm onSuccess={handleNewLog} onClose={() => setShowForm(false)} />

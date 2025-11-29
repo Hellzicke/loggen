@@ -8,10 +8,21 @@ datasource db {
 }
 
 model LogMessage {
-  id        Int      @id @default(autoincrement())
-  message   String
-  author    String
-  version   String
-  createdAt DateTime @default(now())
+  id         Int             @id @default(autoincrement())
+  message    String
+  author     String
+  version    String
+  createdAt  DateTime        @default(now())
+  signatures ReadSignature[]
+}
+
+model ReadSignature {
+  id        Int        @id @default(autoincrement())
+  name      String
+  logId     Int
+  log       LogMessage @relation(fields: [logId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+
+  @@unique([logId, name])
 }
 
