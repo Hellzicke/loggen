@@ -25,7 +25,6 @@ export interface Comment {
 export interface Reaction {
   id: number
   emoji: string
-  name: string
   logId: number
   createdAt: string
 }
@@ -169,29 +168,22 @@ export default function App() {
     }
   }
 
-  const handleReaction = async (logId: number, emoji: string, name: string) => {
+  const handleReaction = async (logId: number, emoji: string) => {
     try {
       const res = await fetch(`/api/logs/${logId}/reactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emoji, name })
+        body: JSON.stringify({ emoji })
       })
       if (res.ok) {
-        const result = await res.json()
+        const reaction = await res.json()
         setLogs(prev => prev.map(log => {
           if (log.id !== logId) return log
-          if (result.action === 'added') {
-            return { ...log, reactions: [...log.reactions, result] }
-          } else {
-            return { 
-              ...log, 
-              reactions: log.reactions.filter(r => !(r.emoji === emoji && r.name === name))
-            }
-          }
+          return { ...log, reactions: [...log.reactions, reaction] }
         }))
       }
     } catch (error) {
-      console.error('Failed to toggle reaction:', error)
+      console.error('Failed to add reaction:', error)
     }
   }
 

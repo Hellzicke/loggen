@@ -9,7 +9,7 @@ interface LogListProps {
   onComment: (logId: number, comment: Comment, parentId?: number) => void
   onEditLog: (logId: number, title: string, message: string) => void
   onDeleteComment: (logId: number, commentId: number, parentId?: number) => void
-  onReaction: (logId: number, emoji: string, name: string) => void
+  onReaction: (logId: number, emoji: string) => void
 }
 
 const EMOJI_OPTIONS = ['👍', '❤️', '😊', '🎉', '👀', '🙏']
@@ -17,17 +17,15 @@ const EMOJI_OPTIONS = ['👍', '❤️', '😊', '🎉', '👀', '🙏']
 interface ReactionGroup {
   emoji: string
   count: number
-  names: string[]
 }
 
 function groupReactions(reactions: Reaction[]): ReactionGroup[] {
   const groups: Record<string, ReactionGroup> = {}
   for (const r of reactions) {
     if (!groups[r.emoji]) {
-      groups[r.emoji] = { emoji: r.emoji, count: 0, names: [] }
+      groups[r.emoji] = { emoji: r.emoji, count: 0 }
     }
     groups[r.emoji].count++
-    groups[r.emoji].names.push(r.name)
   }
   return Object.values(groups)
 }
@@ -378,7 +376,6 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
   const [editingId, setEditingId] = useState<number | null>(null)
   const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set())
   const [showReactionPicker, setShowReactionPicker] = useState<number | null>(null)
-  const [reactionName, setReactionName] = useState('')
 
   const toggleComments = (logId: number) => {
     setExpandedComments(prev => {
@@ -470,13 +467,13 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
             {log.reactions && log.reactions.length > 0 && (
               <div className="reactions-display">
                 {groupReactions(log.reactions).map(group => (
-                  <span 
+                  <button 
                     key={group.emoji} 
                     className="reaction-badge"
-                    title={group.names.join(', ')}
+                    onClick={() => onReaction(log.id, group.emoji)}
                   >
                     {group.emoji} {group.count}
-                  </span>
+                  </button>
                 ))}
               </div>
             )}
@@ -494,30 +491,18 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                 </button>
                 {showReactionPicker === log.id && (
                   <div className="reaction-picker">
-                    <div className="reaction-emojis">
-                      {EMOJI_OPTIONS.map(emoji => (
-                        <button
-                          key={emoji}
-                          className="emoji-btn"
-                          onClick={() => {
-                            if (reactionName.trim()) {
-                              onReaction(log.id, emoji, reactionName.trim())
-                              setShowReactionPicker(null)
-                            }
-                          }}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                    <input
-                      type="text"
-                      className="reaction-name-input"
-                      placeholder="Ditt namn"
-                      value={reactionName}
-                      onChange={e => setReactionName(e.target.value)}
-                      autoFocus
-                    />
+                    {EMOJI_OPTIONS.map(emoji => (
+                      <button
+                        key={emoji}
+                        className="emoji-btn"
+                        onClick={() => {
+                          onReaction(log.id, emoji)
+                          setShowReactionPicker(null)
+                        }}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
