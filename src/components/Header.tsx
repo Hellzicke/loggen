@@ -10,6 +10,9 @@ export default function Header({ version, onVersionClick, onArchiveClick, archiv
     <header className="header">
       <h1>Loggen</h1>
       <div className="header-actions">
+        <a href="/admin" className="admin-link">
+          Admin
+        </a>
         <button className="archive-badge" onClick={onArchiveClick}>
           Arkiv {archiveCount > 0 && <span className="archive-count">{archiveCount}</span>}
         </button>
