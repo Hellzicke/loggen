@@ -300,7 +300,6 @@ export default function App() {
           onEditLog={handleEditLog}
           onDeleteComment={handleDeleteComment}
           onReaction={handleReaction}
-          onArchive={handleArchive}
         />
       </main>
       {showForm && (
