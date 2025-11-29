@@ -522,6 +522,7 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
   const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set())
   const [showReactionPicker, setShowReactionPicker] = useState<number | null>(null)
   const [reactionCooldown, setReactionCooldown] = useState<Set<number>>(new Set())
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null)
 
   const handleReactionWithCooldown = (logId: number, emoji: string) => {
     if (reactionCooldown.has(logId)) return
