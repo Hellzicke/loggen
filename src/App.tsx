@@ -58,9 +58,12 @@ export default function App() {
         onVersionClick={() => setShowChangelog(true)} 
       />
       <main className="main">
-        <button className="create-btn" onClick={() => setShowForm(true)}>
-          Skapa inlägg
-        </button>
+        <div className="create-trigger">
+          <div className="create-avatar">?</div>
+          <button className="create-btn" onClick={() => setShowForm(true)}>
+            Vad vill du dela?
+          </button>
+        </div>
         <LogList logs={logs} loading={loading} />
       </main>
       {showForm && (
