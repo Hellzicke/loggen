@@ -257,10 +257,17 @@ app.get('/api/admin/images', authenticateToken, async (_req, res) => {
 // Delete image (admin only)
 app.delete('/api/admin/images/:filename', authenticateToken, async (req, res) => {
   const { unlinkSync } = await import('fs')
-  const filename = req.params.filename
+  const filename = decodeURIComponent(req.params.filename)
   const filePath = join(uploadsDir, filename)
   
   try {
+    // Security: Ensure the file is within uploadsDir (prevent path traversal)
+    const resolvedPath = resolve(filePath)
+    const resolvedUploadsDir = resolve(uploadsDir)
+    if (!resolvedPath.startsWith(resolvedUploadsDir)) {
+      return res.status(403).json({ error: 'Invalid file path' })
+    }
+
     if (existsSync(filePath)) {
       unlinkSync(filePath)
       res.json({ success: true })
