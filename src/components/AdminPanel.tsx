@@ -263,10 +263,24 @@ export default function AdminPanel() {
                     </div>
                     <div className="image-actions">
                       <button 
-                        className="delete-btn admin-delete-image-btn"
+                        className="admin-delete-image-btn"
                         onClick={() => handleDeleteImage(img.filename)}
                         title="Ta bort bild permanent"
                         type="button"
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem',
+                          fontSize: '0.8125rem',
+                          background: '#dc2626',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          fontWeight: '500',
+                          display: 'block',
+                          marginTop: '0.25rem'
+                        }}
                       >
                         Ta bort
                       </button>
