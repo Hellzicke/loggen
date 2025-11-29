@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.7.2] - 2025-11-29
+
+### Tillagt
+- Admin-länk i headern som länkar till /admin
+
 ## [0.7.1] - 2025-11-29
 
 ### Tillagt
