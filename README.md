@@ -53,16 +53,31 @@ Nixpacks upptäcker automatiskt projektet. Ställ in följande:
 | Start Command | `npm run db:migrate && npm start` |
 | Install Command | `npm install` |
 
-### 4. Miljövariabler
+### 4. Persistent Storage för bilder
+För att bilder ska sparas mellan redeploys:
+
+1. Gå till din applikation i Coolify
+2. Klicka på **Storage**-fliken
+3. Klicka **Add Storage**
+4. Ange:
+   - **Mount Path:** `/app/uploads`
+   - **Size:** Minst 1GB (eller mer om du förväntar dig många bilder)
+5. Klicka **Save**
+
+### 5. Miljövariabler
 Lägg till följande i Coolify:
 
 ```
 DATABASE_URL=<din-postgresql-url>
 NODE_ENV=production
 PORT=3000
+JWT_SECRET=<din-jwt-secret-nyckel>
+UPLOADS_DIR=/app/uploads
 ```
 
-### 5. Deploy
+**Viktigt:** `UPLOADS_DIR` måste matcha mount path från storage (ovan).
+
+### 6. Deploy
 Klicka **Deploy** - Nixpacks bygger och startar automatiskt.
 
 ## Projektstruktur

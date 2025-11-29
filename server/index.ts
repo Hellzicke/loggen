@@ -24,7 +24,8 @@ const rootDir = process.env.NODE_ENV === 'production'
   : resolve(__dirname, '..')
 
 const distDir = join(rootDir, 'dist')
-const uploadsDir = join(rootDir, 'uploads')
+// Use UPLOADS_DIR from env if set (for persistent storage), otherwise use local uploads folder
+const uploadsDir = process.env.UPLOADS_DIR || join(rootDir, 'uploads')
 
 // Create uploads directory if it doesn't exist
 if (!existsSync(uploadsDir)) {
