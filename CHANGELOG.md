@@ -2,6 +2,16 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.2.3] - 2025-11-29
+
+### Tillagt
+- Rubrik på inlägg med redigeringsikon bredvid
+
+### Ändrat
+- Divider mellan inlägg och kommentarer
+- "Ställ en fråga" och "Visa kommentarer" separerade
+- Läst av och Signera som läst på samma rad (vänster/höger)
+
 ## [0.2.1] - 2025-11-29
 
 ### Tillagt
