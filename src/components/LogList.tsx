@@ -491,6 +491,11 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                   </div>
                 )}
                 <div className="log-message" dangerouslySetInnerHTML={{ __html: log.message }} />
+                {log.imageUrl && (
+                  <div className="log-image">
+                    <img src={log.imageUrl} alt="Inläggsbild" />
+                  </div>
+                )}
               </div>
             )}
             

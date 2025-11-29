@@ -224,7 +224,7 @@ app.post('/api/logs', async (req, res) => {
 // Edit a log message
 app.put('/api/logs/:id', async (req, res) => {
   const logId = parseInt(req.params.id)
-  const { title, message } = req.body
+  const { title, message, imageUrl } = req.body
 
   if (!message) {
     return res.status(400).json({ error: 'Message is required' })
@@ -235,7 +235,8 @@ app.put('/api/logs/:id', async (req, res) => {
       where: { id: logId },
       data: { 
         title: title?.trim() || '',
-        message: message.trim() 
+        message: message.trim(),
+        imageUrl: imageUrl || null
       },
       include: {
         signatures: true,
