@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import type { LogMessage, ReadSignature } from '../App'
+import type { LogMessage, ReadSignature, Comment } from '../App'
 
 interface LogListProps {
   logs: LogMessage[]
   loading: boolean
   onSign: (logId: number, signature: ReadSignature) => void
   onPin: (logId: number) => void
+  onComment: (logId: number, comment: Comment, parentId?: number) => void
 }
 
 function formatDate(dateString: string): string {
@@ -112,8 +113,148 @@ function SignForm({ logId, onSign, onCancel }: SignFormProps) {
   )
 }
 
-export default function LogList({ logs, loading, onSign, onPin }: LogListProps) {
+interface CommentFormProps {
+  logId: number
+  parentId?: number
+  onComment: (logId: number, comment: Comment, parentId?: number) => void
+  onCancel: () => void
+  placeholder?: string
+}
+
+function CommentForm({ logId, parentId, onComment, onCancel, placeholder }: CommentFormProps) {
+  const [author, setAuthor] = useState('')
+  const [message, setMessage] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async () => {
+    if (!author.trim() || !message.trim()) return
+    
+    setSubmitting(true)
+
+    try {
+      const res = await fetch(`/api/logs/${logId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          author: author.trim(), 
+          message: message.trim(),
+          parentId 
+        })
+      })
+
+      if (res.ok) {
+        const comment = await res.json()
+        onComment(logId, comment, parentId)
+        onCancel()
+      }
+    } catch (error) {
+      console.error('Failed to post comment:', error)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="comment-form">
+      <input
+        type="text"
+        value={author}
+        onChange={e => setAuthor(e.target.value)}
+        placeholder="Ditt namn"
+        className="comment-input"
+      />
+      <textarea
+        value={message}
+        onChange={e => setMessage(e.target.value)}
+        placeholder={placeholder || 'Skriv en kommentar...'}
+        className="comment-textarea"
+        rows={2}
+      />
+      <div className="comment-actions">
+        <button 
+          className="comment-submit" 
+          onClick={handleSubmit}
+          disabled={submitting || !author.trim() || !message.trim()}
+        >
+          {submitting ? '...' : 'Skicka'}
+        </button>
+        <button className="comment-cancel" onClick={onCancel}>
+          Avbryt
+        </button>
+      </div>
+    </div>
+  )
+}
+
+interface CommentItemProps {
+  comment: Comment
+  logId: number
+  onComment: (logId: number, comment: Comment, parentId?: number) => void
+}
+
+function CommentItem({ comment, logId, onComment }: CommentItemProps) {
+  const [showReplyForm, setShowReplyForm] = useState(false)
+
+  return (
+    <div className="comment-item">
+      <div className="comment-header">
+        <div 
+          className="comment-avatar"
+          style={{ background: getAvatarColor(comment.author) }}
+        >
+          {getInitials(comment.author)}
+        </div>
+        <div className="comment-meta">
+          <span className="comment-author">{comment.author}</span>
+          <span className="comment-date">{formatDate(comment.createdAt)}</span>
+        </div>
+      </div>
+      <p className="comment-message">{comment.message}</p>
+      
+      {!showReplyForm && (
+        <button className="reply-btn" onClick={() => setShowReplyForm(true)}>
+          Svara
+        </button>
+      )}
+      
+      {showReplyForm && (
+        <CommentForm
+          logId={logId}
+          parentId={comment.id}
+          onComment={onComment}
+          onCancel={() => setShowReplyForm(false)}
+          placeholder="Skriv ett svar..."
+        />
+      )}
+
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="comment-replies">
+          {comment.replies.map(reply => (
+            <div key={reply.id} className="reply-item">
+              <div className="comment-header">
+                <div 
+                  className="comment-avatar comment-avatar--small"
+                  style={{ background: getAvatarColor(reply.author) }}
+                >
+                  {getInitials(reply.author)}
+                </div>
+                <div className="comment-meta">
+                  <span className="comment-author">{reply.author}</span>
+                  <span className="comment-date">{formatDate(reply.createdAt)}</span>
+                </div>
+              </div>
+              <p className="comment-message">{reply.message}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function LogList({ logs, loading, onSign, onPin, onComment }: LogListProps) {
   const [signingId, setSigningId] = useState<number | null>(null)
+  const [commentingId, setCommentingId] = useState<number | null>(null)
 
   if (loading) {
     return <div className="loading">Laddar...</div>
@@ -156,6 +297,38 @@ export default function LogList({ logs, loading, onSign, onPin }: LogListProps) 
             </button>
           </div>
           <p className="log-message">{log.message}</p>
+          
+          {/* Comments section */}
+          {log.comments && log.comments.length > 0 && (
+            <div className="comments-section">
+              {log.comments.map(comment => (
+                <CommentItem 
+                  key={comment.id} 
+                  comment={comment} 
+                  logId={log.id}
+                  onComment={onComment}
+                />
+              ))}
+            </div>
+          )}
+
+          {commentingId === log.id ? (
+            <div className="add-comment">
+              <CommentForm
+                logId={log.id}
+                onComment={onComment}
+                onCancel={() => setCommentingId(null)}
+                placeholder="Ställ en fråga..."
+              />
+            </div>
+          ) : (
+            <button 
+              className="comment-btn"
+              onClick={() => setCommentingId(log.id)}
+            >
+              Ställ en fråga
+            </button>
+          )}
           
           <div className="log-signatures">
             {log.signatures.length > 0 && (

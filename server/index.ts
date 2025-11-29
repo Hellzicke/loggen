@@ -26,7 +26,7 @@ if (existsSync(distDir)) {
 }
 
 // Get package.json version
-let version = '1.1.0'
+let version = '0.2.0'
 try {
   const packageJsonPath = join(rootDir, 'package.json')
   const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
@@ -50,7 +50,7 @@ app.get('/api/version', (_req, res) => {
   res.json({ version })
 })
 
-// Get all log messages with signatures
+// Get all log messages with signatures and comments
 app.get('/api/logs', async (_req, res) => {
   try {
     const logs = await prisma.logMessage.findMany({
@@ -58,6 +58,15 @@ app.get('/api/logs', async (_req, res) => {
       include: {
         signatures: {
           orderBy: { createdAt: 'asc' }
+        },
+        comments: {
+          where: { parentId: null },
+          orderBy: { createdAt: 'asc' },
+          include: {
+            replies: {
+              orderBy: { createdAt: 'asc' }
+            }
+          }
         }
       }
     })
@@ -84,7 +93,8 @@ app.post('/api/logs', async (req, res) => {
         version
       },
       include: {
-        signatures: true
+        signatures: true,
+        comments: true
       }
     })
     res.status(201).json(log)
@@ -107,7 +117,13 @@ app.post('/api/logs/:id/pin', async (req, res) => {
     const updated = await prisma.logMessage.update({
       where: { id: logId },
       data: { pinned: !log.pinned },
-      include: { signatures: true }
+      include: {
+        signatures: true,
+        comments: {
+          where: { parentId: null },
+          include: { replies: true }
+        }
+      }
     })
     res.json(updated)
   } catch (error) {
@@ -140,6 +156,34 @@ app.post('/api/logs/:id/sign', async (req, res) => {
     }
     console.error('Error creating signature:', error)
     res.status(500).json({ error: 'Failed to sign' })
+  }
+})
+
+// Add comment to a log
+app.post('/api/logs/:id/comments', async (req, res) => {
+  const logId = parseInt(req.params.id)
+  const { message, author, parentId } = req.body
+
+  if (!message || !author) {
+    return res.status(400).json({ error: 'Message and author are required' })
+  }
+
+  try {
+    const comment = await prisma.comment.create({
+      data: {
+        message: message.trim(),
+        author: author.trim(),
+        logId,
+        parentId: parentId || null
+      },
+      include: {
+        replies: true
+      }
+    })
+    res.status(201).json(comment)
+  } catch (error) {
+    console.error('Error creating comment:', error)
+    res.status(500).json({ error: 'Failed to create comment' })
   }
 })
 

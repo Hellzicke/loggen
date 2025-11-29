@@ -11,6 +11,16 @@ export interface ReadSignature {
   createdAt: string
 }
 
+export interface Comment {
+  id: number
+  message: string
+  author: string
+  logId: number
+  parentId: number | null
+  createdAt: string
+  replies: Comment[]
+}
+
 export interface LogMessage {
   id: number
   message: string
@@ -19,6 +29,7 @@ export interface LogMessage {
   pinned: boolean
   createdAt: string
   signatures: ReadSignature[]
+  comments: Comment[]
 }
 
 export default function App() {
@@ -80,6 +91,27 @@ export default function App() {
     }
   }
 
+  const handleComment = (logId: number, comment: Comment, parentId?: number) => {
+    setLogs(prev => prev.map(log => {
+      if (log.id !== logId) return log
+      
+      if (parentId) {
+        // Add reply to existing comment
+        return {
+          ...log,
+          comments: log.comments.map(c => 
+            c.id === parentId 
+              ? { ...c, replies: [...c.replies, comment] }
+              : c
+          )
+        }
+      } else {
+        // Add new top-level comment
+        return { ...log, comments: [...log.comments, { ...comment, replies: [] }] }
+      }
+    }))
+  }
+
   // Sort: pinned first, then by date
   const sortedLogs = [...logs].sort((a, b) => {
     if (a.pinned && !b.pinned) return -1
@@ -100,7 +132,13 @@ export default function App() {
             Vad vill du dela?
           </button>
         </div>
-        <LogList logs={sortedLogs} loading={loading} onSign={handleSign} onPin={handlePin} />
+        <LogList 
+          logs={sortedLogs} 
+          loading={loading} 
+          onSign={handleSign} 
+          onPin={handlePin}
+          onComment={handleComment}
+        />
       </main>
       {showForm && (
         <LogForm onSuccess={handleNewLog} onClose={() => setShowForm(false)} />
