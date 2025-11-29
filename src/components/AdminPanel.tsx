@@ -251,7 +251,9 @@ export default function AdminPanel() {
               <div className="images-grid">
                 {images.map(img => (
                   <div key={img.filename} className="admin-image-item">
-                    <img src={img.url} alt={img.filename} />
+                    <div className="admin-image-wrapper">
+                      <img src={img.url} alt={img.filename} />
+                    </div>
                     <div className="image-info">
                       <div className="image-name" title={img.filename}>{img.filename}</div>
                       <div className="image-meta">
