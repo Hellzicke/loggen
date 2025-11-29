@@ -599,10 +599,73 @@ body {
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .edit-delete:hover {
   background: #b91c1c;
+}
+
+/* Confirm Modal */
+.confirm-modal {
+  background: var(--bg-card);
+  border-radius: 12px;
+  max-width: 400px;
+  width: 100%;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+.confirm-modal h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--text-primary);
+}
+
+.confirm-modal p {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 1.25rem;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.confirm-btn {
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.confirm-btn--primary {
+  background: #dc2626;
+  color: white;
+}
+
+.confirm-btn--primary:hover {
+  background: #b91c1c;
+}
+
+.confirm-btn--secondary {
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+}
+
+.confirm-btn--secondary:hover {
+  background: var(--border);
+  color: var(--text-primary);
 }
 
 .comments-toggle {

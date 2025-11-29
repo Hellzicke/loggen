@@ -5,6 +5,7 @@ import LogList from './components/LogList'
 import ChangelogModal from './components/ChangelogModal'
 import ArchiveModal from './components/ArchiveModal'
 import UnpinModal from './components/UnpinModal'
+import ConfirmModal from './components/ConfirmModal'
 
 export interface ReadSignature {
   id: number
@@ -56,6 +57,7 @@ export default function App() {
   const [showForm, setShowForm] = useState(false)
   const [showArchive, setShowArchive] = useState(false)
   const [unpinPrompt, setUnpinPrompt] = useState<LogMessage | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -269,18 +271,22 @@ export default function App() {
     }
   }
 
-  const handleDeleteLog = async (logId: number) => {
-    if (!confirm('Är du säker på att du vill ta bort detta inlägg?')) {
-      return
-    }
+  const handleDeleteLog = (logId: number) => {
+    setDeleteConfirm(logId)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return
 
     try {
-      const res = await fetch(`/api/logs/${logId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/logs/${deleteConfirm}`, { method: 'DELETE' })
       if (res.ok) {
-        setLogs(prev => prev.filter(log => log.id !== logId))
+        setLogs(prev => prev.filter(log => log.id !== deleteConfirm))
       }
     } catch (error) {
       console.error('Failed to delete log:', error)
+    } finally {
+      setDeleteConfirm(null)
     }
   }
 
@@ -337,6 +343,16 @@ export default function App() {
           onArchive={() => handleUnpinAndArchive(unpinPrompt.id)}
           onKeep={() => handleUnpinKeep(unpinPrompt.id)}
           onCancel={() => setUnpinPrompt(null)}
+        />
+      )}
+      {deleteConfirm && (
+        <ConfirmModal
+          title="Ta bort inlägg"
+          message="Är du säker på att du vill ta bort detta inlägg? Detta går inte att ångra."
+          confirmText="Ta bort"
+          cancelText="Avbryt"
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteConfirm(null)}
         />
       )}
     </>

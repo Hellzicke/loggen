@@ -2,6 +2,12 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.5.3] - 2025-11-29
+
+### Ändrat
+- Radera-knapp är nu en papperskorgsikon
+- Bekräftelsedialog i samma tema som sidan (istället för browser confirm)
+
 ## [0.5.2] - 2025-11-29
 
 ### Ändrat
