@@ -2,6 +2,16 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.2.4] - 2025-11-29
+
+### Tillagt
+- Textformatering — fet (**text**), kursiv (*text*), understruken (__text__)
+- Formateringsverktyg med knappar B, I, U
+- Tangentbordsgenvägar Ctrl+B, Ctrl+I, Ctrl+U
+
+### Ändrat
+- Större modal för att skapa inlägg
+
 ## [0.2.3] - 2025-11-29
 
 ### Tillagt
