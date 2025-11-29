@@ -13,13 +13,38 @@ interface LogListProps {
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString)
-  return date.toLocaleString('sv-SE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return 'Just nu'
+  if (diffMins < 60) return `${diffMins} min`
+  if (diffHours < 24) return `${diffHours} tim`
+  if (diffDays < 7) return `${diffDays} d`
+  
+  return date.toLocaleDateString('sv-SE', {
+    day: 'numeric',
+    month: 'short'
   })
+}
+
+function getInitials(name: string): string {
+  return name.charAt(0).toUpperCase()
+}
+
+function getAvatarColor(name: string): string {
+  const colors = [
+    'linear-gradient(135deg, #667eea, #764ba2)',
+    'linear-gradient(135deg, #f093fb, #f5576c)',
+    'linear-gradient(135deg, #4facfe, #00f2fe)',
+    'linear-gradient(135deg, #43e97b, #38f9d7)',
+    'linear-gradient(135deg, #fa709a, #fee140)',
+    'linear-gradient(135deg, #a18cd1, #fbc2eb)',
+  ]
+  const index = name.charCodeAt(0) % colors.length
+  return colors[index]
 }
 
 export default function LogList({ logs, loading }: LogListProps) {
@@ -36,20 +61,24 @@ export default function LogList({ logs, loading }: LogListProps) {
   }
 
   return (
-    <div>
-      <div className="log-list-header">Senaste inlägg</div>
-      <div className="log-list">
-        {logs.map(log => (
-          <article key={log.id} className="log-item">
-            <div className="log-meta">
+    <div className="log-list">
+      {logs.map(log => (
+        <article key={log.id} className="log-item">
+          <div className="log-header">
+            <div 
+              className="log-avatar" 
+              style={{ background: getAvatarColor(log.author) }}
+            >
+              {getInitials(log.author)}
+            </div>
+            <div className="log-info">
               <span className="log-author">{log.author}</span>
               <span className="log-date">{formatDate(log.createdAt)}</span>
             </div>
-            <p className="log-message">{log.message}</p>
-            <div className="log-version">v{log.version}</div>
-          </article>
-        ))}
-      </div>
+          </div>
+          <p className="log-message">{log.message}</p>
+        </article>
+      ))}
     </div>
   )
 }

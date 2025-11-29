@@ -55,41 +55,43 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
     <div className="form-overlay" onClick={onClose}>
       <form className="log-form" onSubmit={handleSubmit} onClick={e => e.stopPropagation()}>
         <div className="form-header">
-          <h2>Nytt inlägg</h2>
+          <h2>Skapa inlägg</h2>
           <button type="button" className="form-close" onClick={onClose}>
             &times;
           </button>
         </div>
-        <div className="form-row">
-          <div className="input-group">
-            <label htmlFor="author">Namn</label>
-            <input
-              id="author"
-              type="text"
-              value={author}
-              onChange={e => setAuthor(e.target.value)}
-              placeholder="Ditt namn"
-              autoFocus
-              required
-            />
+        <div className="form-body">
+          <div className="form-row">
+            <div className="input-group">
+              <label htmlFor="author">Namn</label>
+              <input
+                id="author"
+                type="text"
+                value={author}
+                onChange={e => setAuthor(e.target.value)}
+                placeholder="Ditt namn"
+                autoFocus
+                required
+              />
+            </div>
           </div>
-        </div>
-        <div className="form-row">
-          <div className="input-group">
-            <label htmlFor="message">Meddelande</label>
-            <textarea
-              id="message"
-              value={message}
-              onChange={e => setMessage(e.target.value)}
-              placeholder="Skriv ditt meddelande..."
-              required
-            />
+          <div className="form-row">
+            <div className="input-group">
+              <label htmlFor="message">Meddelande</label>
+              <textarea
+                id="message"
+                value={message}
+                onChange={e => setMessage(e.target.value)}
+                placeholder="Vad vill du dela?"
+                required
+              />
+            </div>
           </div>
-        </div>
-        <div className="form-row">
-          <button type="submit" className="submit-btn" disabled={submitting}>
-            {submitting ? 'Skickar...' : 'Publicera'}
-          </button>
+          <div className="form-row">
+            <button type="submit" className="submit-btn" disabled={submitting}>
+              {submitting ? 'Publicerar...' : 'Publicera'}
+            </button>
+          </div>
         </div>
       </form>
     </div>
