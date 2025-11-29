@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.7.4] - 2025-11-29
+
+### Ändrat
+- "Reagera"-knappen flyttad upp över dividern, bredvid emojis
+
 ## [0.7.3] - 2025-11-29
 
 ### Ändrat
