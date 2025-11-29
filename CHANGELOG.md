@@ -2,6 +2,12 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.6.3] - 2025-11-29
+
+### Tillagt
+- Bilder i inlägg är thumbnails som kan klickas för fullskärm
+- Redigera inlägg stöder nu även bilder (ladda upp/ändra/ta bort)
+
 ## [0.6.2] - 2025-11-29
 
 ### Ändrat

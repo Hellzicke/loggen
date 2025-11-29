@@ -209,12 +209,12 @@ export default function App() {
     }))
   }
 
-  const handleEditLog = async (logId: number, title: string, message: string) => {
+  const handleEditLog = async (logId: number, title: string, message: string, imageUrl: string | null) => {
     try {
       const res = await fetch(`/api/logs/${logId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, message })
+        body: JSON.stringify({ title, message, imageUrl })
       })
       if (res.ok) {
         const updated = await res.json()
