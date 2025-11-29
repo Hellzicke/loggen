@@ -1,8 +1,8 @@
 import express from 'express'
 import { PrismaClient } from '@prisma/client'
 import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
-import { readFileSync } from 'fs'
+import { dirname, join, resolve } from 'path'
+import { readFileSync, existsSync } from 'fs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -11,23 +11,34 @@ const app = express()
 const prisma = new PrismaClient()
 const PORT = process.env.PORT || 3001
 
+// Determine root directory (works in both dev and production)
+const rootDir = process.env.NODE_ENV === 'production' 
+  ? resolve(__dirname, '..') 
+  : resolve(__dirname, '..')
+
+const distDir = join(rootDir, 'dist')
+
 app.use(express.json())
 
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(join(__dirname, '../dist')))
+// Serve static files
+if (existsSync(distDir)) {
+  app.use(express.static(distDir))
 }
 
 // Get package.json version
-const packageJson = JSON.parse(
-  readFileSync(join(__dirname, '../package.json'), 'utf-8')
-)
-const version = packageJson.version
+let version = '1.0.0'
+try {
+  const packageJsonPath = join(rootDir, 'package.json')
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
+  version = packageJson.version
+} catch (e) {
+  console.error('Could not read package.json:', e)
+}
 
 // Get changelog
 app.get('/api/changelog', (_req, res) => {
   try {
-    const changelog = readFileSync(join(__dirname, '../CHANGELOG.md'), 'utf-8')
+    const changelog = readFileSync(join(rootDir, 'CHANGELOG.md'), 'utf-8')
     res.json({ changelog })
   } catch {
     res.json({ changelog: 'No changelog available.' })
@@ -75,14 +86,19 @@ app.post('/api/logs', async (req, res) => {
   }
 })
 
-// Serve React app for all other routes in production
-if (process.env.NODE_ENV === 'production') {
-  app.get('*', (_req, res) => {
-    res.sendFile(join(__dirname, '../dist/index.html'))
-  })
-}
+// Serve React app for all other routes
+app.get('*', (_req, res) => {
+  const indexPath = join(distDir, 'index.html')
+  if (existsSync(indexPath)) {
+    res.sendFile(indexPath)
+  } else {
+    res.status(404).send('App not built. Run npm run build first.')
+  }
+})
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
+  console.log(`Root dir: ${rootDir}`)
+  console.log(`Dist dir: ${distDir}`)
+  console.log(`Dist exists: ${existsSync(distDir)}`)
 })
-
