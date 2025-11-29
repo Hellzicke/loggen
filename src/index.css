@@ -447,6 +447,15 @@ body {
   color: var(--accent-hover);
 }
 
+.header-btn--danger {
+  color: #dc2626;
+}
+
+.header-btn--danger:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 .pinned-badge {
   display: inline-block;
   margin-left: 0.5rem;

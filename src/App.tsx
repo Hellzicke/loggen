@@ -269,6 +269,21 @@ export default function App() {
     }
   }
 
+  const handleDeleteLog = async (logId: number) => {
+    if (!confirm('Är du säker på att du vill ta bort detta inlägg?')) {
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/logs/${logId}`, { method: 'DELETE' })
+      if (res.ok) {
+        setLogs(prev => prev.filter(log => log.id !== logId))
+      }
+    } catch (error) {
+      console.error('Failed to delete log:', error)
+    }
+  }
+
   // Sort: pinned first, then by date
   const sortedLogs = [...logs].sort((a, b) => {
     if (a.pinned && !b.pinned) return -1
@@ -300,6 +315,7 @@ export default function App() {
           onEditLog={handleEditLog}
           onDeleteComment={handleDeleteComment}
           onReaction={handleReaction}
+          onDeleteLog={handleDeleteLog}
         />
       </main>
       {showForm && (
