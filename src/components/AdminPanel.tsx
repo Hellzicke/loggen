@@ -124,19 +124,23 @@ export default function AdminPanel() {
   }
 
   const handleDeleteImage = async (filename: string) => {
-    if (!confirm('Är du säker på att du vill ta bort denna bild?')) return
+    if (!confirm('Är du säker på att du vill ta bort denna bild permanent?')) return
 
     const token = getAuthToken()
     try {
-      const res = await fetch(`/api/admin/images/${filename}`, {
+      const res = await fetch(`/api/admin/images/${encodeURIComponent(filename)}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
         setImages(prev => prev.filter(img => img.filename !== filename))
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Kunde inte ta bort bilden')
       }
     } catch (error) {
       console.error('Error deleting image:', error)
+      alert('Ett fel uppstod vid borttagning av bilden')
     }
   }
 
