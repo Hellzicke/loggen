@@ -32,6 +32,15 @@ function getInitials(name: string): string {
   return name.charAt(0).toUpperCase()
 }
 
+function hashName(name: string): number {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = ((hash << 5) - hash) + name.toLowerCase().charCodeAt(i)
+    hash = hash & hash
+  }
+  return Math.abs(hash)
+}
+
 function getAvatarColor(name: string): string {
   const colors = [
     'linear-gradient(135deg, #667eea, #764ba2)',
@@ -40,8 +49,14 @@ function getAvatarColor(name: string): string {
     'linear-gradient(135deg, #43e97b, #38f9d7)',
     'linear-gradient(135deg, #fa709a, #fee140)',
     'linear-gradient(135deg, #a18cd1, #fbc2eb)',
+    'linear-gradient(135deg, #ff6b6b, #ee5a24)',
+    'linear-gradient(135deg, #6c5ce7, #a29bfe)',
+    'linear-gradient(135deg, #00b894, #00cec9)',
+    'linear-gradient(135deg, #fd79a8, #e84393)',
+    'linear-gradient(135deg, #fdcb6e, #e17055)',
+    'linear-gradient(135deg, #74b9ff, #0984e3)',
   ]
-  const index = name.charCodeAt(0) % colors.length
+  const index = hashName(name) % colors.length
   return colors[index]
 }
 
