@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.1.4] - 2025-11-29
+
+### Ändrat
+- Snyggare ändringslogg med formaterade versioner och datum
+
 ## [0.1.3] - 2025-11-29
 
 ### Tillagt
