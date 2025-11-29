@@ -158,11 +158,13 @@ function SignForm({ logId, onSign, onCancel }: SignFormProps) {
 interface EditFormProps {
   initialTitle: string
   initialMessage: string
+  logId: number
   onSave: (title: string, message: string) => void
   onCancel: () => void
+  onDelete: (logId: number) => void
 }
 
-function EditForm({ initialTitle, initialMessage, onSave, onCancel }: EditFormProps) {
+function EditForm({ initialTitle, initialMessage, logId, onSave, onCancel, onDelete }: EditFormProps) {
   const [title, setTitle] = useState(initialTitle)
   const [message, setMessage] = useState(initialMessage)
   const editorRef = useRef<HTMLDivElement>(null)
@@ -222,6 +224,12 @@ function EditForm({ initialTitle, initialMessage, onSave, onCancel }: EditFormPr
         </button>
         <button className="edit-cancel" onClick={onCancel}>
           Avbryt
+        </button>
+        <button 
+          className="edit-delete" 
+          onClick={() => onDelete(logId)}
+        >
+          Ta bort
         </button>
       </div>
     </div>
@@ -457,26 +465,19 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                   <path d="M15 4.5l-4 4L7 10l-1.5 1.5 7 7L14 17l1.5-4 4-4M9 15l-4.5 4.5M14.5 4L20 9.5" />
                 </svg>
               </button>
-              <button 
-                className="header-btn header-btn--danger"
-                onClick={() => onDeleteLog(log.id)}
-                title="Ta bort inlägg"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                </svg>
-              </button>
             </div>
 
             {editingId === log.id ? (
               <EditForm
                 initialTitle={log.title}
                 initialMessage={log.message}
+                logId={log.id}
                 onSave={(title, message) => {
                   onEditLog(log.id, title, message)
                   setEditingId(null)
                 }}
                 onCancel={() => setEditingId(null)}
+                onDelete={onDeleteLog}
               />
             ) : (
               <div className="log-content">

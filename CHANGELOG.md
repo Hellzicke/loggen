@@ -2,10 +2,15 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.5.2] - 2025-11-29
+
+### Ändrat
+- Radera-knapp visas endast i redigeringsläge
+
 ## [0.5.1] - 2025-11-29
 
 ### Tillagt
-- Ta bort inlägg — radera-knapp i headern med bekräftelse
+- Ta bort inlägg — radera-knapp med bekräftelse
 
 ## [0.4.3] - 2025-11-29
 
