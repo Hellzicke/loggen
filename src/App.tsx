@@ -22,9 +22,15 @@ export default function App() {
     try {
       const res = await fetch('/api/logs')
       const data = await res.json()
-      setLogs(data)
+      if (Array.isArray(data)) {
+        setLogs(data)
+      } else {
+        console.error('API error:', data)
+        setLogs([])
+      }
     } catch (error) {
       console.error('Failed to fetch logs:', error)
+      setLogs([])
     } finally {
       setLoading(false)
     }
