@@ -642,11 +642,10 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
             <div className="reactions-section">
               <div className="reaction-trigger">
                 <button 
-                  className="reaction-add-btn"
+                  className="interaction-btn"
                   onClick={() => setShowReactionPicker(showReactionPicker === log.id ? null : log.id)}
-                  title="Reagera"
                 >
-                  😊
+                  Reagera
                 </button>
                 {showReactionPicker === log.id && (
                   <div className="reaction-picker">
