@@ -681,9 +681,21 @@ body {
   transition: all 0.15s;
 }
 
-.reaction-badge:hover {
+.reaction-badge:hover:not(:disabled) {
   border-color: var(--accent);
   background: var(--accent-light);
+}
+
+.reaction-badge--disabled,
+.reaction-badge:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.emoji-btn--disabled,
+.emoji-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .reaction-trigger {
@@ -782,6 +794,12 @@ body {
 
 .signature-name {
   color: var(--text-primary);
+  font-weight: 500;
+}
+
+.signatures-more {
+  color: var(--accent);
+  cursor: help;
   font-weight: 500;
 }
 

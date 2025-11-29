@@ -377,6 +377,23 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
   const [editingId, setEditingId] = useState<number | null>(null)
   const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set())
   const [showReactionPicker, setShowReactionPicker] = useState<number | null>(null)
+  const [reactionCooldown, setReactionCooldown] = useState<Set<number>>(new Set())
+
+  const handleReactionWithCooldown = (logId: number, emoji: string) => {
+    if (reactionCooldown.has(logId)) return
+    
+    onReaction(logId, emoji)
+    setReactionCooldown(prev => new Set(prev).add(logId))
+    
+    // 2 second cooldown per post
+    setTimeout(() => {
+      setReactionCooldown(prev => {
+        const next = new Set(prev)
+        next.delete(logId)
+        return next
+      })
+    }, 2000)
+  }
 
   const toggleComments = (logId: number) => {
     setExpandedComments(prev => {
@@ -479,8 +496,9 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                 {groupReactions(log.reactions).map(group => (
                   <button 
                     key={group.emoji} 
-                    className="reaction-badge"
-                    onClick={() => onReaction(log.id, group.emoji)}
+                    className={`reaction-badge ${reactionCooldown.has(log.id) ? 'reaction-badge--disabled' : ''}`}
+                    onClick={() => handleReactionWithCooldown(log.id, group.emoji)}
+                    disabled={reactionCooldown.has(log.id)}
                   >
                     {group.emoji} {group.count}
                   </button>
@@ -504,11 +522,14 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                     {EMOJI_OPTIONS.map(emoji => (
                       <button
                         key={emoji}
-                        className="emoji-btn"
+                        className={`emoji-btn ${reactionCooldown.has(log.id) ? 'emoji-btn--disabled' : ''}`}
                         onClick={() => {
-                          onReaction(log.id, emoji)
-                          setShowReactionPicker(null)
+                          if (!reactionCooldown.has(log.id)) {
+                            handleReactionWithCooldown(log.id, emoji)
+                            setShowReactionPicker(null)
+                          }
                         }}
+                        disabled={reactionCooldown.has(log.id)}
                       >
                         {emoji}
                       </button>
@@ -568,11 +589,27 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                 {log.signatures.length > 0 && (
                   <div className="signatures-list">
                     <span className="signatures-label">Läst av:</span>
-                    {log.signatures.map((sig, i) => (
-                      <span key={sig.id} className="signature-name">
-                        {sig.name}{i < log.signatures.length - 1 ? ', ' : ''}
-                      </span>
-                    ))}
+                    {log.signatures.length <= 3 ? (
+                      log.signatures.map((sig, i) => (
+                        <span key={sig.id} className="signature-name">
+                          {sig.name}{i < log.signatures.length - 1 ? ', ' : ''}
+                        </span>
+                      ))
+                    ) : (
+                      <>
+                        {log.signatures.slice(0, 3).map((sig, i) => (
+                          <span key={sig.id} className="signature-name">
+                            {sig.name}{i < 2 ? ', ' : ''}
+                          </span>
+                        ))}
+                        <span 
+                          className="signatures-more"
+                          title={log.signatures.map(s => s.name).join(', ')}
+                        >
+                          {' '}och {log.signatures.length - 3} till
+                        </span>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
