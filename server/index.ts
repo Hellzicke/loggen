@@ -94,6 +94,28 @@ app.post('/api/logs', async (req, res) => {
   }
 })
 
+// Toggle pin on a log
+app.post('/api/logs/:id/pin', async (req, res) => {
+  const logId = parseInt(req.params.id)
+
+  try {
+    const log = await prisma.logMessage.findUnique({ where: { id: logId } })
+    if (!log) {
+      return res.status(404).json({ error: 'Log not found' })
+    }
+
+    const updated = await prisma.logMessage.update({
+      where: { id: logId },
+      data: { pinned: !log.pinned },
+      include: { signatures: true }
+    })
+    res.json(updated)
+  } catch (error) {
+    console.error('Error toggling pin:', error)
+    res.status(500).json({ error: 'Failed to toggle pin' })
+  }
+})
+
 // Add signature to a log
 app.post('/api/logs/:id/sign', async (req, res) => {
   const logId = parseInt(req.params.id)

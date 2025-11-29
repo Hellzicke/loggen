@@ -12,6 +12,7 @@ model LogMessage {
   message    String
   author     String
   version    String
+  pinned     Boolean         @default(false)
   createdAt  DateTime        @default(now())
   signatures ReadSignature[]
 }

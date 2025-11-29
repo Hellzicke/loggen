@@ -5,6 +5,7 @@ interface LogListProps {
   logs: LogMessage[]
   loading: boolean
   onSign: (logId: number, signature: ReadSignature) => void
+  onPin: (logId: number) => void
 }
 
 function formatDate(dateString: string): string {
@@ -111,7 +112,7 @@ function SignForm({ logId, onSign, onCancel }: SignFormProps) {
   )
 }
 
-export default function LogList({ logs, loading, onSign }: LogListProps) {
+export default function LogList({ logs, loading, onSign, onPin }: LogListProps) {
   const [signingId, setSigningId] = useState<number | null>(null)
 
   if (loading) {
@@ -129,7 +130,7 @@ export default function LogList({ logs, loading, onSign }: LogListProps) {
   return (
     <div className="log-list">
       {logs.map(log => (
-        <article key={log.id} className="log-item">
+        <article key={log.id} className={`log-item ${log.pinned ? 'log-item--pinned' : ''}`}>
           <div className="log-header">
             <div 
               className="log-avatar" 
@@ -138,9 +139,21 @@ export default function LogList({ logs, loading, onSign }: LogListProps) {
               {getInitials(log.author)}
             </div>
             <div className="log-info">
-              <span className="log-author">{log.author}</span>
+              <span className="log-author">
+                {log.author}
+                {log.pinned && <span className="pinned-badge">Nålad</span>}
+              </span>
               <span className="log-date">{formatDate(log.createdAt)}</span>
             </div>
+            <button 
+              className={`pin-btn ${log.pinned ? 'pin-btn--active' : ''}`}
+              onClick={() => onPin(log.id)}
+              title={log.pinned ? 'Ta bort nål' : 'Nåla inlägg'}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill={log.pinned ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                <path d="M15 4.5l-4 4L7 10l-1.5 1.5 7 7L14 17l1.5-4 4-4M9 15l-4.5 4.5M14.5 4L20 9.5" />
+              </svg>
+            </button>
           </div>
           <p className="log-message">{log.message}</p>
           

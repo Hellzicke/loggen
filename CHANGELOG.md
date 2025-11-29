@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.1.3] - 2025-11-29
+
+### Tillagt
+- Nåla inlägg — förhindrar framtida arkivering
+
 ## [0.1.2] - 2025-11-29
 
 ### Tillagt
