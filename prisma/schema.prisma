@@ -15,6 +15,7 @@ model LogMessage {
   pinned     Boolean         @default(false)
   createdAt  DateTime        @default(now())
   signatures ReadSignature[]
+  comments   Comment[]
 }
 
 model ReadSignature {
@@ -25,5 +26,17 @@ model ReadSignature {
   createdAt DateTime   @default(now())
 
   @@unique([logId, name])
+}
+
+model Comment {
+  id        Int        @id @default(autoincrement())
+  message   String
+  author    String
+  logId     Int
+  log       LogMessage @relation(fields: [logId], references: [id], onDelete: Cascade)
+  parentId  Int?
+  parent    Comment?   @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]  @relation("CommentReplies")
+  createdAt DateTime   @default(now())
 }
 

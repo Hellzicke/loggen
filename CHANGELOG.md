@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.2.0] - 2025-11-29
+
+### Tillagt
+- Kommentarer och svar — ställ frågor på inlägg och svara i trådar
+
 ## [0.1.4] - 2025-11-29
 
 ### Ändrat
