@@ -22,6 +22,14 @@ export interface Comment {
   replies: Comment[]
 }
 
+export interface Reaction {
+  id: number
+  emoji: string
+  name: string
+  logId: number
+  createdAt: string
+}
+
 export interface LogMessage {
   id: number
   title: string
@@ -32,6 +40,7 @@ export interface LogMessage {
   createdAt: string
   signatures: ReadSignature[]
   comments: Comment[]
+  reactions: Reaction[]
 }
 
 export default function App() {
@@ -160,6 +169,32 @@ export default function App() {
     }
   }
 
+  const handleReaction = async (logId: number, emoji: string, name: string) => {
+    try {
+      const res = await fetch(`/api/logs/${logId}/reactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emoji, name })
+      })
+      if (res.ok) {
+        const result = await res.json()
+        setLogs(prev => prev.map(log => {
+          if (log.id !== logId) return log
+          if (result.action === 'added') {
+            return { ...log, reactions: [...log.reactions, result] }
+          } else {
+            return { 
+              ...log, 
+              reactions: log.reactions.filter(r => !(r.emoji === emoji && r.name === name))
+            }
+          }
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to toggle reaction:', error)
+    }
+  }
+
   // Sort: pinned first, then by date
   const sortedLogs = [...logs].sort((a, b) => {
     if (a.pinned && !b.pinned) return -1
@@ -188,6 +223,7 @@ export default function App() {
           onComment={handleComment}
           onEditLog={handleEditLog}
           onDeleteComment={handleDeleteComment}
+          onReaction={handleReaction}
         />
       </main>
       {showForm && (

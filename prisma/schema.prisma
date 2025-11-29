@@ -17,6 +17,18 @@ model LogMessage {
   createdAt  DateTime        @default(now())
   signatures ReadSignature[]
   comments   Comment[]
+  reactions  Reaction[]
+}
+
+model Reaction {
+  id        Int        @id @default(autoincrement())
+  emoji     String
+  name      String
+  logId     Int
+  log       LogMessage @relation(fields: [logId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+
+  @@unique([logId, name, emoji])
 }
 
 model ReadSignature {
