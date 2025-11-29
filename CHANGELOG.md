@@ -2,6 +2,13 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.7.3] - 2025-11-29
+
+### Ändrat
+- Mindre thumbnails för bilder i inlägg (max 200px istället för 300px)
+- Mindre thumbnails i admin-panelens bildöversikt (120px höjd, 150px minsta kolumnbredd)
+- Förbättrad layout för bildkort i admin-panel
+
 ## [0.7.2] - 2025-11-29
 
 ### Tillagt
