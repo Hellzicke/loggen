@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import type { LogMessage, ReadSignature, Comment, Reaction } from '../App'
+import ImageModal from './ImageModal'
 
 interface LogListProps {
   logs: LogMessage[]
@@ -7,7 +8,7 @@ interface LogListProps {
   onSign: (logId: number, signature: ReadSignature) => void
   onPin: (logId: number) => void
   onComment: (logId: number, comment: Comment, parentId?: number) => void
-  onEditLog: (logId: number, title: string, message: string) => void
+  onEditLog: (logId: number, title: string, message: string, imageUrl: string | null) => void
   onDeleteComment: (logId: number, commentId: number, parentId?: number) => void
   onReaction: (logId: number, emoji: string) => void
   onDeleteLog: (logId: number) => void
@@ -158,16 +159,29 @@ function SignForm({ logId, onSign, onCancel }: SignFormProps) {
 interface EditFormProps {
   initialTitle: string
   initialMessage: string
+  initialImageUrl: string | null
   logId: number
-  onSave: (title: string, message: string) => void
+  onSave: (title: string, message: string, imageUrl: string | null) => void
   onCancel: () => void
   onDelete: (logId: number) => void
 }
 
-function EditForm({ initialTitle, initialMessage, logId, onSave, onCancel, onDelete }: EditFormProps) {
+interface ImageFile {
+  filename: string
+  url: string
+  uploadedAt: string
+}
+
+function EditForm({ initialTitle, initialMessage, initialImageUrl, logId, onSave, onCancel, onDelete }: EditFormProps) {
   const [title, setTitle] = useState(initialTitle)
   const [message, setMessage] = useState(initialMessage)
+  const [imageUrl, setImageUrl] = useState<string | null>(initialImageUrl)
+  const [uploading, setUploading] = useState(false)
+  const [showImagePicker, setShowImagePicker] = useState(false)
+  const [availableImages, setAvailableImages] = useState<ImageFile[]>([])
+  const [loadingImages, setLoadingImages] = useState(false)
   const editorRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (editorRef.current) {
@@ -187,6 +201,52 @@ function EditForm({ initialTitle, initialMessage, logId, onSave, onCancel, onDel
     if (editorRef.current) {
       setMessage(editorRef.current.innerHTML)
     }
+  }
+
+  const loadAvailableImages = async () => {
+    setLoadingImages(true)
+    try {
+      const res = await fetch('/api/images')
+      if (res.ok) {
+        const images = await res.json()
+        setAvailableImages(images)
+      }
+    } catch (error) {
+      console.error('Failed to load images:', error)
+    } finally {
+      setLoadingImages(false)
+    }
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    const formData = new FormData()
+    formData.append('image', file)
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setImageUrl(data.url)
+        setShowImagePicker(false)
+        loadAvailableImages()
+      }
+    } catch (error) {
+      console.error('Failed to upload image:', error)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleSelectImage = (url: string) => {
+    setImageUrl(url)
+    setShowImagePicker(false)
   }
 
   const plainText = message.replace(/<[^>]*>/g, '').trim()
@@ -214,10 +274,83 @@ function EditForm({ initialTitle, initialMessage, logId, onSave, onCancel, onDel
           suppressContentEditableWarning
         />
       </div>
+      <div className="form-row">
+        <div className="input-group">
+          <label>Bild (valfritt)</label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            style={{ display: 'none' }}
+          />
+          <div className="image-upload-area">
+            {imageUrl ? (
+              <div className="image-preview">
+                <img src={imageUrl} alt="Preview" />
+                <button
+                  type="button"
+                  className="image-remove"
+                  onClick={() => {
+                    setImageUrl(null)
+                    if (fileInputRef.current) fileInputRef.current.value = ''
+                  }}
+                >
+                  &times;
+                </button>
+              </div>
+            ) : (
+              <div className="image-upload-options">
+                <button
+                  type="button"
+                  className="image-upload-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? 'Laddar upp...' : '+ Ladda upp ny bild'}
+                </button>
+                <button
+                  type="button"
+                  className="image-select-btn"
+                  onClick={() => {
+                    setShowImagePicker(!showImagePicker)
+                    if (!showImagePicker) {
+                      loadAvailableImages()
+                    }
+                  }}
+                >
+                  {showImagePicker ? 'Dölj' : 'Välj'} från tidigare bilder
+                </button>
+              </div>
+            )}
+            {showImagePicker && !imageUrl && (
+              <div className="image-picker">
+                {loadingImages ? (
+                  <div className="image-picker-loading">Laddar bilder...</div>
+                ) : availableImages.length === 0 ? (
+                  <div className="image-picker-empty">Inga bilder tillgängliga</div>
+                ) : (
+                  <div className="image-picker-grid">
+                    {availableImages.map((img) => (
+                      <div
+                        key={img.filename}
+                        className="image-picker-item"
+                        onClick={() => handleSelectImage(img.url)}
+                      >
+                        <img src={img.url} alt={img.filename} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
       <div className="edit-actions">
         <button 
           className="edit-save" 
-          onClick={() => onSave(title, message)}
+          onClick={() => onSave(title, message, imageUrl)}
           disabled={!plainText}
         >
           Spara
@@ -474,9 +607,10 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
               <EditForm
                 initialTitle={log.title}
                 initialMessage={log.message}
+                initialImageUrl={log.imageUrl}
                 logId={log.id}
-                onSave={(title, message) => {
-                  onEditLog(log.id, title, message)
+                onSave={(title, message, imageUrl) => {
+                  onEditLog(log.id, title, message, imageUrl)
                   setEditingId(null)
                 }}
                 onCancel={() => setEditingId(null)}
@@ -492,11 +626,15 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                 )}
                 <div className="log-message" dangerouslySetInnerHTML={{ __html: log.message }} />
                 {log.imageUrl && (
-                  <div className="log-image">
+                  <div className="log-image" onClick={() => setFullscreenImage(log.imageUrl!)}>
                     <img src={log.imageUrl} alt="Inläggsbild" />
                   </div>
                 )}
               </div>
+            )}
+            
+            {fullscreenImage && (
+              <ImageModal imageUrl={fullscreenImage} onClose={() => setFullscreenImage(null)} />
             )}
             
             {/* Reactions */}
