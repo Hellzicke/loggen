@@ -2,6 +2,12 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.3.1] - 2025-11-29
+
+### Tillagt
+- Reaktions-emojis på inlägg (👍 ❤️ 😊 🎉 👀 🙏)
+- Visar antal reaktioner och vilka som reagerat
+
 ## [0.2.5] - 2025-11-29
 
 ### Ändrat

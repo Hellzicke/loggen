@@ -50,7 +50,7 @@ app.get('/api/version', (_req, res) => {
   res.json({ version })
 })
 
-// Get all log messages with signatures and comments
+// Get all log messages with signatures, comments and reactions
 app.get('/api/logs', async (_req, res) => {
   try {
     const logs = await prisma.logMessage.findMany({
@@ -67,6 +67,9 @@ app.get('/api/logs', async (_req, res) => {
               orderBy: { createdAt: 'asc' }
             }
           }
+        },
+        reactions: {
+          orderBy: { createdAt: 'asc' }
         }
       }
     })
@@ -216,6 +219,44 @@ app.post('/api/logs/:id/comments', async (req, res) => {
   } catch (error) {
     console.error('Error creating comment:', error)
     res.status(500).json({ error: 'Failed to create comment' })
+  }
+})
+
+// Toggle reaction on a log
+app.post('/api/logs/:id/reactions', async (req, res) => {
+  const logId = parseInt(req.params.id)
+  const { emoji, name } = req.body
+
+  if (!emoji || !name) {
+    return res.status(400).json({ error: 'Emoji and name are required' })
+  }
+
+  try {
+    // Check if reaction already exists
+    const existing = await prisma.reaction.findUnique({
+      where: {
+        logId_name_emoji: { logId, name: name.trim(), emoji }
+      }
+    })
+
+    if (existing) {
+      // Remove reaction
+      await prisma.reaction.delete({ where: { id: existing.id } })
+      res.json({ action: 'removed', emoji, name: name.trim() })
+    } else {
+      // Add reaction
+      const reaction = await prisma.reaction.create({
+        data: {
+          emoji,
+          name: name.trim(),
+          logId
+        }
+      })
+      res.status(201).json({ action: 'added', ...reaction })
+    }
+  } catch (error) {
+    console.error('Error toggling reaction:', error)
+    res.status(500).json({ error: 'Failed to toggle reaction' })
   }
 })
 

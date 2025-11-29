@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import type { LogMessage, ReadSignature, Comment } from '../App'
+import type { LogMessage, ReadSignature, Comment, Reaction } from '../App'
 
 interface LogListProps {
   logs: LogMessage[]
@@ -9,6 +9,27 @@ interface LogListProps {
   onComment: (logId: number, comment: Comment, parentId?: number) => void
   onEditLog: (logId: number, title: string, message: string) => void
   onDeleteComment: (logId: number, commentId: number, parentId?: number) => void
+  onReaction: (logId: number, emoji: string, name: string) => void
+}
+
+const EMOJI_OPTIONS = ['👍', '❤️', '😊', '🎉', '👀', '🙏']
+
+interface ReactionGroup {
+  emoji: string
+  count: number
+  names: string[]
+}
+
+function groupReactions(reactions: Reaction[]): ReactionGroup[] {
+  const groups: Record<string, ReactionGroup> = {}
+  for (const r of reactions) {
+    if (!groups[r.emoji]) {
+      groups[r.emoji] = { emoji: r.emoji, count: 0, names: [] }
+    }
+    groups[r.emoji].count++
+    groups[r.emoji].names.push(r.name)
+  }
+  return Object.values(groups)
 }
 
 function formatDate(dateString: string): string {
@@ -351,11 +372,13 @@ function CommentItem({ comment, logId, onComment, onDelete, parentId }: CommentI
   )
 }
 
-export default function LogList({ logs, loading, onSign, onPin, onComment, onEditLog, onDeleteComment }: LogListProps) {
+export default function LogList({ logs, loading, onSign, onPin, onComment, onEditLog, onDeleteComment, onReaction }: LogListProps) {
   const [signingId, setSigningId] = useState<number | null>(null)
   const [commentingId, setCommentingId] = useState<number | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set())
+  const [showReactionPicker, setShowReactionPicker] = useState<number | null>(null)
+  const [reactionName, setReactionName] = useState('')
 
   const toggleComments = (logId: number) => {
     setExpandedComments(prev => {
@@ -443,10 +466,61 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
               </div>
             )}
             
+            {/* Reactions */}
+            {log.reactions && log.reactions.length > 0 && (
+              <div className="reactions-display">
+                {groupReactions(log.reactions).map(group => (
+                  <span 
+                    key={group.emoji} 
+                    className="reaction-badge"
+                    title={group.names.join(', ')}
+                  >
+                    {group.emoji} {group.count}
+                  </span>
+                ))}
+              </div>
+            )}
+
             {/* Divider and comments section */}
             <div className="log-divider"></div>
             
             <div className="log-interactions">
+              <div className="reaction-trigger">
+                <button 
+                  className="interaction-btn"
+                  onClick={() => setShowReactionPicker(showReactionPicker === log.id ? null : log.id)}
+                >
+                  Reagera
+                </button>
+                {showReactionPicker === log.id && (
+                  <div className="reaction-picker">
+                    <div className="reaction-emojis">
+                      {EMOJI_OPTIONS.map(emoji => (
+                        <button
+                          key={emoji}
+                          className="emoji-btn"
+                          onClick={() => {
+                            if (reactionName.trim()) {
+                              onReaction(log.id, emoji, reactionName.trim())
+                              setShowReactionPicker(null)
+                            }
+                          }}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="text"
+                      className="reaction-name-input"
+                      placeholder="Ditt namn"
+                      value={reactionName}
+                      onChange={e => setReactionName(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                )}
+              </div>
               <button 
                 className="interaction-btn"
                 onClick={() => setCommentingId(commentingId === log.id ? null : log.id)}
