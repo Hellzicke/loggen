@@ -17,6 +17,7 @@ export default function App() {
   const [version, setVersion] = useState('')
   const [loading, setLoading] = useState(true)
   const [showChangelog, setShowChangelog] = useState(false)
+  const [showForm, setShowForm] = useState(false)
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -47,6 +48,7 @@ export default function App() {
 
   const handleNewLog = (log: LogMessage) => {
     setLogs(prev => [log, ...prev])
+    setShowForm(false)
   }
 
   return (
@@ -56,13 +58,17 @@ export default function App() {
         onVersionClick={() => setShowChangelog(true)} 
       />
       <main className="main">
-        <LogForm onSuccess={handleNewLog} />
+        <button className="create-btn" onClick={() => setShowForm(true)}>
+          Skapa inlägg
+        </button>
         <LogList logs={logs} loading={loading} />
       </main>
+      {showForm && (
+        <LogForm onSuccess={handleNewLog} onClose={() => setShowForm(false)} />
+      )}
       {showChangelog && (
         <ChangelogModal onClose={() => setShowChangelog(false)} />
       )}
     </>
   )
 }
-

@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useEffect } from 'react'
 
 interface LogMessage {
   id: number
@@ -10,12 +10,21 @@ interface LogMessage {
 
 interface LogFormProps {
   onSuccess: (log: LogMessage) => void
+  onClose: () => void
 }
 
-export default function LogForm({ onSuccess }: LogFormProps) {
+export default function LogForm({ onSuccess, onClose }: LogFormProps) {
   const [author, setAuthor] = useState('')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [onClose])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -34,7 +43,6 @@ export default function LogForm({ onSuccess }: LogFormProps) {
       if (res.ok) {
         const log = await res.json()
         onSuccess(log)
-        setMessage('')
       }
     } catch (error) {
       console.error('Failed to create log:', error)
@@ -44,38 +52,46 @@ export default function LogForm({ onSuccess }: LogFormProps) {
   }
 
   return (
-    <form className="log-form" onSubmit={handleSubmit}>
-      <div className="form-row">
-        <div className="input-group">
-          <label htmlFor="author">Namn</label>
-          <input
-            id="author"
-            type="text"
-            value={author}
-            onChange={e => setAuthor(e.target.value)}
-            placeholder="Ditt namn"
-            required
-          />
+    <div className="form-overlay" onClick={onClose}>
+      <form className="log-form" onSubmit={handleSubmit} onClick={e => e.stopPropagation()}>
+        <div className="form-header">
+          <h2>Nytt inlägg</h2>
+          <button type="button" className="form-close" onClick={onClose}>
+            &times;
+          </button>
         </div>
-      </div>
-      <div className="form-row">
-        <div className="input-group">
-          <label htmlFor="message">Meddelande</label>
-          <textarea
-            id="message"
-            value={message}
-            onChange={e => setMessage(e.target.value)}
-            placeholder="Skriv ditt meddelande..."
-            required
-          />
+        <div className="form-row">
+          <div className="input-group">
+            <label htmlFor="author">Namn</label>
+            <input
+              id="author"
+              type="text"
+              value={author}
+              onChange={e => setAuthor(e.target.value)}
+              placeholder="Ditt namn"
+              autoFocus
+              required
+            />
+          </div>
         </div>
-      </div>
-      <div className="form-row">
-        <button type="submit" className="submit-btn" disabled={submitting}>
-          {submitting ? 'Skickar...' : 'Skicka'}
-        </button>
-      </div>
-    </form>
+        <div className="form-row">
+          <div className="input-group">
+            <label htmlFor="message">Meddelande</label>
+            <textarea
+              id="message"
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              placeholder="Skriv ditt meddelande..."
+              required
+            />
+          </div>
+        </div>
+        <div className="form-row">
+          <button type="submit" className="submit-btn" disabled={submitting}>
+            {submitting ? 'Skickar...' : 'Publicera'}
+          </button>
+        </div>
+      </form>
+    </div>
   )
 }
-
