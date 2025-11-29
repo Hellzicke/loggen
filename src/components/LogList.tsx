@@ -639,25 +639,7 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
             )}
             
             {/* Reactions */}
-            {log.reactions && log.reactions.length > 0 && (
-              <div className="reactions-display">
-                {groupReactions(log.reactions).map(group => (
-                  <button 
-                    key={group.emoji} 
-                    className={`reaction-badge ${reactionCooldown.has(log.id) ? 'reaction-badge--disabled' : ''}`}
-                    onClick={() => handleReactionWithCooldown(log.id, group.emoji)}
-                    disabled={reactionCooldown.has(log.id)}
-                  >
-                    {group.emoji} {group.count}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Divider and comments section */}
-            <div className="log-divider"></div>
-            
-            <div className="log-interactions">
+            <div className="reactions-section">
               <div className="reaction-trigger">
                 <button 
                   className="interaction-btn"
@@ -685,6 +667,26 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                   </div>
                 )}
               </div>
+              {log.reactions && log.reactions.length > 0 && (
+                <div className="reactions-display">
+                  {groupReactions(log.reactions).map(group => (
+                    <button 
+                      key={group.emoji} 
+                      className={`reaction-badge ${reactionCooldown.has(log.id) ? 'reaction-badge--disabled' : ''}`}
+                      onClick={() => handleReactionWithCooldown(log.id, group.emoji)}
+                      disabled={reactionCooldown.has(log.id)}
+                    >
+                      {group.emoji} {group.count}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Divider and comments section */}
+            <div className="log-divider"></div>
+            
+            <div className="log-interactions">
               <button 
                 className="interaction-btn"
                 onClick={() => setCommentingId(commentingId === log.id ? null : log.id)}

@@ -1309,11 +1309,18 @@ body {
 }
 
 /* Reactions */
+.reactions-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
 .reactions-display {
   display: flex;
   flex-wrap: wrap;
   gap: 0.375rem;
-  margin-top: 0.75rem;
 }
 
 .reaction-badge {
@@ -1350,6 +1357,7 @@ body {
 
 .reaction-trigger {
   position: relative;
+  flex-shrink: 0;
 }
 
 .reaction-picker {
