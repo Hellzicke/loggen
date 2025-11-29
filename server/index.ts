@@ -219,17 +219,15 @@ app.post('/api/logs/:id/comments', async (req, res) => {
   }
 })
 
-// Soft delete a comment
+// Delete a comment (and its replies via cascade)
 app.delete('/api/comments/:id', async (req, res) => {
   const commentId = parseInt(req.params.id)
 
   try {
-    const updated = await prisma.comment.update({
-      where: { id: commentId },
-      data: { deleted: true },
-      include: { replies: true }
+    await prisma.comment.delete({
+      where: { id: commentId }
     })
-    res.json(updated)
+    res.json({ success: true, id: commentId })
   } catch (error) {
     console.error('Error deleting comment:', error)
     res.status(500).json({ error: 'Failed to delete comment' })

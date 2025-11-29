@@ -1,6 +1,5 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { LogMessage, ReadSignature, Comment } from '../App'
-import { formatText } from '../utils/formatText'
 
 interface LogListProps {
   logs: LogMessage[]
@@ -146,6 +145,29 @@ interface EditFormProps {
 function EditForm({ initialTitle, initialMessage, onSave, onCancel }: EditFormProps) {
   const [title, setTitle] = useState(initialTitle)
   const [message, setMessage] = useState(initialMessage)
+  const editorRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = initialMessage
+    }
+  }, [initialMessage])
+
+  const execFormat = (command: string) => {
+    document.execCommand(command, false)
+    editorRef.current?.focus()
+    if (editorRef.current) {
+      setMessage(editorRef.current.innerHTML)
+    }
+  }
+
+  const handleInput = () => {
+    if (editorRef.current) {
+      setMessage(editorRef.current.innerHTML)
+    }
+  }
+
+  const plainText = message.replace(/<[^>]*>/g, '').trim()
 
   return (
     <div className="edit-form">
@@ -156,17 +178,25 @@ function EditForm({ initialTitle, initialMessage, onSave, onCancel }: EditFormPr
         className="edit-input"
         placeholder="Rubrik"
       />
-      <textarea
-        value={message}
-        onChange={e => setMessage(e.target.value)}
-        className="edit-textarea"
-        rows={3}
-      />
+      <div className="edit-editor-container">
+        <div className="format-toolbar format-toolbar--small">
+          <button type="button" className="format-btn format-btn--bold" onClick={() => execFormat('bold')}>B</button>
+          <button type="button" className="format-btn format-btn--italic" onClick={() => execFormat('italic')}>I</button>
+          <button type="button" className="format-btn format-btn--underline" onClick={() => execFormat('underline')}>U</button>
+        </div>
+        <div
+          ref={editorRef}
+          className="edit-editor"
+          contentEditable
+          onInput={handleInput}
+          suppressContentEditableWarning
+        />
+      </div>
       <div className="edit-actions">
         <button 
           className="edit-save" 
           onClick={() => onSave(title, message)}
-          disabled={!message.trim()}
+          disabled={!plainText}
         >
           Spara
         </button>
@@ -262,30 +292,6 @@ interface CommentItemProps {
 function CommentItem({ comment, logId, onComment, onDelete, parentId }: CommentItemProps) {
   const [showReplyForm, setShowReplyForm] = useState(false)
 
-  if (comment.deleted) {
-    return (
-      <div className="comment-item comment-item--deleted">
-        <p className="comment-deleted-text">
-          {parentId ? 'Svar borttaget' : 'Fråga borttagen'}
-        </p>
-        {comment.replies && comment.replies.length > 0 && (
-          <div className="comment-replies">
-            {comment.replies.map(reply => (
-              <CommentItem 
-                key={reply.id} 
-                comment={reply}
-                logId={logId}
-                onComment={onComment}
-                onDelete={onDelete}
-                parentId={comment.id}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    )
-  }
-
   return (
     <div className="comment-item">
       <div className="comment-header">
@@ -307,7 +313,7 @@ function CommentItem({ comment, logId, onComment, onDelete, parentId }: CommentI
           &times;
         </button>
       </div>
-      <p className="comment-message">{formatText(comment.message)}</p>
+      <div className="comment-message" dangerouslySetInnerHTML={{ __html: comment.message }} />
       
       <div className="comment-footer">
         {!showReplyForm && (
@@ -395,7 +401,17 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                 <span className="log-date">{formatDate(log.createdAt)}</span>
               </div>
               <button 
-                className={`pin-btn ${log.pinned ? 'pin-btn--active' : ''}`}
+                className="header-btn"
+                onClick={() => setEditingId(editingId === log.id ? null : log.id)}
+                title="Redigera"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              </button>
+              <button 
+                className={`header-btn ${log.pinned ? 'header-btn--active' : ''}`}
                 onClick={() => onPin(log.id)}
                 title={log.pinned ? 'Ta bort nål' : 'Nåla inlägg'}
               >
@@ -421,31 +437,9 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                   <div className="log-title-row">
                     <h3 className="log-title">{log.title}</h3>
                     {log.pinned && <span className="pinned-badge">Nålad</span>}
-                    <button 
-                      className="edit-btn"
-                      onClick={() => setEditingId(log.id)}
-                      title="Redigera"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-                      </svg>
-                    </button>
                   </div>
                 )}
-                {!log.title && (
-                  <button 
-                    className="edit-btn edit-btn--float"
-                    onClick={() => setEditingId(log.id)}
-                    title="Redigera"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-                    </svg>
-                  </button>
-                )}
-                <p className="log-message">{formatText(log.message)}</p>
+                <div className="log-message" dangerouslySetInnerHTML={{ __html: log.message }} />
               </div>
             )}
             

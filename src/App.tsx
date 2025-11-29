@@ -134,22 +134,23 @@ export default function App() {
     try {
       const res = await fetch(`/api/comments/${commentId}`, { method: 'DELETE' })
       if (res.ok) {
-        const updated = await res.json()
         setLogs(prev => prev.map(log => {
           if (log.id !== logId) return log
           if (parentId) {
+            // Remove reply from parent comment
             return {
               ...log,
               comments: log.comments.map(c => 
                 c.id === parentId 
-                  ? { ...c, replies: c.replies.map(r => r.id === commentId ? updated : r) }
+                  ? { ...c, replies: c.replies.filter(r => r.id !== commentId) }
                   : c
               )
             }
           } else {
+            // Remove entire comment (including its replies)
             return {
               ...log,
-              comments: log.comments.map(c => c.id === commentId ? { ...updated, replies: c.replies } : c)
+              comments: log.comments.filter(c => c.id !== commentId)
             }
           }
         }))

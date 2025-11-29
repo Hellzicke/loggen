@@ -2,10 +2,17 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.2.5] - 2025-11-29
+
+### Ändrat
+- Redigeringsknapp flyttad till headern (vänster om nåla)
+- WYSIWYG-editor — formateringen visas direkt i texten
+- Frågor raderas nu helt (inklusive svar) istället för att markeras som borttagna
+
 ## [0.2.4] - 2025-11-29
 
 ### Tillagt
-- Textformatering — fet (**text**), kursiv (*text*), understruken (__text__)
+- Textformatering — fet, kursiv, understruken
 - Formateringsverktyg med knappar B, I, U
 - Tangentbordsgenvägar Ctrl+B, Ctrl+I, Ctrl+U
 

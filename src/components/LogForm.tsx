@@ -1,5 +1,6 @@
-import { useState, FormEvent, useEffect, useRef } from 'react'
+import { useState, FormEvent, useEffect } from 'react'
 import type { LogMessage } from '../App'
+import RichTextEditor from './RichTextEditor'
 
 interface LogFormProps {
   onSuccess: (log: LogMessage) => void
@@ -11,7 +12,6 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
   const [title, setTitle] = useState('')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -21,32 +21,12 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
     return () => document.removeEventListener('keydown', handleEscape)
   }, [onClose])
 
-  const insertFormat = (before: string, after: string) => {
-    const textarea = textareaRef.current
-    if (!textarea) return
-
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const selectedText = message.substring(start, end)
-    
-    const newText = message.substring(0, start) + before + selectedText + after + message.substring(end)
-    setMessage(newText)
-    
-    // Set cursor position after formatting
-    setTimeout(() => {
-      textarea.focus()
-      if (selectedText) {
-        textarea.setSelectionRange(start + before.length, end + before.length)
-      } else {
-        textarea.setSelectionRange(start + before.length, start + before.length)
-      }
-    }, 0)
-  }
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     
-    if (!author.trim() || !message.trim()) return
+    // Strip HTML tags to check if there's actual content
+    const plainText = message.replace(/<[^>]*>/g, '').trim()
+    if (!author.trim() || !plainText) return
 
     setSubmitting(true)
     
@@ -110,55 +90,11 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
           </div>
           <div className="form-row">
             <div className="input-group">
-              <label htmlFor="message">Meddelande</label>
-              <div className="format-toolbar">
-                <button 
-                  type="button" 
-                  className="format-btn format-btn--bold"
-                  onClick={() => insertFormat('**', '**')}
-                  title="Fet (Ctrl+B)"
-                >
-                  B
-                </button>
-                <button 
-                  type="button" 
-                  className="format-btn format-btn--italic"
-                  onClick={() => insertFormat('*', '*')}
-                  title="Kursiv (Ctrl+I)"
-                >
-                  I
-                </button>
-                <button 
-                  type="button" 
-                  className="format-btn format-btn--underline"
-                  onClick={() => insertFormat('__', '__')}
-                  title="Understruken (Ctrl+U)"
-                >
-                  U
-                </button>
-              </div>
-              <textarea
-                ref={textareaRef}
-                id="message"
-                className="has-toolbar"
+              <label>Meddelande</label>
+              <RichTextEditor
                 value={message}
-                onChange={e => setMessage(e.target.value)}
-                placeholder="Vad vill du dela? Använd **fet**, *kursiv* eller __understruken__"
-                required
-                onKeyDown={e => {
-                  if (e.ctrlKey || e.metaKey) {
-                    if (e.key === 'b') {
-                      e.preventDefault()
-                      insertFormat('**', '**')
-                    } else if (e.key === 'i') {
-                      e.preventDefault()
-                      insertFormat('*', '*')
-                    } else if (e.key === 'u') {
-                      e.preventDefault()
-                      insertFormat('__', '__')
-                    }
-                  }
-                }}
+                onChange={setMessage}
+                placeholder="Vad vill du dela?"
               />
             </div>
           </div>
