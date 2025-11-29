@@ -391,6 +391,37 @@ app.post('/api/logs/:id/reactions', async (req, res) => {
   }
 })
 
+// Clear test data
+app.post('/api/clear-test-data', async (_req, res) => {
+  try {
+    const testTitles = [
+      'Ny rutin för morgonmöten',
+      'Uppdatering av systemet',
+      'Viktig information',
+      'Semesterplanering',
+      'Städdag på kontoret',
+      'Ny kollega börjar',
+      'Feedback från kunder',
+      'Projektuppdatering',
+      'Fikapaus kl 15',
+      'Kontorsflytt nästa vecka'
+    ]
+
+    const result = await prisma.logMessage.deleteMany({
+      where: {
+        title: {
+          in: testTitles
+        }
+      }
+    })
+
+    res.json({ success: true, deleted: result.count })
+  } catch (error) {
+    console.error('Error clearing test data:', error)
+    res.status(500).json({ error: 'Failed to clear test data' })
+  }
+})
+
 // Seed test data (for development)
 app.post('/api/seed-test-data', async (_req, res) => {
   const authors = ['Anna', 'Erik', 'Maria', 'Johan', 'Lisa', 'Oscar', 'Emma', 'Karl']
