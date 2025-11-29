@@ -4,6 +4,8 @@ import { fileURLToPath } from 'url'
 import { dirname, join, resolve } from 'path'
 import { readFileSync, existsSync, mkdirSync } from 'fs'
 import multer from 'multer'
+import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -11,6 +13,7 @@ const __dirname = dirname(__filename)
 const app = express()
 const prisma = new PrismaClient()
 const PORT = process.env.PORT || 3001
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
 
 const ARCHIVE_DAYS = 30
 const MS_PER_DAY = 24 * 60 * 60 * 1000
@@ -53,6 +56,33 @@ const upload = multer({
 
 app.use(express.json())
 app.use('/uploads', express.static(uploadsDir))
+
+// Auth middleware
+const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const authHeader = req.headers['authorization']
+  const token = authHeader && authHeader.split(' ')[1]
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access denied' })
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: number, username: string }
+    req.user = decoded
+    next()
+  } catch (error) {
+    res.status(403).json({ error: 'Invalid token' })
+  }
+}
+
+// Extend Express Request type
+declare global {
+  namespace Express {
+    interface Request {
+      user?: { id: number, username: string }
+    }
+  }
+}
 
 // Serve static files
 if (existsSync(distDir)) {
@@ -102,6 +132,145 @@ async function autoArchiveOldPosts() {
     }
   })
 }
+
+// Admin login
+app.post('/api/admin/login', async (req, res) => {
+  const { username, password } = req.body
+
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password required' })
+  }
+
+  try {
+    const admin = await prisma.admin.findUnique({ where: { username } })
+    if (!admin) {
+      return res.status(401).json({ error: 'Invalid credentials' })
+    }
+
+    const valid = await bcrypt.compare(password, admin.password)
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid credentials' })
+    }
+
+    const token = jwt.sign({ id: admin.id, username: admin.username }, JWT_SECRET, { expiresIn: '24h' })
+    res.json({ token, username: admin.username })
+  } catch (error) {
+    console.error('Login error:', error)
+    res.status(500).json({ error: 'Login failed' })
+  }
+})
+
+// Get database overview
+app.get('/api/admin/overview', authenticateToken, async (_req, res) => {
+  try {
+    const [logs, comments, signatures, reactions, images] = await Promise.all([
+      prisma.logMessage.count(),
+      prisma.comment.count(),
+      prisma.readSignature.count(),
+      prisma.reaction.count(),
+      prisma.logMessage.count({ where: { imageUrl: { not: null } } })
+    ])
+
+    const logsByStatus = await Promise.all([
+      prisma.logMessage.count({ where: { pinned: true } }),
+      prisma.logMessage.count({ where: { archived: true } }),
+      prisma.logMessage.count({ where: { archived: false } })
+    ])
+
+    res.json({
+      logs: {
+        total: logs,
+        pinned: logsByStatus[0],
+        archived: logsByStatus[1],
+        active: logsByStatus[2]
+      },
+      comments,
+      signatures,
+      reactions,
+      images
+    })
+  } catch (error) {
+    console.error('Error fetching overview:', error)
+    res.status(500).json({ error: 'Failed to fetch overview' })
+  }
+})
+
+// Get all logs for admin
+app.get('/api/admin/logs', authenticateToken, async (req, res) => {
+  try {
+    const logs = await prisma.logMessage.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        signatures: { select: { id: true, name: true, createdAt: true } },
+        comments: { select: { id: true, message: true, author: true, createdAt: true } },
+        reactions: { select: { id: true, emoji: true, createdAt: true } }
+      }
+    })
+    res.json(logs)
+  } catch (error) {
+    console.error('Error fetching logs:', error)
+    res.status(500).json({ error: 'Failed to fetch logs' })
+  }
+})
+
+// Delete log (admin only)
+app.delete('/api/admin/logs/:id', authenticateToken, async (req, res) => {
+  const logId = parseInt(req.params.id)
+  try {
+    await prisma.logMessage.delete({ where: { id: logId } })
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting log:', error)
+    res.status(500).json({ error: 'Failed to delete log' })
+  }
+})
+
+// Get all images for admin
+app.get('/api/admin/images', authenticateToken, async (_req, res) => {
+  try {
+    const { readdirSync, statSync } = await import('fs')
+    const files = readdirSync(uploadsDir)
+      .filter(file => {
+        const filePath = join(uploadsDir, file)
+        return statSync(filePath).isFile() && /\.(jpg|jpeg|png|gif|webp)$/i.test(file)
+      })
+      .map(file => {
+        const filePath = join(uploadsDir, file)
+        const stats = statSync(filePath)
+        return {
+          filename: file,
+          url: `/uploads/${file}`,
+          size: stats.size,
+          uploadedAt: stats.mtime
+        }
+      })
+      .sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime())
+    
+    res.json(files)
+  } catch (error) {
+    console.error('Error fetching images:', error)
+    res.status(500).json({ error: 'Failed to fetch images' })
+  }
+})
+
+// Delete image (admin only)
+app.delete('/api/admin/images/:filename', authenticateToken, async (req, res) => {
+  const { unlinkSync } = await import('fs')
+  const filename = req.params.filename
+  const filePath = join(uploadsDir, filename)
+  
+  try {
+    if (existsSync(filePath)) {
+      unlinkSync(filePath)
+      res.json({ success: true })
+    } else {
+      res.status(404).json({ error: 'File not found' })
+    }
+  } catch (error) {
+    console.error('Error deleting image:', error)
+    res.status(500).json({ error: 'Failed to delete image' })
+  }
+})
 
 // Get changelog
 app.get('/api/changelog', (_req, res) => {
