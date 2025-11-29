@@ -2,13 +2,19 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.4.3] - 2025-11-29
+
+### Ändrat
+- Borttagen manuell arkiv-knapp på inlägg (arkivering sker automatiskt eller via avnålning)
+- Arkivsidan sorteras och filtreras per månad med antal inlägg
+- Fixad tooltip för "och X till" i läst av-listan
+
 ## [0.4.1] - 2025-11-29
 
 ### Tillagt
 - Automatisk arkivering efter 30 dagar (pinnade undantagna)
 - Arkiv-sektion i headern för att se arkiverade inlägg
 - Återställ arkiverade inlägg
-- Manuell arkivering via arkiv-knapp
 - Popup vid avnålning av gammalt inlägg — välj arkivera eller behåll 30 dagar till
 
 ## [0.3.2] - 2025-11-29
