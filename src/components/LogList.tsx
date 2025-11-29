@@ -7,7 +7,7 @@ interface LogListProps {
   onSign: (logId: number, signature: ReadSignature) => void
   onPin: (logId: number) => void
   onComment: (logId: number, comment: Comment, parentId?: number) => void
-  onEditLog: (logId: number, message: string) => void
+  onEditLog: (logId: number, title: string, message: string) => void
   onDeleteComment: (logId: number, commentId: number, parentId?: number) => void
 }
 
@@ -110,55 +110,61 @@ function SignForm({ logId, onSign, onCancel }: SignFormProps) {
   }
 
   return (
-    <div className="sign-form">
+    <div className="sign-form-inline">
       <input
         type="text"
         value={name}
         onChange={e => setName(e.target.value)}
         placeholder="Ditt namn"
-        className="sign-input"
+        className="sign-input-inline"
         autoFocus
         onKeyDown={e => e.key === 'Enter' && handleSubmit()}
       />
-      <div className="sign-actions">
-        <button 
-          className="sign-submit" 
-          onClick={handleSubmit}
-          disabled={submitting || !name.trim()}
-        >
-          {submitting ? '...' : 'Signera'}
-        </button>
-        <button className="sign-cancel" onClick={onCancel}>
-          Avbryt
-        </button>
-      </div>
-      {error && <div className="sign-error">{error}</div>}
+      <button 
+        className="sign-submit-inline" 
+        onClick={handleSubmit}
+        disabled={submitting || !name.trim()}
+      >
+        {submitting ? '...' : 'OK'}
+      </button>
+      <button className="sign-cancel-inline" onClick={onCancel}>
+        &times;
+      </button>
+      {error && <div className="sign-error-inline">{error}</div>}
     </div>
   )
 }
 
 interface EditFormProps {
+  initialTitle: string
   initialMessage: string
-  onSave: (message: string) => void
+  onSave: (title: string, message: string) => void
   onCancel: () => void
 }
 
-function EditForm({ initialMessage, onSave, onCancel }: EditFormProps) {
+function EditForm({ initialTitle, initialMessage, onSave, onCancel }: EditFormProps) {
+  const [title, setTitle] = useState(initialTitle)
   const [message, setMessage] = useState(initialMessage)
 
   return (
     <div className="edit-form">
+      <input
+        type="text"
+        value={title}
+        onChange={e => setTitle(e.target.value)}
+        className="edit-input"
+        placeholder="Rubrik"
+      />
       <textarea
         value={message}
         onChange={e => setMessage(e.target.value)}
         className="edit-textarea"
         rows={3}
-        autoFocus
       />
       <div className="edit-actions">
         <button 
           className="edit-save" 
-          onClick={() => onSave(message)}
+          onClick={() => onSave(title, message)}
           disabled={!message.trim()}
         >
           Spara
@@ -384,22 +390,9 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                 {getInitials(log.author)}
               </div>
               <div className="log-info">
-                <span className="log-author">
-                  {log.author}
-                  {log.pinned && <span className="pinned-badge">Nålad</span>}
-                </span>
+                <span className="log-author">{log.author}</span>
                 <span className="log-date">{formatDate(log.createdAt)}</span>
               </div>
-              <button 
-                className="edit-btn"
-                onClick={() => setEditingId(editingId === log.id ? null : log.id)}
-                title="Redigera"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </svg>
-              </button>
               <button 
                 className={`pin-btn ${log.pinned ? 'pin-btn--active' : ''}`}
                 onClick={() => onPin(log.id)}
@@ -410,31 +403,87 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                 </svg>
               </button>
             </div>
-            
+
             {editingId === log.id ? (
               <EditForm
+                initialTitle={log.title}
                 initialMessage={log.message}
-                onSave={(message) => {
-                  onEditLog(log.id, message)
+                onSave={(title, message) => {
+                  onEditLog(log.id, title, message)
                   setEditingId(null)
                 }}
                 onCancel={() => setEditingId(null)}
               />
             ) : (
-              <p className="log-message">{log.message}</p>
+              <div className="log-content">
+                {log.title && (
+                  <div className="log-title-row">
+                    <h3 className="log-title">{log.title}</h3>
+                    {log.pinned && <span className="pinned-badge">Nålad</span>}
+                    <button 
+                      className="edit-btn"
+                      onClick={() => setEditingId(log.id)}
+                      title="Redigera"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+                {!log.title && (
+                  <button 
+                    className="edit-btn edit-btn--float"
+                    onClick={() => setEditingId(log.id)}
+                    title="Redigera"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                  </button>
+                )}
+                <p className="log-message">{log.message}</p>
+              </div>
             )}
             
-            {/* Comments toggle */}
-            {commentCount > 0 && (
+            {/* Divider and comments section */}
+            <div className="log-divider"></div>
+            
+            <div className="log-interactions">
               <button 
-                className="comments-toggle"
-                onClick={() => toggleComments(log.id)}
+                className="interaction-btn"
+                onClick={() => setCommentingId(commentingId === log.id ? null : log.id)}
               >
-                {isExpanded ? 'Dölj' : 'Visa'} {commentCount} {commentCount === 1 ? 'kommentar' : 'kommentarer'}
+                Ställ en fråga
               </button>
+              
+              {commentCount > 0 && (
+                <button 
+                  className="interaction-btn"
+                  onClick={() => toggleComments(log.id)}
+                >
+                  {isExpanded ? 'Dölj' : 'Visa'} {commentCount} {commentCount === 1 ? 'kommentar' : 'kommentarer'}
+                </button>
+              )}
+            </div>
+
+            {commentingId === log.id && (
+              <div className="add-comment">
+                <CommentForm
+                  logId={log.id}
+                  onComment={(logId, comment, parentId) => {
+                    onComment(logId, comment, parentId)
+                    setExpandedComments(prev => new Set(prev).add(logId))
+                    setCommentingId(null)
+                  }}
+                  onCancel={() => setCommentingId(null)}
+                  placeholder="Ställ en fråga..."
+                />
+              </div>
             )}
 
-            {/* Comments section */}
             {isExpanded && log.comments && log.comments.length > 0 && (
               <div className="comments-section">
                 {log.comments.map(comment => (
@@ -448,54 +497,38 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                 ))}
               </div>
             )}
-
-            {commentingId === log.id ? (
-              <div className="add-comment">
-                <CommentForm
-                  logId={log.id}
-                  onComment={(logId, comment, parentId) => {
-                    onComment(logId, comment, parentId)
-                    setExpandedComments(prev => new Set(prev).add(logId))
-                  }}
-                  onCancel={() => setCommentingId(null)}
-                  placeholder="Ställ en fråga..."
-                />
-              </div>
-            ) : (
-              <button 
-                className="comment-btn"
-                onClick={() => setCommentingId(log.id)}
-              >
-                Ställ en fråga
-              </button>
-            )}
             
-            <div className="log-signatures">
-              {log.signatures.length > 0 && (
-                <div className="signatures-list">
-                  <span className="signatures-label">Läst av:</span>
-                  {log.signatures.map((sig, i) => (
-                    <span key={sig.id} className="signature-name">
-                      {sig.name}{i < log.signatures.length - 1 ? ', ' : ''}
-                    </span>
-                  ))}
-                </div>
-              )}
+            {/* Footer with signatures */}
+            <div className="log-footer">
+              <div className="signatures-left">
+                {log.signatures.length > 0 && (
+                  <div className="signatures-list">
+                    <span className="signatures-label">Läst av:</span>
+                    {log.signatures.map((sig, i) => (
+                      <span key={sig.id} className="signature-name">
+                        {sig.name}{i < log.signatures.length - 1 ? ', ' : ''}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
               
-              {signingId === log.id ? (
-                <SignForm 
-                  logId={log.id} 
-                  onSign={onSign}
-                  onCancel={() => setSigningId(null)}
-                />
-              ) : (
-                <button 
-                  className="sign-btn"
-                  onClick={() => setSigningId(log.id)}
-                >
-                  Signera som läst
-                </button>
-              )}
+              <div className="signatures-right">
+                {signingId === log.id ? (
+                  <SignForm 
+                    logId={log.id} 
+                    onSign={onSign}
+                    onCancel={() => setSigningId(null)}
+                  />
+                ) : (
+                  <button 
+                    className="sign-btn"
+                    onClick={() => setSigningId(log.id)}
+                  >
+                    Signera som läst
+                  </button>
+                )}
+              </div>
             </div>
           </article>
         )

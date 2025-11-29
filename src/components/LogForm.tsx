@@ -1,12 +1,5 @@
 import { useState, FormEvent, useEffect } from 'react'
-
-interface LogMessage {
-  id: number
-  message: string
-  author: string
-  version: string
-  createdAt: string
-}
+import type { LogMessage } from '../App'
 
 interface LogFormProps {
   onSuccess: (log: LogMessage) => void
@@ -15,6 +8,7 @@ interface LogFormProps {
 
 export default function LogForm({ onSuccess, onClose }: LogFormProps) {
   const [author, setAuthor] = useState('')
+  const [title, setTitle] = useState('')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -37,7 +31,11 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
       const res = await fetch('/api/logs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ author: author.trim(), message: message.trim() })
+        body: JSON.stringify({ 
+          author: author.trim(), 
+          title: title.trim(),
+          message: message.trim() 
+        })
       })
 
       if (res.ok) {
@@ -72,6 +70,18 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
                 placeholder="Ditt namn"
                 autoFocus
                 required
+              />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="input-group">
+              <label htmlFor="title">Rubrik</label>
+              <input
+                id="title"
+                type="text"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                placeholder="Rubrik på inlägget"
               />
             </div>
           </div>

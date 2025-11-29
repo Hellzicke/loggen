@@ -9,6 +9,7 @@ datasource db {
 
 model LogMessage {
   id         Int             @id @default(autoincrement())
+  title      String          @default("")
   message    String
   author     String
   version    String

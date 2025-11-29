@@ -79,7 +79,7 @@ app.get('/api/logs', async (_req, res) => {
 
 // Create a new log message
 app.post('/api/logs', async (req, res) => {
-  const { message, author } = req.body
+  const { title, message, author } = req.body
 
   if (!message || !author) {
     return res.status(400).json({ error: 'Message and author are required' })
@@ -88,6 +88,7 @@ app.post('/api/logs', async (req, res) => {
   try {
     const log = await prisma.logMessage.create({
       data: {
+        title: title?.trim() || '',
         message,
         author,
         version
@@ -107,7 +108,7 @@ app.post('/api/logs', async (req, res) => {
 // Edit a log message
 app.put('/api/logs/:id', async (req, res) => {
   const logId = parseInt(req.params.id)
-  const { message } = req.body
+  const { title, message } = req.body
 
   if (!message) {
     return res.status(400).json({ error: 'Message is required' })
@@ -116,7 +117,10 @@ app.put('/api/logs/:id', async (req, res) => {
   try {
     const updated = await prisma.logMessage.update({
       where: { id: logId },
-      data: { message: message.trim() },
+      data: { 
+        title: title?.trim() || '',
+        message: message.trim() 
+      },
       include: {
         signatures: true,
         comments: {

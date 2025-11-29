@@ -24,6 +24,7 @@ export interface Comment {
 
 export interface LogMessage {
   id: number
+  title: string
   message: string
   author: string
   version: string
@@ -113,12 +114,12 @@ export default function App() {
     }))
   }
 
-  const handleEditLog = async (logId: number, message: string) => {
+  const handleEditLog = async (logId: number, title: string, message: string) => {
     try {
       const res = await fetch(`/api/logs/${logId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message })
+        body: JSON.stringify({ title, message })
       })
       if (res.ok) {
         const updated = await res.json()
