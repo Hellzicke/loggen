@@ -7,6 +7,12 @@ interface LogFormProps {
   onClose: () => void
 }
 
+interface ImageFile {
+  filename: string
+  url: string
+  uploadedAt: string
+}
+
 export default function LogForm({ onSuccess, onClose }: LogFormProps) {
   const [author, setAuthor] = useState('')
   const [title, setTitle] = useState('')
@@ -14,6 +20,9 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [showImagePicker, setShowImagePicker] = useState(false)
+  const [availableImages, setAvailableImages] = useState<ImageFile[]>([])
+  const [loadingImages, setLoadingImages] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -23,6 +32,21 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
   }, [onClose])
+
+  const loadAvailableImages = async () => {
+    setLoadingImages(true)
+    try {
+      const res = await fetch('/api/images')
+      if (res.ok) {
+        const images = await res.json()
+        setAvailableImages(images)
+      }
+    } catch (error) {
+      console.error('Failed to load images:', error)
+    } finally {
+      setLoadingImages(false)
+    }
+  }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -40,12 +64,20 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
       if (res.ok) {
         const data = await res.json()
         setImageUrl(data.url)
+        setShowImagePicker(false)
+        // Reload available images
+        loadAvailableImages()
       }
     } catch (error) {
       console.error('Failed to upload image:', error)
     } finally {
       setUploading(false)
     }
+  }
+
+  const handleSelectImage = (url: string) => {
+    setImageUrl(url)
+    setShowImagePicker(false)
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -153,14 +185,49 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
                     </button>
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    className="image-upload-btn"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                  >
-                    {uploading ? 'Laddar upp...' : '+ Lägg till bild'}
-                  </button>
+                  <div className="image-upload-options">
+                    <button
+                      type="button"
+                      className="image-upload-btn"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                    >
+                      {uploading ? 'Laddar upp...' : '+ Ladda upp ny bild'}
+                    </button>
+                    <button
+                      type="button"
+                      className="image-select-btn"
+                      onClick={() => {
+                        setShowImagePicker(!showImagePicker)
+                        if (!showImagePicker) {
+                          loadAvailableImages()
+                        }
+                      }}
+                    >
+                      {showImagePicker ? 'Dölj' : 'Välj'} från tidigare bilder
+                    </button>
+                  </div>
+                )}
+                {showImagePicker && !imageUrl && (
+                  <div className="image-picker">
+                    {loadingImages ? (
+                      <div className="image-picker-loading">Laddar bilder...</div>
+                    ) : availableImages.length === 0 ? (
+                      <div className="image-picker-empty">Inga bilder tillgängliga</div>
+                    ) : (
+                      <div className="image-picker-grid">
+                        {availableImages.map((img) => (
+                          <div
+                            key={img.filename}
+                            className="image-picker-item"
+                            onClick={() => handleSelectImage(img.url)}
+                          >
+                            <img src={img.url} alt={img.filename} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

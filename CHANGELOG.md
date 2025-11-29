@@ -2,6 +2,12 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.6.2] - 2025-11-29
+
+### Ändrat
+- Bilduppladdning har två alternativ: ladda upp ny eller välja från tidigare
+- Punktlista är nu indragen (mindre utskjutande)
+
 ## [0.6.1] - 2025-11-29
 
 ### Tillagt
