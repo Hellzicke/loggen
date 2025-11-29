@@ -2,6 +2,13 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.2.1] - 2025-11-29
+
+### Tillagt
+- Redigera inlägg
+- Ta bort frågor/svar (visas som "Fråga borttagen" i kursiv)
+- Fäll in/ut kommentarer — visar antal istället för hela listan
+
 ## [0.2.0] - 2025-11-29
 
 ### Tillagt

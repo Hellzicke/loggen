@@ -104,6 +104,34 @@ app.post('/api/logs', async (req, res) => {
   }
 })
 
+// Edit a log message
+app.put('/api/logs/:id', async (req, res) => {
+  const logId = parseInt(req.params.id)
+  const { message } = req.body
+
+  if (!message) {
+    return res.status(400).json({ error: 'Message is required' })
+  }
+
+  try {
+    const updated = await prisma.logMessage.update({
+      where: { id: logId },
+      data: { message: message.trim() },
+      include: {
+        signatures: true,
+        comments: {
+          where: { parentId: null },
+          include: { replies: true }
+        }
+      }
+    })
+    res.json(updated)
+  } catch (error) {
+    console.error('Error updating log:', error)
+    res.status(500).json({ error: 'Failed to update log' })
+  }
+})
+
 // Toggle pin on a log
 app.post('/api/logs/:id/pin', async (req, res) => {
   const logId = parseInt(req.params.id)
@@ -184,6 +212,23 @@ app.post('/api/logs/:id/comments', async (req, res) => {
   } catch (error) {
     console.error('Error creating comment:', error)
     res.status(500).json({ error: 'Failed to create comment' })
+  }
+})
+
+// Soft delete a comment
+app.delete('/api/comments/:id', async (req, res) => {
+  const commentId = parseInt(req.params.id)
+
+  try {
+    const updated = await prisma.comment.update({
+      where: { id: commentId },
+      data: { deleted: true },
+      include: { replies: true }
+    })
+    res.json(updated)
+  } catch (error) {
+    console.error('Error deleting comment:', error)
+    res.status(500).json({ error: 'Failed to delete comment' })
   }
 })
 

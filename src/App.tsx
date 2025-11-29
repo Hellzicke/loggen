@@ -15,6 +15,7 @@ export interface Comment {
   id: number
   message: string
   author: string
+  deleted: boolean
   logId: number
   parentId: number | null
   createdAt: string
@@ -112,6 +113,51 @@ export default function App() {
     }))
   }
 
+  const handleEditLog = async (logId: number, message: string) => {
+    try {
+      const res = await fetch(`/api/logs/${logId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setLogs(prev => prev.map(log => log.id === logId ? updated : log))
+      }
+    } catch (error) {
+      console.error('Failed to edit log:', error)
+    }
+  }
+
+  const handleDeleteComment = async (logId: number, commentId: number, parentId?: number) => {
+    try {
+      const res = await fetch(`/api/comments/${commentId}`, { method: 'DELETE' })
+      if (res.ok) {
+        const updated = await res.json()
+        setLogs(prev => prev.map(log => {
+          if (log.id !== logId) return log
+          if (parentId) {
+            return {
+              ...log,
+              comments: log.comments.map(c => 
+                c.id === parentId 
+                  ? { ...c, replies: c.replies.map(r => r.id === commentId ? updated : r) }
+                  : c
+              )
+            }
+          } else {
+            return {
+              ...log,
+              comments: log.comments.map(c => c.id === commentId ? { ...updated, replies: c.replies } : c)
+            }
+          }
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to delete comment:', error)
+    }
+  }
+
   // Sort: pinned first, then by date
   const sortedLogs = [...logs].sort((a, b) => {
     if (a.pinned && !b.pinned) return -1
@@ -138,6 +184,8 @@ export default function App() {
           onSign={handleSign} 
           onPin={handlePin}
           onComment={handleComment}
+          onEditLog={handleEditLog}
+          onDeleteComment={handleDeleteComment}
         />
       </main>
       {showForm && (
