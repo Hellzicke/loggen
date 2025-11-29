@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.5.1] - 2025-11-29
+
+### Tillagt
+- Ta bort inlägg — radera-knapp i headern med bekräftelse
+
 ## [0.4.3] - 2025-11-29
 
 ### Ändrat

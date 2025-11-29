@@ -10,7 +10,8 @@ interface LogListProps {
   onEditLog: (logId: number, title: string, message: string) => void
   onDeleteComment: (logId: number, commentId: number, parentId?: number) => void
   onReaction: (logId: number, emoji: string) => void
-  }
+  onDeleteLog: (logId: number) => void
+}
 
 const EMOJI_OPTIONS = ['👍', '❤️', '😊', '🎉', '👀', '🙏']
 
@@ -370,7 +371,7 @@ function CommentItem({ comment, logId, onComment, onDelete, parentId }: CommentI
   )
 }
 
-export default function LogList({ logs, loading, onSign, onPin, onComment, onEditLog, onDeleteComment, onReaction }: LogListProps) {
+export default function LogList({ logs, loading, onSign, onPin, onComment, onEditLog, onDeleteComment, onReaction, onDeleteLog }: LogListProps) {
   const [signingId, setSigningId] = useState<number | null>(null)
   const [commentingId, setCommentingId] = useState<number | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -454,6 +455,15 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill={log.pinned ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
                   <path d="M15 4.5l-4 4L7 10l-1.5 1.5 7 7L14 17l1.5-4 4-4M9 15l-4.5 4.5M14.5 4L20 9.5" />
+                </svg>
+              </button>
+              <button 
+                className="header-btn header-btn--danger"
+                onClick={() => onDeleteLog(log.id)}
+                title="Ta bort inlägg"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
                 </svg>
               </button>
             </div>

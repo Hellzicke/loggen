@@ -491,6 +491,21 @@ app.post('/api/seed-test-data', async (_req, res) => {
   }
 })
 
+// Delete a log message
+app.delete('/api/logs/:id', async (req, res) => {
+  const logId = parseInt(req.params.id)
+
+  try {
+    await prisma.logMessage.delete({
+      where: { id: logId }
+    })
+    res.json({ success: true, id: logId })
+  } catch (error) {
+    console.error('Error deleting log:', error)
+    res.status(500).json({ error: 'Failed to delete log' })
+  }
+})
+
 // Delete a comment (and its replies via cascade)
 app.delete('/api/comments/:id', async (req, res) => {
   const commentId = parseInt(req.params.id)
