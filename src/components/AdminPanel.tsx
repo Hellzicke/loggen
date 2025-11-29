@@ -253,7 +253,7 @@ export default function AdminPanel() {
                   <div key={img.filename} className="admin-image-item">
                     <img src={img.url} alt={img.filename} />
                     <div className="image-info">
-                      <div className="image-name">{img.filename}</div>
+                      <div className="image-name" title={img.filename}>{img.filename}</div>
                       <div className="image-meta">
                         <span>{formatBytes(img.size)}</span>
                         <span>{new Date(img.uploadedAt).toLocaleDateString('sv-SE')}</span>
@@ -262,6 +262,7 @@ export default function AdminPanel() {
                     <button 
                       className="delete-btn"
                       onClick={() => handleDeleteImage(img.filename)}
+                      title="Ta bort bild permanent"
                     >
                       Ta bort
                     </button>

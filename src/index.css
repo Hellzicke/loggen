@@ -722,7 +722,7 @@ body {
 
 .images-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 1rem;
 }
 
@@ -731,37 +731,48 @@ body {
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
 }
 
 .admin-image-item img {
   width: 100%;
-  height: 200px;
+  height: 120px;
   object-fit: cover;
   display: block;
 }
 
 .image-info {
-  padding: 0.75rem;
+  padding: 0.5rem;
+  flex: 1;
+  min-width: 0;
 }
 
 .image-name {
   font-weight: 500;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
   word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .image-meta {
   display: flex;
   justify-content: space-between;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--text-secondary);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
+  flex-wrap: wrap;
+  gap: 0.25rem;
 }
 
 .admin-image-item .delete-btn {
   width: 100%;
   margin-top: 0.5rem;
+  padding: 0.5rem;
+  font-size: 0.8125rem;
 }
 
 .empty-state {
@@ -813,7 +824,7 @@ body {
   border: 1px solid var(--border);
   cursor: pointer;
   transition: transform 0.15s;
-  max-width: 300px;
+  max-width: 200px;
 }
 
 .log-image:hover {
