@@ -2,6 +2,15 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.7.1] - 2025-11-29
+
+### Tillagt
+- Admin-inloggning med JWT-autentisering
+- Admin-panel med databasöversikt (inlägg, kommentarer, signaturer, reaktioner, bilder)
+- Admin-sida för att hantera bilder på servern
+- Admin-sida för att redigera och ta bort inlägg
+- Admin-routes på /admin
+
 ## [0.6.3] - 2025-11-29
 
 ### Tillagt
