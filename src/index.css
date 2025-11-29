@@ -777,32 +777,38 @@ body {
 }
 
 .image-actions {
-  padding: 0.5rem;
-  padding-top: 0.25rem;
-  margin-top: auto;
-  position: relative;
-  z-index: 10;
+  padding: 0.5rem !important;
+  padding-top: 0.25rem !important;
+  margin-top: auto !important;
+  position: relative !important;
+  z-index: 100 !important;
+  visibility: visible !important;
+  display: block !important;
 }
 
 .admin-delete-image-btn {
-  width: 100%;
-  padding: 0.5rem;
-  font-size: 0.8125rem;
-  background: #dc2626;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-family: inherit;
-  font-weight: 500;
-  transition: background 0.15s;
-  display: block;
-  position: relative;
-  z-index: 10;
+  width: 100% !important;
+  padding: 0.5rem !important;
+  font-size: 0.8125rem !important;
+  background: #dc2626 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  font-family: inherit !important;
+  font-weight: 500 !important;
+  transition: background 0.15s !important;
+  display: block !important;
+  position: relative !important;
+  z-index: 100 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  min-height: 36px !important;
 }
 
 .admin-delete-image-btn:hover {
-  background: #b91c1c;
+  background: #b91c1c !important;
 }
 
 .empty-state {
