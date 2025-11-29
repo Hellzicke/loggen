@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "LogMessage" ADD COLUMN "pinned" BOOLEAN NOT NULL DEFAULT false;
+

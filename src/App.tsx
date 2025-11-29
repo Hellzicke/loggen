@@ -16,6 +16,7 @@ export interface LogMessage {
   message: string
   author: string
   version: string
+  pinned: boolean
   createdAt: string
   signatures: ReadSignature[]
 }
@@ -67,6 +68,25 @@ export default function App() {
     ))
   }
 
+  const handlePin = async (logId: number) => {
+    try {
+      const res = await fetch(`/api/logs/${logId}/pin`, { method: 'POST' })
+      if (res.ok) {
+        const updated = await res.json()
+        setLogs(prev => prev.map(log => log.id === logId ? updated : log))
+      }
+    } catch (error) {
+      console.error('Failed to toggle pin:', error)
+    }
+  }
+
+  // Sort: pinned first, then by date
+  const sortedLogs = [...logs].sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1
+    if (!a.pinned && b.pinned) return 1
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  })
+
   return (
     <>
       <Header 
@@ -80,7 +100,7 @@ export default function App() {
             Vad vill du dela?
           </button>
         </div>
-        <LogList logs={logs} loading={loading} onSign={handleSign} />
+        <LogList logs={sortedLogs} loading={loading} onSign={handleSign} onPin={handlePin} />
       </main>
       {showForm && (
         <LogForm onSuccess={handleNewLog} onClose={() => setShowForm(false)} />
