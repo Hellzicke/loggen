@@ -222,41 +222,26 @@ app.post('/api/logs/:id/comments', async (req, res) => {
   }
 })
 
-// Toggle reaction on a log
+// Add reaction to a log
 app.post('/api/logs/:id/reactions', async (req, res) => {
   const logId = parseInt(req.params.id)
-  const { emoji, name } = req.body
+  const { emoji } = req.body
 
-  if (!emoji || !name) {
-    return res.status(400).json({ error: 'Emoji and name are required' })
+  if (!emoji) {
+    return res.status(400).json({ error: 'Emoji is required' })
   }
 
   try {
-    // Check if reaction already exists
-    const existing = await prisma.reaction.findUnique({
-      where: {
-        logId_name_emoji: { logId, name: name.trim(), emoji }
+    const reaction = await prisma.reaction.create({
+      data: {
+        emoji,
+        logId
       }
     })
-
-    if (existing) {
-      // Remove reaction
-      await prisma.reaction.delete({ where: { id: existing.id } })
-      res.json({ action: 'removed', emoji, name: name.trim() })
-    } else {
-      // Add reaction
-      const reaction = await prisma.reaction.create({
-        data: {
-          emoji,
-          name: name.trim(),
-          logId
-        }
-      })
-      res.status(201).json({ action: 'added', ...reaction })
-    }
+    res.status(201).json(reaction)
   } catch (error) {
-    console.error('Error toggling reaction:', error)
-    res.status(500).json({ error: 'Failed to toggle reaction' })
+    console.error('Error adding reaction:', error)
+    res.status(500).json({ error: 'Failed to add reaction' })
   }
 })
 
