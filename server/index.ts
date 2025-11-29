@@ -2,7 +2,8 @@ import express from 'express'
 import { PrismaClient } from '@prisma/client'
 import { fileURLToPath } from 'url'
 import { dirname, join, resolve } from 'path'
-import { readFileSync, existsSync } from 'fs'
+import { readFileSync, existsSync, mkdirSync } from 'fs'
+import multer from 'multer'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -20,8 +21,38 @@ const rootDir = process.env.NODE_ENV === 'production'
   : resolve(__dirname, '..')
 
 const distDir = join(rootDir, 'dist')
+const uploadsDir = join(rootDir, 'uploads')
+
+// Create uploads directory if it doesn't exist
+if (!existsSync(uploadsDir)) {
+  mkdirSync(uploadsDir, { recursive: true })
+}
+
+// Configure multer for image uploads
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadsDir)
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+    cb(null, uniqueSuffix + '-' + file.originalname)
+  }
+})
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true)
+    } else {
+      cb(new Error('Only image files are allowed'))
+    }
+  }
+})
 
 app.use(express.json())
+app.use('/uploads', express.static(uploadsDir))
 
 // Serve static files
 if (existsSync(distDir)) {
@@ -152,9 +183,17 @@ app.get('/api/logs/archived', async (_req, res) => {
   }
 })
 
+// Upload image
+app.post('/api/upload', upload.single('image'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' })
+  }
+  res.json({ url: `/uploads/${req.file.filename}` })
+})
+
 // Create a new log message
 app.post('/api/logs', async (req, res) => {
-  const { title, message, author } = req.body
+  const { title, message, author, imageUrl } = req.body
 
   if (!message || !author) {
     return res.status(400).json({ error: 'Message and author are required' })
@@ -166,7 +205,8 @@ app.post('/api/logs', async (req, res) => {
         title: title?.trim() || '',
         message,
         author,
-        version
+        version,
+        imageUrl: imageUrl || null
       },
       include: {
         signatures: true,
