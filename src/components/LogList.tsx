@@ -24,31 +24,32 @@ function formatDate(dateString: string): string {
 
 export default function LogList({ logs, loading }: LogListProps) {
   if (loading) {
-    return <div className="loading">Laddar loggar...</div>
+    return <div className="loading">Laddar...</div>
   }
 
   if (logs.length === 0) {
     return (
       <div className="empty-state">
-        <p>Inga loggar ännu. Skriv det första meddelandet!</p>
+        <p>Inga inlägg ännu</p>
       </div>
     )
   }
 
   return (
-    <div className="log-list">
-      <h2>Loggar ({logs.length})</h2>
-      {logs.map(log => (
-        <article key={log.id} className="log-item">
-          <div className="log-meta">
-            <span className="log-author">{log.author}</span>
-            <span className="log-date">{formatDate(log.createdAt)}</span>
-          </div>
-          <p className="log-message">{log.message}</p>
-          <div className="log-version">v{log.version}</div>
-        </article>
-      ))}
+    <div>
+      <div className="log-list-header">Senaste inlägg</div>
+      <div className="log-list">
+        {logs.map(log => (
+          <article key={log.id} className="log-item">
+            <div className="log-meta">
+              <span className="log-author">{log.author}</span>
+              <span className="log-date">{formatDate(log.createdAt)}</span>
+            </div>
+            <p className="log-message">{log.message}</p>
+            <div className="log-version">v{log.version}</div>
+          </article>
+        ))}
+      </div>
     </div>
   )
 }
-
