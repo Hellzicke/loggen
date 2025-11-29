@@ -7,6 +7,8 @@ interface LogListProps {
   onSign: (logId: number, signature: ReadSignature) => void
   onPin: (logId: number) => void
   onComment: (logId: number, comment: Comment, parentId?: number) => void
+  onEditLog: (logId: number, message: string) => void
+  onDeleteComment: (logId: number, commentId: number, parentId?: number) => void
 }
 
 function formatDate(dateString: string): string {
@@ -58,6 +60,13 @@ function getAvatarColor(name: string): string {
   ]
   const index = hashName(name) % colors.length
   return colors[index]
+}
+
+function countComments(comments: Comment[]): number {
+  return comments.reduce((total, c) => {
+    const replyCount = c.replies ? c.replies.length : 0
+    return total + 1 + replyCount
+  }, 0)
 }
 
 interface SignFormProps {
@@ -124,6 +133,40 @@ function SignForm({ logId, onSign, onCancel }: SignFormProps) {
         </button>
       </div>
       {error && <div className="sign-error">{error}</div>}
+    </div>
+  )
+}
+
+interface EditFormProps {
+  initialMessage: string
+  onSave: (message: string) => void
+  onCancel: () => void
+}
+
+function EditForm({ initialMessage, onSave, onCancel }: EditFormProps) {
+  const [message, setMessage] = useState(initialMessage)
+
+  return (
+    <div className="edit-form">
+      <textarea
+        value={message}
+        onChange={e => setMessage(e.target.value)}
+        className="edit-textarea"
+        rows={3}
+        autoFocus
+      />
+      <div className="edit-actions">
+        <button 
+          className="edit-save" 
+          onClick={() => onSave(message)}
+          disabled={!message.trim()}
+        >
+          Spara
+        </button>
+        <button className="edit-cancel" onClick={onCancel}>
+          Avbryt
+        </button>
+      </div>
     </div>
   )
 }
@@ -205,10 +248,36 @@ interface CommentItemProps {
   comment: Comment
   logId: number
   onComment: (logId: number, comment: Comment, parentId?: number) => void
+  onDelete: (logId: number, commentId: number, parentId?: number) => void
+  parentId?: number
 }
 
-function CommentItem({ comment, logId, onComment }: CommentItemProps) {
+function CommentItem({ comment, logId, onComment, onDelete, parentId }: CommentItemProps) {
   const [showReplyForm, setShowReplyForm] = useState(false)
+
+  if (comment.deleted) {
+    return (
+      <div className="comment-item comment-item--deleted">
+        <p className="comment-deleted-text">
+          {parentId ? 'Svar borttaget' : 'Fråga borttagen'}
+        </p>
+        {comment.replies && comment.replies.length > 0 && (
+          <div className="comment-replies">
+            {comment.replies.map(reply => (
+              <CommentItem 
+                key={reply.id} 
+                comment={reply}
+                logId={logId}
+                onComment={onComment}
+                onDelete={onDelete}
+                parentId={comment.id}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="comment-item">
@@ -223,14 +292,23 @@ function CommentItem({ comment, logId, onComment }: CommentItemProps) {
           <span className="comment-author">{comment.author}</span>
           <span className="comment-date">{formatDate(comment.createdAt)}</span>
         </div>
+        <button 
+          className="delete-btn"
+          onClick={() => onDelete(logId, comment.id, parentId)}
+          title="Ta bort"
+        >
+          &times;
+        </button>
       </div>
       <p className="comment-message">{comment.message}</p>
       
-      {!showReplyForm && (
-        <button className="reply-btn" onClick={() => setShowReplyForm(true)}>
-          Svara
-        </button>
-      )}
+      <div className="comment-footer">
+        {!showReplyForm && (
+          <button className="reply-btn" onClick={() => setShowReplyForm(true)}>
+            Svara
+          </button>
+        )}
+      </div>
       
       {showReplyForm && (
         <CommentForm
@@ -245,21 +323,14 @@ function CommentItem({ comment, logId, onComment }: CommentItemProps) {
       {comment.replies && comment.replies.length > 0 && (
         <div className="comment-replies">
           {comment.replies.map(reply => (
-            <div key={reply.id} className="reply-item">
-              <div className="comment-header">
-                <div 
-                  className="comment-avatar comment-avatar--small"
-                  style={{ background: getAvatarColor(reply.author) }}
-                >
-                  {getInitials(reply.author)}
-                </div>
-                <div className="comment-meta">
-                  <span className="comment-author">{reply.author}</span>
-                  <span className="comment-date">{formatDate(reply.createdAt)}</span>
-                </div>
-              </div>
-              <p className="comment-message">{reply.message}</p>
-            </div>
+            <CommentItem 
+              key={reply.id} 
+              comment={reply}
+              logId={logId}
+              onComment={onComment}
+              onDelete={onDelete}
+              parentId={comment.id}
+            />
           ))}
         </div>
       )}
@@ -267,9 +338,23 @@ function CommentItem({ comment, logId, onComment }: CommentItemProps) {
   )
 }
 
-export default function LogList({ logs, loading, onSign, onPin, onComment }: LogListProps) {
+export default function LogList({ logs, loading, onSign, onPin, onComment, onEditLog, onDeleteComment }: LogListProps) {
   const [signingId, setSigningId] = useState<number | null>(null)
   const [commentingId, setCommentingId] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set())
+
+  const toggleComments = (logId: number) => {
+    setExpandedComments(prev => {
+      const next = new Set(prev)
+      if (next.has(logId)) {
+        next.delete(logId)
+      } else {
+        next.add(logId)
+      }
+      return next
+    })
+  }
 
   if (loading) {
     return <div className="loading">Laddar...</div>
@@ -285,95 +370,136 @@ export default function LogList({ logs, loading, onSign, onPin, onComment }: Log
 
   return (
     <div className="log-list">
-      {logs.map(log => (
-        <article key={log.id} className={`log-item ${log.pinned ? 'log-item--pinned' : ''}`}>
-          <div className="log-header">
-            <div 
-              className="log-avatar" 
-              style={{ background: getAvatarColor(log.author) }}
-            >
-              {getInitials(log.author)}
-            </div>
-            <div className="log-info">
-              <span className="log-author">
-                {log.author}
-                {log.pinned && <span className="pinned-badge">Nålad</span>}
-              </span>
-              <span className="log-date">{formatDate(log.createdAt)}</span>
-            </div>
-            <button 
-              className={`pin-btn ${log.pinned ? 'pin-btn--active' : ''}`}
-              onClick={() => onPin(log.id)}
-              title={log.pinned ? 'Ta bort nål' : 'Nåla inlägg'}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill={log.pinned ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
-                <path d="M15 4.5l-4 4L7 10l-1.5 1.5 7 7L14 17l1.5-4 4-4M9 15l-4.5 4.5M14.5 4L20 9.5" />
-              </svg>
-            </button>
-          </div>
-          <p className="log-message">{log.message}</p>
-          
-          {/* Comments section */}
-          {log.comments && log.comments.length > 0 && (
-            <div className="comments-section">
-              {log.comments.map(comment => (
-                <CommentItem 
-                  key={comment.id} 
-                  comment={comment} 
-                  logId={log.id}
-                  onComment={onComment}
-                />
-              ))}
-            </div>
-          )}
+      {logs.map(log => {
+        const commentCount = countComments(log.comments || [])
+        const isExpanded = expandedComments.has(log.id)
 
-          {commentingId === log.id ? (
-            <div className="add-comment">
-              <CommentForm
-                logId={log.id}
-                onComment={onComment}
-                onCancel={() => setCommentingId(null)}
-                placeholder="Ställ en fråga..."
-              />
+        return (
+          <article key={log.id} className={`log-item ${log.pinned ? 'log-item--pinned' : ''}`}>
+            <div className="log-header">
+              <div 
+                className="log-avatar" 
+                style={{ background: getAvatarColor(log.author) }}
+              >
+                {getInitials(log.author)}
+              </div>
+              <div className="log-info">
+                <span className="log-author">
+                  {log.author}
+                  {log.pinned && <span className="pinned-badge">Nålad</span>}
+                </span>
+                <span className="log-date">{formatDate(log.createdAt)}</span>
+              </div>
+              <button 
+                className="edit-btn"
+                onClick={() => setEditingId(editingId === log.id ? null : log.id)}
+                title="Redigera"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              </button>
+              <button 
+                className={`pin-btn ${log.pinned ? 'pin-btn--active' : ''}`}
+                onClick={() => onPin(log.id)}
+                title={log.pinned ? 'Ta bort nål' : 'Nåla inlägg'}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill={log.pinned ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                  <path d="M15 4.5l-4 4L7 10l-1.5 1.5 7 7L14 17l1.5-4 4-4M9 15l-4.5 4.5M14.5 4L20 9.5" />
+                </svg>
+              </button>
             </div>
-          ) : (
-            <button 
-              className="comment-btn"
-              onClick={() => setCommentingId(log.id)}
-            >
-              Ställ en fråga
-            </button>
-          )}
-          
-          <div className="log-signatures">
-            {log.signatures.length > 0 && (
-              <div className="signatures-list">
-                <span className="signatures-label">Läst av:</span>
-                {log.signatures.map((sig, i) => (
-                  <span key={sig.id} className="signature-name">
-                    {sig.name}{i < log.signatures.length - 1 ? ', ' : ''}
-                  </span>
+            
+            {editingId === log.id ? (
+              <EditForm
+                initialMessage={log.message}
+                onSave={(message) => {
+                  onEditLog(log.id, message)
+                  setEditingId(null)
+                }}
+                onCancel={() => setEditingId(null)}
+              />
+            ) : (
+              <p className="log-message">{log.message}</p>
+            )}
+            
+            {/* Comments toggle */}
+            {commentCount > 0 && (
+              <button 
+                className="comments-toggle"
+                onClick={() => toggleComments(log.id)}
+              >
+                {isExpanded ? 'Dölj' : 'Visa'} {commentCount} {commentCount === 1 ? 'kommentar' : 'kommentarer'}
+              </button>
+            )}
+
+            {/* Comments section */}
+            {isExpanded && log.comments && log.comments.length > 0 && (
+              <div className="comments-section">
+                {log.comments.map(comment => (
+                  <CommentItem 
+                    key={comment.id} 
+                    comment={comment} 
+                    logId={log.id}
+                    onComment={onComment}
+                    onDelete={onDeleteComment}
+                  />
                 ))}
               </div>
             )}
-            
-            {signingId === log.id ? (
-              <SignForm 
-                logId={log.id} 
-                onSign={onSign}
-                onCancel={() => setSigningId(null)}
-              />
+
+            {commentingId === log.id ? (
+              <div className="add-comment">
+                <CommentForm
+                  logId={log.id}
+                  onComment={(logId, comment, parentId) => {
+                    onComment(logId, comment, parentId)
+                    setExpandedComments(prev => new Set(prev).add(logId))
+                  }}
+                  onCancel={() => setCommentingId(null)}
+                  placeholder="Ställ en fråga..."
+                />
+              </div>
             ) : (
               <button 
-                className="sign-btn"
-                onClick={() => setSigningId(log.id)}
+                className="comment-btn"
+                onClick={() => setCommentingId(log.id)}
               >
-                Signera som läst
+                Ställ en fråga
               </button>
             )}
-          </div>
-        </article>
-      ))}
+            
+            <div className="log-signatures">
+              {log.signatures.length > 0 && (
+                <div className="signatures-list">
+                  <span className="signatures-label">Läst av:</span>
+                  {log.signatures.map((sig, i) => (
+                    <span key={sig.id} className="signature-name">
+                      {sig.name}{i < log.signatures.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+              
+              {signingId === log.id ? (
+                <SignForm 
+                  logId={log.id} 
+                  onSign={onSign}
+                  onCancel={() => setSigningId(null)}
+                />
+              ) : (
+                <button 
+                  className="sign-btn"
+                  onClick={() => setSigningId(log.id)}
+                >
+                  Signera som läst
+                </button>
+              )}
+            </div>
+          </article>
+        )
+      })}
     </div>
   )
 }
