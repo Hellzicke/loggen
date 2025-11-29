@@ -22,6 +22,5 @@ Thumbs.db
 *.log
 npm-debug.log*
 
-# Prisma
-prisma/migrations/*.sql
+# Prisma (keep migrations)
 
