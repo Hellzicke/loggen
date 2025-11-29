@@ -391,6 +391,75 @@ app.post('/api/logs/:id/reactions', async (req, res) => {
   }
 })
 
+// Seed test data (for development)
+app.post('/api/seed-test-data', async (_req, res) => {
+  const authors = ['Anna', 'Erik', 'Maria', 'Johan', 'Lisa', 'Oscar', 'Emma', 'Karl']
+  const titles = [
+    'Ny rutin för morgonmöten',
+    'Uppdatering av systemet',
+    'Viktig information',
+    'Semesterplanering',
+    'Städdag på kontoret',
+    'Ny kollega börjar',
+    'Feedback från kunder',
+    'Projektuppdatering',
+    'Fikapaus kl 15',
+    'Kontorsflytt nästa vecka'
+  ]
+  const messages = [
+    'Kom ihåg att läsa igenom dokumentet innan mötet imorgon.',
+    'Vi har uppdaterat rutinerna, se bifogad fil för mer info.',
+    'Tack för ert hårda arbete den senaste tiden!',
+    'Glöm inte att registrera era timmar innan fredag.',
+    'Mötet flyttas till rum 3B istället.',
+    'Alla behöver signera den nya policyn.',
+    'Grattis till teamet för ett lyckat projekt!',
+    'Påminnelse om att låsa dörren när ni går.',
+    'Ny kaffemaskin har installerats i fikarummet.',
+    'Tack för en bra vecka allihop!'
+  ]
+
+  try {
+    const now = new Date()
+    const created = []
+    
+    for (let i = 0; i < 10; i++) {
+      const monthsAgo = Math.floor(Math.random() * 6)
+      const daysAgo = Math.floor(Math.random() * 28)
+      const date = new Date(now)
+      date.setMonth(date.getMonth() - monthsAgo)
+      date.setDate(date.getDate() - daysAgo)
+
+      const author = authors[Math.floor(Math.random() * authors.length)]
+      const title = titles[i]
+      const message = messages[i]
+
+      const daysSinceCreated = (now.getTime() - date.getTime()) / (24 * 60 * 60 * 1000)
+      const shouldArchive = daysSinceCreated > 30 && Math.random() > 0.3
+
+      const log = await prisma.logMessage.create({
+        data: {
+          title,
+          message,
+          author,
+          version,
+          pinned: false,
+          archived: shouldArchive,
+          archivedAt: shouldArchive ? new Date() : null,
+          createdAt: date
+        }
+      })
+
+      created.push({ id: log.id, title, author, date: date.toISOString(), archived: shouldArchive })
+    }
+
+    res.json({ success: true, created })
+  } catch (error) {
+    console.error('Error seeding:', error)
+    res.status(500).json({ error: 'Failed to seed' })
+  }
+})
+
 // Delete a comment (and its replies via cascade)
 app.delete('/api/comments/:id', async (req, res) => {
   const commentId = parseInt(req.params.id)
