@@ -53,7 +53,43 @@ body {
   color: var(--accent);
 }
 
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.archive-badge {
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.375rem 0.75rem;
+  background: var(--bg-primary);
+  border: none;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.archive-badge:hover {
+  background: var(--border);
+}
+
+.archive-count {
+  background: var(--accent);
+  color: white;
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
 .version-badge {
+  font-family: inherit;
   font-size: 0.75rem;
   padding: 0.3rem 0.6rem;
   background: var(--bg-primary);
@@ -1223,6 +1259,183 @@ body {
   height: 4px;
   background: var(--accent);
   border-radius: 50%;
+}
+
+/* Archive Modal */
+.archive-modal {
+  background: var(--bg-card);
+  border-radius: 12px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.archive-content {
+  padding: 0;
+  overflow-y: auto;
+}
+
+.archive-empty {
+  padding: 3rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.archive-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.archive-item {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.archive-item:last-child {
+  border-bottom: none;
+}
+
+.archive-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.archive-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.archive-title {
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.archive-meta {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.archive-message {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+}
+
+.archive-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.unarchive-btn {
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.375rem 0.625rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.unarchive-btn:hover {
+  background: var(--accent-hover);
+}
+
+/* Unpin Modal */
+.unpin-modal {
+  background: var(--bg-card);
+  border-radius: 12px;
+  max-width: 420px;
+  width: 100%;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+.unpin-modal h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.unpin-modal p {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.unpin-preview {
+  background: var(--bg-primary);
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 1.25rem;
+}
+
+.unpin-preview strong {
+  display: block;
+  font-size: 0.9375rem;
+  margin-bottom: 0.25rem;
+}
+
+.unpin-author {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.unpin-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.unpin-btn {
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.unpin-btn--archive {
+  background: var(--accent);
+  color: white;
+}
+
+.unpin-btn--archive:hover {
+  background: var(--accent-hover);
+}
+
+.unpin-btn--keep {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.unpin-btn--keep:hover {
+  background: var(--border);
+}
+
+.unpin-btn--cancel {
+  background: none;
+  color: var(--text-muted);
+}
+
+.unpin-btn--cancel:hover {
+  color: var(--text-secondary);
 }
 
 /* Loading */
