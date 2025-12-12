@@ -108,9 +108,13 @@ function SignForm({ logId, onSign, onCancel }: SignFormProps) {
     setError('')
 
     try {
+      const token = localStorage.getItem('authToken')
       const res = await fetch(`/api/logs/${logId}/sign`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ name: name.trim() })
       })
 
@@ -206,7 +210,12 @@ function EditForm({ initialTitle, initialMessage, initialImageUrl, logId, onSave
   const loadAvailableImages = async () => {
     setLoadingImages(true)
     try {
-      const res = await fetch('/api/images')
+      const token = localStorage.getItem('authToken')
+      const res = await fetch('/api/images', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      })
       if (res.ok) {
         const images = await res.json()
         setAvailableImages(images)
@@ -227,8 +236,12 @@ function EditForm({ initialTitle, initialMessage, initialImageUrl, logId, onSave
     formData.append('image', file)
 
     try {
+      const token = localStorage.getItem('authToken')
       const res = await fetch('/api/upload', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         body: formData
       })
       if (res.ok) {
@@ -391,9 +404,13 @@ function CommentForm({ logId, parentId, onComment, onCancel, placeholder }: Comm
     setSubmitting(true)
 
     try {
+      const token = localStorage.getItem('authToken')
       const res = await fetch(`/api/logs/${logId}/comments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ 
           author: author.trim(), 
           message: message.trim(),
