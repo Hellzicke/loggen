@@ -36,7 +36,12 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
   const loadAvailableImages = async () => {
     setLoadingImages(true)
     try {
-      const res = await fetch('/api/images')
+      const token = localStorage.getItem('authToken')
+      const res = await fetch('/api/images', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      })
       if (res.ok) {
         const images = await res.json()
         setAvailableImages(images)
@@ -57,8 +62,12 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
     formData.append('image', file)
 
     try {
+      const token = localStorage.getItem('authToken')
       const res = await fetch('/api/upload', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         body: formData
       })
       if (res.ok) {
@@ -90,9 +99,13 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
     setSubmitting(true)
     
     try {
+      const token = localStorage.getItem('authToken')
       const res = await fetch('/api/logs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ 
           author: author.trim(), 
           title: title.trim(),

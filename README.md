@@ -72,8 +72,11 @@ DATABASE_URL=<din-postgresql-url>
 NODE_ENV=production
 PORT=3000
 JWT_SECRET=<din-jwt-secret-nyckel>
+SHARED_PASSWORD=<ditt-delade-lösenord>
 UPLOADS_DIR=/app/uploads
 ```
+
+**Viktigt:** `SHARED_PASSWORD` är lösenordet som alla användare använder för att logga in på huvudsidan.
 
 **Viktigt:** `UPLOADS_DIR` måste matcha mount path från storage (ovan).
 

@@ -14,6 +14,7 @@ const app = express()
 const prisma = new PrismaClient()
 const PORT = process.env.PORT || 3001
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+const SHARED_PASSWORD = process.env.SHARED_PASSWORD || 'password'
 
 const ARCHIVE_DAYS = 30
 const MS_PER_DAY = 24 * 60 * 60 * 1000
@@ -58,7 +59,7 @@ const upload = multer({
 app.use(express.json())
 app.use('/uploads', express.static(uploadsDir))
 
-// Auth middleware
+// Auth middleware for admin
 const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers['authorization']
   const token = authHeader && authHeader.split(' ')[1]
@@ -70,6 +71,26 @@ const authenticateToken = (req: express.Request, res: express.Response, next: ex
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: number, username: string }
     req.user = decoded
+    next()
+  } catch (error) {
+    res.status(403).json({ error: 'Invalid token' })
+  }
+}
+
+// Auth middleware for shared password (simple auth)
+const authenticateSharedPassword = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const authHeader = req.headers['authorization']
+  const token = authHeader && authHeader.split(' ')[1]
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access denied' })
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { type: string }
+    if (decoded.type !== 'shared') {
+      return res.status(403).json({ error: 'Invalid token type' })
+    }
     next()
   } catch (error) {
     res.status(403).json({ error: 'Invalid token' })
@@ -133,6 +154,22 @@ async function autoArchiveOldPosts() {
     }
   })
 }
+
+// Shared password login (for main app)
+app.post('/api/auth/login', async (req, res) => {
+  const { password } = req.body
+
+  if (!password) {
+    return res.status(400).json({ error: 'Password required' })
+  }
+
+  if (password !== SHARED_PASSWORD) {
+    return res.status(401).json({ error: 'Fel lösenord' })
+  }
+
+  const token = jwt.sign({ type: 'shared' }, JWT_SECRET, { expiresIn: '30d' })
+  res.json({ token })
+})
 
 // Admin login
 app.post('/api/admin/login', async (req, res) => {
@@ -296,7 +333,7 @@ app.get('/api/version', (_req, res) => {
 })
 
 // Get all active (non-archived) log messages
-app.get('/api/logs', async (_req, res) => {
+app.get('/api/logs', authenticateSharedPassword, async (_req, res) => {
   try {
     // Auto-archive old posts first
     await autoArchiveOldPosts()
@@ -330,7 +367,7 @@ app.get('/api/logs', async (_req, res) => {
 })
 
 // Get archived log messages
-app.get('/api/logs/archived', async (_req, res) => {
+app.get('/api/logs/archived', authenticateSharedPassword, async (_req, res) => {
   try {
     const logs = await prisma.logMessage.findMany({
       where: { archived: true },
@@ -361,7 +398,7 @@ app.get('/api/logs/archived', async (_req, res) => {
 })
 
 // Upload image
-app.post('/api/upload', upload.single('image'), (req, res) => {
+app.post('/api/upload', authenticateSharedPassword, upload.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' })
   }
@@ -369,7 +406,7 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 })
 
 // Get all uploaded images
-app.get('/api/images', async (_req, res) => {
+app.get('/api/images', authenticateSharedPassword, async (_req, res) => {
   try {
     const { readdirSync, statSync } = await import('fs')
     const files = readdirSync(uploadsDir)
@@ -392,7 +429,7 @@ app.get('/api/images', async (_req, res) => {
 })
 
 // Create a new log message
-app.post('/api/logs', async (req, res) => {
+app.post('/api/logs', authenticateSharedPassword, async (req, res) => {
   const { title, message, author, imageUrl } = req.body
 
   if (!message || !author) {
@@ -422,7 +459,7 @@ app.post('/api/logs', async (req, res) => {
 })
 
 // Edit a log message
-app.put('/api/logs/:id', async (req, res) => {
+app.put('/api/logs/:id', authenticateSharedPassword, async (req, res) => {
   const logId = parseInt(req.params.id)
   const { title, message, imageUrl } = req.body
 
@@ -455,7 +492,7 @@ app.put('/api/logs/:id', async (req, res) => {
 })
 
 // Toggle pin on a log
-app.post('/api/logs/:id/pin', async (req, res) => {
+app.post('/api/logs/:id/pin', authenticateSharedPassword, async (req, res) => {
   const logId = parseInt(req.params.id)
 
   try {
@@ -499,7 +536,7 @@ app.post('/api/logs/:id/pin', async (req, res) => {
 })
 
 // Archive a log
-app.post('/api/logs/:id/archive', async (req, res) => {
+app.post('/api/logs/:id/archive', authenticateSharedPassword, async (req, res) => {
   const logId = parseInt(req.params.id)
 
   try {
@@ -527,7 +564,7 @@ app.post('/api/logs/:id/archive', async (req, res) => {
 })
 
 // Unarchive a log
-app.post('/api/logs/:id/unarchive', async (req, res) => {
+app.post('/api/logs/:id/unarchive', authenticateSharedPassword, async (req, res) => {
   const logId = parseInt(req.params.id)
 
   try {
@@ -555,7 +592,7 @@ app.post('/api/logs/:id/unarchive', async (req, res) => {
 })
 
 // Add signature to a log
-app.post('/api/logs/:id/sign', async (req, res) => {
+app.post('/api/logs/:id/sign', authenticateSharedPassword, async (req, res) => {
   const logId = parseInt(req.params.id)
   const { name } = req.body
 
@@ -582,7 +619,7 @@ app.post('/api/logs/:id/sign', async (req, res) => {
 })
 
 // Add comment to a log
-app.post('/api/logs/:id/comments', async (req, res) => {
+app.post('/api/logs/:id/comments', authenticateSharedPassword, async (req, res) => {
   const logId = parseInt(req.params.id)
   const { message, author, parentId } = req.body
 
@@ -610,7 +647,7 @@ app.post('/api/logs/:id/comments', async (req, res) => {
 })
 
 // Add reaction to a log
-app.post('/api/logs/:id/reactions', async (req, res) => {
+app.post('/api/logs/:id/reactions', authenticateSharedPassword, async (req, res) => {
   const logId = parseInt(req.params.id)
   const { emoji } = req.body
 
@@ -733,7 +770,7 @@ app.post('/api/seed-test-data', async (_req, res) => {
 })
 
 // Delete a log message
-app.delete('/api/logs/:id', async (req, res) => {
+app.delete('/api/logs/:id', authenticateSharedPassword, async (req, res) => {
   const logId = parseInt(req.params.id)
 
   try {
@@ -748,7 +785,7 @@ app.delete('/api/logs/:id', async (req, res) => {
 })
 
 // Delete a comment (and its replies via cascade)
-app.delete('/api/comments/:id', async (req, res) => {
+app.delete('/api/comments/:id', authenticateSharedPassword, async (req, res) => {
   const commentId = parseInt(req.params.id)
 
   try {
