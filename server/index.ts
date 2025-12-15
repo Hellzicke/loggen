@@ -671,6 +671,11 @@ app.post('/api/logs/:id/reactions', authenticateSharedPassword, async (req, res)
 
 // Clear test data
 app.post('/api/clear-test-data', async (_req, res) => {
+  // Only allow in development
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Not available in production' })
+  }
+
   try {
     const testTitles = [
       'Ny rutin för morgonmöten',
@@ -700,8 +705,12 @@ app.post('/api/clear-test-data', async (_req, res) => {
   }
 })
 
-// Seed test data (for development)
+// Seed test data (for development only)
 app.post('/api/seed-test-data', async (_req, res) => {
+  // Only allow in development
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Not available in production' })
+  }
   const authors = ['Anna', 'Erik', 'Maria', 'Johan', 'Lisa', 'Oscar', 'Emma', 'Karl']
   const titles = [
     'Ny rutin för morgonmöten',
