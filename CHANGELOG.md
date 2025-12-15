@@ -2,6 +2,12 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.7.5] - 2025-11-29
+
+### Tillagt
+- Delat lösenord för att komma åt sidan (SHARED_PASSWORD miljövariabel)
+- Inloggningsskärm som kräver lösenord innan man kan se inlägg
+
 ## [0.7.4] - 2025-11-29
 
 ### Ändrat
