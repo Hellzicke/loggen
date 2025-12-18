@@ -2,6 +2,18 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.7.6] - 2025-01-XX
+
+### Tillagt
+- Navigationsmeny med tre alternativ: Logg, Förslagslåda, Mötespunkter
+- Undermeny för "Logg" med "Arkiv"-alternativ (visas vid hover)
+- Professionell meny-design med dropdown-animationer och hover-effekter
+
+### Ändrat
+- Arkiv-funktionen flyttad från header till undermeny under "Logg"
+- Förbättrad header-design med mer professionell styling
+- Menyn är nu alltid synlig (tidigare dold vid scroll)
+
 ## [0.7.5] - 2025-11-29
 
 ### Tillagt

@@ -62,6 +62,30 @@ export default function App() {
   const [showArchive, setShowArchive] = useState(false)
   const [unpinPrompt, setUnpinPrompt] = useState<LogMessage | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
+  const [greetingPositions, setGreetingPositions] = useState<Array<{top: number, left: number}>>([])
+  const [activeView, setActiveView] = useState<'logg' | 'förslagslåda' | 'mötespunkter'>('logg')
+
+  // Check if it's Christmas (24-26 December)
+  const isChristmas = () => {
+    const now = new Date()
+    const month = now.getMonth() // 0-11, December is 11
+    const day = now.getDate()
+    return month === 11 && (day === 24 || day === 25 || day === 26)
+  }
+
+  const [showChristmasTheme, setShowChristmasTheme] = useState(isChristmas())
+
+  useEffect(() => {
+    // Check daily if it's Christmas
+    const checkChristmas = () => {
+      setShowChristmasTheme(isChristmas())
+    }
+    
+    checkChristmas()
+    const interval = setInterval(checkChristmas, 60 * 60 * 1000) // Check every hour
+    
+    return () => clearInterval(interval)
+  }, [])
 
   // Check authentication on mount
   useEffect(() => {
@@ -71,6 +95,30 @@ export default function App() {
       setIsAuthenticated(true)
     }
   }, [])
+
+  // Generate random positions for greetings (only if Christmas theme is active)
+  useEffect(() => {
+    if (!showChristmasTheme) return
+
+    const generateRandomPositions = () => {
+      return Array.from({ length: 11 }, () => ({
+        top: Math.random() * 80 + 5, // 5% to 85%
+        left: Math.random() * 90 + 5  // 5% to 95%
+      }))
+    }
+    
+    setGreetingPositions(generateRandomPositions())
+    
+    // Change positions every 20 seconds (after fade out completes at 8s)
+    const interval = setInterval(() => {
+      // Wait for fade out to complete (8 seconds = 40% of 20s animation)
+      setTimeout(() => {
+        setGreetingPositions(generateRandomPositions())
+      }, 8000)
+    }, 20000)
+    
+    return () => clearInterval(interval)
+  }, [showChristmasTheme])
 
   // Helper function to make authenticated fetch requests
   const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
@@ -356,30 +404,82 @@ export default function App() {
 
   return (
     <>
+      <div className={`header-hover-area ${showChristmasTheme ? 'christmas-active' : ''}`}></div>
+      {showChristmasTheme && (
+        <div className="christmas-greetings">
+          {greetingPositions.map((pos, index) => {
+            const greetings = [
+              'GOD JUL',
+              'MERRY CHRISTMAS',
+              'FROHE WEIHNACHTEN',
+              'JOYEUX NOËL',
+              'FELIZ NAVIDAD',
+              'BUON NATALE',
+              'GLÆDELIG JUL',
+              'VESELÉ VÁNOCE',
+              'HYVÄÄ JOULUA',
+              'عيد ميلاد مجيد',
+              'کریسمس مبارک'
+            ]
+            return (
+              <span 
+                key={index}
+                className="greeting-text"
+                style={{
+                  top: `${pos.top}%`,
+                  left: `${pos.left}%`,
+                  animationDelay: `${index * 0.5}s`
+                }}
+              >
+                {greetings[index]}
+              </span>
+            )
+          })}
+        </div>
+      )}
+      <div className={showChristmasTheme ? 'christmas-theme' : ''}>
       <Header 
         version={version} 
         onVersionClick={() => setShowChangelog(true)}
         onArchiveClick={() => setShowArchive(true)}
         archiveCount={archivedLogs.length}
+        activeView={activeView}
+        onViewChange={setActiveView}
       />
       <main className="main">
-        <div className="create-trigger">
-          <div className="create-avatar">?</div>
-          <button className="create-btn" onClick={() => setShowForm(true)}>
-            Vad vill du dela?
-          </button>
-        </div>
-        <LogList 
-          logs={sortedLogs} 
-          loading={loading} 
-          onSign={handleSign} 
-          onPin={handlePin}
-          onComment={handleComment}
-          onEditLog={handleEditLog}
-          onDeleteComment={handleDeleteComment}
-          onReaction={handleReaction}
-          onDeleteLog={handleDeleteLog}
-        />
+        {activeView === 'logg' && (
+          <>
+            <div className="create-trigger">
+              <div className="create-avatar">?</div>
+              <button className="create-btn" onClick={() => setShowForm(true)}>
+                Vad vill du dela?
+              </button>
+            </div>
+            <LogList 
+              logs={sortedLogs} 
+              loading={loading} 
+              onSign={handleSign} 
+              onPin={handlePin}
+              onComment={handleComment}
+              onEditLog={handleEditLog}
+              onDeleteComment={handleDeleteComment}
+              onReaction={handleReaction}
+              onDeleteLog={handleDeleteLog}
+            />
+          </>
+        )}
+        {activeView === 'förslagslåda' && (
+          <div className="coming-soon">
+            <h2>Förslagslåda</h2>
+            <p>Denna funktion kommer snart...</p>
+          </div>
+        )}
+        {activeView === 'mötespunkter' && (
+          <div className="coming-soon">
+            <h2>Mötespunkter</h2>
+            <p>Denna funktion kommer snart...</p>
+          </div>
+        )}
       </main>
       {showForm && (
         <LogForm onSuccess={handleNewLog} onClose={() => setShowForm(false)} />
@@ -412,6 +512,7 @@ export default function App() {
           onCancel={() => setDeleteConfirm(null)}
         />
       )}
+      </div>
     </>
   )
 }
