@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Header from './components/Header'
 import LogForm from './components/LogForm'
 import LogList from './components/LogList'
