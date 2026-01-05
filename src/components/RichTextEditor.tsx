@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
 
 interface RichTextEditorProps {
   value: string
@@ -9,6 +9,7 @@ interface RichTextEditorProps {
 export default function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const isInternalChange = useRef(false)
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     if (editorRef.current && !isInternalChange.current) {
@@ -19,12 +20,30 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     isInternalChange.current = false
   }, [value])
 
-  const handleInput = () => {
+  const handleInput = useCallback(() => {
     if (editorRef.current) {
       isInternalChange.current = true
-      onChange(editorRef.current.innerHTML)
+      
+      // Debounce onChange to reduce lag when typing
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current)
+      }
+      
+      debounceTimer.current = setTimeout(() => {
+        if (editorRef.current) {
+          onChange(editorRef.current.innerHTML)
+        }
+      }, 100) // 100ms debounce
     }
-  }
+  }, [onChange])
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current)
+      }
+    }
+  }, [])
 
   const execFormat = (command: string, value?: string) => {
     document.execCommand(command, false, value)

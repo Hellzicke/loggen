@@ -91,6 +91,7 @@ body::before {
   opacity: 0.15;
   pointer-events: none;
   z-index: 0;
+  will-change: background-position, opacity;
   animation: snowFall 20s linear infinite, starTwinkle 4s ease-in-out infinite;
 }
 
@@ -137,6 +138,7 @@ body.christmas-theme::after {
   background-size: 100% 200%;
   pointer-events: none;
   z-index: 0;
+  will-change: background-position, opacity;
   animation: fallingSnow 12s linear infinite;
 }
 
@@ -164,6 +166,7 @@ body.christmas-theme::after {
   opacity: 0.3;
   pointer-events: none;
   z-index: 1;
+  will-change: transform, opacity;
   animation: snowFall1 8s linear infinite;
 }
 
@@ -176,6 +179,7 @@ body.christmas-theme::after {
   opacity: 0.25;
   pointer-events: none;
   z-index: 1;
+  will-change: transform, opacity;
   animation: snowFall2 10s linear infinite;
 }
 
@@ -188,6 +192,7 @@ body.christmas-theme::after {
   opacity: 0.3;
   pointer-events: none;
   z-index: 1;
+  will-change: transform, opacity;
   animation: snowFall3 9s linear infinite;
 }
 
@@ -200,6 +205,7 @@ body.christmas-theme::after {
   opacity: 0.2;
   pointer-events: none;
   z-index: 1;
+  will-change: transform, opacity;
   animation: starFloat 8.5s ease-in-out infinite;
   color: var(--christmas-gold);
   filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.5));
@@ -294,6 +300,7 @@ body.christmas-theme::after {
 }
 
 .greeting-text {
+  will-change: transform, opacity;
   animation: slowFade 20s ease-in-out infinite;
 }
 
@@ -1617,6 +1624,8 @@ body:hover #root::before ~ .header {
   gap: 1rem;
   position: relative;
   z-index: 10;
+  contain: layout style paint;
+  will-change: scroll-position;
 }
 
 .log-item {
@@ -1625,6 +1634,10 @@ body:hover #root::before ~ .header {
   padding: 1rem;
   box-shadow: var(--shadow-sm);
   position: relative;
+  z-index: 10;
+  contain: layout style paint;
+  transform: translateZ(0);
+}
   z-index: 10;
 }
 
