@@ -2,6 +2,17 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.7.7] - 2025-01-XX
+
+### Ändrat
+- Prestandaoptimeringar för att minska latency och lagg vid scrollning och skrivande
+- Memoized utility-funktioner (formatDate, getAvatarColor) för att undvika onödiga beräkningar
+- React.memo på CommentItem-komponenter för att förhindra onödiga re-renders
+- useMemo för sorterade loggar och kommentarsräkningar
+- Debouncing på RichTextEditor input (100ms) för smidigare skrivning
+- CSS-optimeringar med will-change och GPU-acceleration för animationer
+- Förbättrad scroll-prestanda med contain och transform optimeringar
+
 ## [0.7.6] - 2025-01-XX
 
 ### Tillagt

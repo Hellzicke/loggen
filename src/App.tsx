@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Header from './components/Header'
 import LogForm from './components/LogForm'
 import LogList from './components/LogList'
@@ -390,12 +390,14 @@ export default function App() {
     setLoading(true)
   }
 
-  // Sort: pinned first, then by date
-  const sortedLogs = [...logs].sort((a, b) => {
-    if (a.pinned && !b.pinned) return -1
-    if (!a.pinned && b.pinned) return 1
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  })
+  // Sort: pinned first, then by date (memoized to avoid recalculation)
+  const sortedLogs = useMemo(() => {
+    return [...logs].sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1
+      if (!a.pinned && b.pinned) return 1
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+  }, [logs])
 
   // Show login if not authenticated
   if (!isAuthenticated) {

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo, memo } from 'react'
 import type { LogMessage, ReadSignature, Comment, Reaction } from '../App'
 import ImageModal from './ImageModal'
 
@@ -32,23 +32,44 @@ function groupReactions(reactions: Reaction[]): ReactionGroup[] {
   return Object.values(groups)
 }
 
+// Memoized date formatting cache
+const dateFormatCache = new Map<string, string>()
+let lastCacheClear = Date.now()
+
 function formatDate(dateString: string): string {
+  // Clear cache every minute to update relative times
+  const now = Date.now()
+  if (now - lastCacheClear > 60000) {
+    dateFormatCache.clear()
+    lastCacheClear = now
+  }
+
+  // Check cache first
+  if (dateFormatCache.has(dateString)) {
+    return dateFormatCache.get(dateString)!
+  }
+
   const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
+  const nowDate = new Date()
+  const diffMs = nowDate.getTime() - date.getTime()
   const diffMins = Math.floor(diffMs / 60000)
   const diffHours = Math.floor(diffMs / 3600000)
   const diffDays = Math.floor(diffMs / 86400000)
 
-  if (diffMins < 1) return 'Just nu'
-  if (diffMins < 60) return `${diffMins} min`
-  if (diffHours < 24) return `${diffHours} tim`
-  if (diffDays < 7) return `${diffDays} d`
-  
-  return date.toLocaleDateString('sv-SE', {
-    day: 'numeric',
-    month: 'short'
-  })
+  let result: string
+  if (diffMins < 1) result = 'Just nu'
+  else if (diffMins < 60) result = `${diffMins} min`
+  else if (diffHours < 24) result = `${diffHours} tim`
+  else if (diffDays < 7) result = `${diffDays} d`
+  else {
+    result = date.toLocaleDateString('sv-SE', {
+      day: 'numeric',
+      month: 'short'
+    })
+  }
+
+  dateFormatCache.set(dateString, result)
+  return result
 }
 
 function getInitials(name: string): string {
@@ -64,7 +85,14 @@ function hashName(name: string): number {
   return Math.abs(hash)
 }
 
+// Memoized avatar color cache
+const avatarColorCache = new Map<string, string>()
+
 function getAvatarColor(name: string): string {
+  if (avatarColorCache.has(name)) {
+    return avatarColorCache.get(name)!
+  }
+
   const colors = [
     'linear-gradient(135deg, #667eea, #764ba2)',
     'linear-gradient(135deg, #f093fb, #f5576c)',
@@ -80,7 +108,9 @@ function getAvatarColor(name: string): string {
     'linear-gradient(135deg, #74b9ff, #0984e3)',
   ]
   const index = hashName(name) % colors.length
-  return colors[index]
+  const color = colors[index]
+  avatarColorCache.set(name, color)
+  return color
 }
 
 function countComments(comments: Comment[]): number {
@@ -470,7 +500,7 @@ interface CommentItemProps {
   parentId?: number
 }
 
-function CommentItem({ comment, logId, onComment, onDelete, parentId }: CommentItemProps) {
+const CommentItem = memo(function CommentItem({ comment, logId, onComment, onDelete, parentId }: CommentItemProps) {
   const [showReplyForm, setShowReplyForm] = useState(false)
 
   return (
@@ -530,7 +560,7 @@ function CommentItem({ comment, logId, onComment, onDelete, parentId }: CommentI
       )}
     </div>
   )
-}
+})
 
 export default function LogList({ logs, loading, onSign, onPin, onComment, onEditLog, onDeleteComment, onReaction, onDeleteLog }: LogListProps) {
   const [signingId, setSigningId] = useState<number | null>(null)
@@ -581,10 +611,19 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
     )
   }
 
+  // Memoize comment counts to avoid recalculating
+  const commentCounts = useMemo(() => {
+    const counts = new Map<number, number>()
+    logs.forEach(log => {
+      counts.set(log.id, countComments(log.comments || []))
+    })
+    return counts
+  }, [logs])
+
   return (
     <div className="log-list">
       {logs.map(log => {
-        const commentCount = countComments(log.comments || [])
+        const commentCount = commentCounts.get(log.id) || 0
         const isExpanded = expandedComments.has(log.id)
 
         return (
