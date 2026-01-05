@@ -200,17 +200,6 @@ export default function App() {
     }
   }, [showArchive, fetchArchivedLogs])
 
-  // Sort: pinned first, then by date (memoized to avoid recalculation)
-  // MUST be called before any handler functions to follow React hooks rules
-  const sortedLogs = useMemo(() => {
-    if (!logs || logs.length === 0) return []
-    return [...logs].sort((a, b) => {
-      if (a.pinned && !b.pinned) return -1
-      if (!a.pinned && b.pinned) return 1
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    })
-  }, [logs])
-
   const handleNewLog = (log: LogMessage) => {
     setLogs(prev => [log, ...prev])
     setShowForm(false)
@@ -460,7 +449,11 @@ export default function App() {
               </button>
             </div>
             <LogList 
-              logs={sortedLogs} 
+              logs={[...logs].sort((a, b) => {
+                if (a.pinned && !b.pinned) return -1
+                if (!a.pinned && b.pinned) return 1
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              })} 
               loading={loading} 
               onSign={handleSign} 
               onPin={handlePin}
