@@ -2524,7 +2524,6 @@ body:hover #root::before ~ .header {
   position: fixed;
   inset: 0;
   background: rgba(255, 255, 255, 0.92); /* increase opacity to compensate */
-  /* backdrop-filter: blur(4px); */  /* <-- REMOVE THIS TOO */
   display: flex;
   align-items: flex-start;
   justify-content: center;
