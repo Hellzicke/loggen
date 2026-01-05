@@ -200,10 +200,14 @@ export default function App() {
     }
   }, [showArchive, fetchArchivedLogs])
 
-  const handleNewLog = (log: LogMessage) => {
+  const handleNewLog = useCallback((log: LogMessage) => {
     setLogs(prev => [log, ...prev])
     setShowForm(false)
-  }
+  }, [])
+
+  const handleCloseForm = useCallback(() => {
+    setShowForm(false)
+  }, [])
 
   const handleSign = (logId: number, signature: ReadSignature) => {
     setLogs(prev => prev.map(log => 
@@ -479,7 +483,10 @@ export default function App() {
         )}
       </main>
       {showForm && (
-        <LogForm onSuccess={handleNewLog} onClose={() => setShowForm(false)} />
+        <LogForm 
+          onSuccess={handleNewLog} 
+          onClose={useMemo(() => () => setShowForm(false), [])} 
+        />
       )}
       {showChangelog && (
         <ChangelogModal onClose={() => setShowChangelog(false)} />
