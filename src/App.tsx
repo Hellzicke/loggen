@@ -200,6 +200,17 @@ export default function App() {
     }
   }, [showArchive, fetchArchivedLogs])
 
+  // Sort: pinned first, then by date (memoized to avoid recalculation)
+  // MUST be called before any handler functions to follow React hooks rules
+  const sortedLogs = useMemo(() => {
+    if (!logs || logs.length === 0) return []
+    return [...logs].sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1
+      if (!a.pinned && b.pinned) return 1
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+  }, [logs])
+
   const handleNewLog = (log: LogMessage) => {
     setLogs(prev => [log, ...prev])
     setShowForm(false)
@@ -389,17 +400,6 @@ export default function App() {
     setIsAuthenticated(true)
     setLoading(true)
   }
-
-  // Sort: pinned first, then by date (memoized to avoid recalculation)
-  // Always call hooks before any conditional returns
-  const sortedLogs = useMemo(() => {
-    if (!logs || logs.length === 0) return []
-    return [...logs].sort((a, b) => {
-      if (a.pinned && !b.pinned) return -1
-      if (!a.pinned && b.pinned) return 1
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    })
-  }, [logs])
 
   // Show login if not authenticated
   if (!isAuthenticated) {
