@@ -120,8 +120,8 @@ export default function App() {
     return () => clearInterval(interval)
   }, [showChristmasTheme])
 
-  // Helper function to make authenticated fetch requests
-  const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+  // Helper function to make authenticated fetch requests (memoized)
+  const authenticatedFetch = useCallback(async (url: string, options: RequestInit = {}) => {
     const token = authToken || localStorage.getItem('authToken')
     const headers: HeadersInit = {
       ...(options.headers as HeadersInit),
@@ -147,7 +147,7 @@ export default function App() {
     }
 
     return response
-  }
+  }, [authToken])
 
   const fetchLogs = useCallback(async () => {
     if (!isAuthenticated) return
@@ -167,7 +167,7 @@ export default function App() {
     } finally {
       setLoading(false)
     }
-  }, [isAuthenticated, authToken])
+  }, [isAuthenticated, authenticatedFetch])
 
   const fetchArchivedLogs = useCallback(async () => {
     if (!isAuthenticated) return
@@ -181,7 +181,7 @@ export default function App() {
     } catch (error) {
       console.error('Failed to fetch archived logs:', error)
     }
-  }, [isAuthenticated, authToken])
+  }, [isAuthenticated, authenticatedFetch])
 
   useEffect(() => {
     if (!isAuthenticated) return
