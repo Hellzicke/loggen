@@ -1,6 +1,6 @@
-import { useState, FormEvent, useEffect, useRef, memo, useCallback, useMemo } from 'react'
+import { useState, FormEvent, useEffect, useRef } from 'react'
 import type { LogMessage } from '../App'
-import RichTextEditor from './RichTextEditor'
+import RichTextEditor, { RichTextEditorRef } from './RichTextEditor'
 
 interface LogFormProps {
   onSuccess: (log: LogMessage) => void
@@ -13,10 +13,9 @@ interface ImageFile {
   uploadedAt: string
 }
 
-const LogForm = memo(function LogForm({ onSuccess, onClose }: LogFormProps) {
+export default function LogForm({ onSuccess, onClose }: LogFormProps) {
   const [author, setAuthor] = useState('')
   const [title, setTitle] = useState('')
-  const [message, setMessage] = useState('')
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -24,9 +23,7 @@ const LogForm = memo(function LogForm({ onSuccess, onClose }: LogFormProps) {
   const [availableImages, setAvailableImages] = useState<ImageFile[]>([])
   const [loadingImages, setLoadingImages] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  
-  // Use ref for message to avoid re-renders during typing
-  const messageRef = useRef(message)
+  const editorRef = useRef<RichTextEditorRef>(null)
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -36,14 +33,7 @@ const LogForm = memo(function LogForm({ onSuccess, onClose }: LogFormProps) {
     return () => document.removeEventListener('keydown', handleEscape)
   }, [onClose])
 
-  // Stable handler that updates ref immediately but state less frequently
-  const handleMessageChange = useCallback((value: string) => {
-    messageRef.current = value
-    // Use startTransition for non-urgent updates if available
-    setMessage(value)
-  }, [])
-
-  const loadAvailableImages = useCallback(async () => {
+  const loadAvailableImages = async () => {
     setLoadingImages(true)
     try {
       const token = localStorage.getItem('authToken')
@@ -61,9 +51,9 @@ const LogForm = memo(function LogForm({ onSuccess, onClose }: LogFormProps) {
     } finally {
       setLoadingImages(false)
     }
-  }, [])
+  }
 
-  const handleImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -91,21 +81,21 @@ const LogForm = memo(function LogForm({ onSuccess, onClose }: LogFormProps) {
     } finally {
       setUploading(false)
     }
-  }, [loadAvailableImages])
+  }
 
-  const handleSelectImage = useCallback((url: string) => {
+  const handleSelectImage = (url: string) => {
     setImageUrl(url)
     setShowImagePicker(false)
-  }, [])
+  }
 
-  const handleSubmit = useCallback(async (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     
-    // Use ref for most current value
-    const currentMessage = messageRef.current
+    // Get message directly from editor ref - no state involved
+    const message = editorRef.current?.getValue() || ''
     
     // Strip HTML tags to check if there's actual content
-    const plainText = currentMessage.replace(/<[^>]*>/g, '').trim()
+    const plainText = message.replace(/<[^>]*>/g, '').trim()
     if (!author.trim() || !plainText) return
 
     setSubmitting(true)
@@ -121,7 +111,7 @@ const LogForm = memo(function LogForm({ onSuccess, onClose }: LogFormProps) {
         body: JSON.stringify({ 
           author: author.trim(), 
           title: title.trim(),
-          message: currentMessage.trim(),
+          message: message.trim(),
           imageUrl
         })
       })
@@ -135,28 +125,7 @@ const LogForm = memo(function LogForm({ onSuccess, onClose }: LogFormProps) {
     } finally {
       setSubmitting(false)
     }
-  }, [author, title, imageUrl, onSuccess])
-
-  const handleRemoveImage = useCallback(() => {
-    setImageUrl(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }, [])
-
-  const toggleImagePicker = useCallback(() => {
-    setShowImagePicker(prev => {
-      if (!prev) {
-        loadAvailableImages()
-      }
-      return !prev
-    })
-  }, [loadAvailableImages])
-
-  // Memoize the editor props to prevent unnecessary re-renders
-  const editorProps = useMemo(() => ({
-    value: message,
-    onChange: handleMessageChange,
-    placeholder: "Vad vill du dela?"
-  }), [message, handleMessageChange])
+  }
 
   return (
     <div className="form-overlay" onClick={onClose}>
@@ -197,7 +166,10 @@ const LogForm = memo(function LogForm({ onSuccess, onClose }: LogFormProps) {
           <div className="form-row">
             <div className="input-group">
               <label>Meddelande</label>
-              <RichTextEditor {...editorProps} />
+              <RichTextEditor
+                ref={editorRef}
+                placeholder="Vad vill du dela?"
+              />
             </div>
           </div>
           <div className="form-row">
@@ -218,7 +190,10 @@ const LogForm = memo(function LogForm({ onSuccess, onClose }: LogFormProps) {
                     <button
                       type="button"
                       className="image-remove"
-                      onClick={handleRemoveImage}
+                      onClick={() => {
+                        setImageUrl(null)
+                        if (fileInputRef.current) fileInputRef.current.value = ''
+                      }}
                     >
                       &times;
                     </button>
@@ -236,7 +211,12 @@ const LogForm = memo(function LogForm({ onSuccess, onClose }: LogFormProps) {
                     <button
                       type="button"
                       className="image-select-btn"
-                      onClick={toggleImagePicker}
+                      onClick={() => {
+                        setShowImagePicker(!showImagePicker)
+                        if (!showImagePicker) {
+                          loadAvailableImages()
+                        }
+                      }}
                     >
                       {showImagePicker ? 'Dölj' : 'Välj'} från tidigare bilder
                     </button>
@@ -275,6 +255,4 @@ const LogForm = memo(function LogForm({ onSuccess, onClose }: LogFormProps) {
       </form>
     </div>
   )
-})
-
-export default LogForm
+}
