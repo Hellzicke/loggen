@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, memo } from 'react'
+import { useState, useRef, useEffect, memo } from 'react'
 import type { LogMessage, ReadSignature, Comment, Reaction } from '../App'
 import ImageModal from './ImageModal'
 
@@ -611,19 +611,10 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
     )
   }
 
-  // Memoize comment counts to avoid recalculating
-  const commentCounts = useMemo(() => {
-    const counts = new Map<number, number>()
-    logs.forEach(log => {
-      counts.set(log.id, countComments(log.comments || []))
-    })
-    return counts
-  }, [logs])
-
   return (
     <div className="log-list">
       {logs.map(log => {
-        const commentCount = commentCounts.get(log.id) || 0
+        const commentCount = countComments(log.comments || [])
         const isExpanded = expandedComments.has(log.id)
 
         return (
