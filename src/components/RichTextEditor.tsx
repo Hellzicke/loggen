@@ -12,10 +12,15 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
   const debounceTimer = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
+    // Only update if it's an external change and content actually differs
     if (editorRef.current && !isInternalChange.current) {
-      if (editorRef.current.innerHTML !== value) {
-        editorRef.current.innerHTML = value
-      }
+      const currentContent = editorRef.current.innerHTML
+      // Use requestAnimationFrame to batch DOM updates
+      requestAnimationFrame(() => {
+        if (editorRef.current && currentContent !== value) {
+          editorRef.current.innerHTML = value
+        }
+      })
     }
     isInternalChange.current = false
   }, [value])
@@ -24,7 +29,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     if (editorRef.current) {
       isInternalChange.current = true
       
-      // Debounce onChange to reduce lag when typing
+      // Debounce onChange to reduce lag when typing - increased to 300ms for better performance
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current)
       }
@@ -33,7 +38,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
         if (editorRef.current) {
           onChange(editorRef.current.innerHTML)
         }
-      }, 100) // 100ms debounce
+      }, 300) // 300ms debounce for better performance
     }
   }, [onChange])
 
