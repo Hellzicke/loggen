@@ -485,7 +485,7 @@ export default function App() {
       {showForm && (
         <LogForm 
           onSuccess={handleNewLog} 
-          onClose={useMemo(() => () => setShowForm(false), [])} 
+          onClose={handleCloseForm} 
         />
       )}
       {showChangelog && (
