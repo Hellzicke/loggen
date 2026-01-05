@@ -391,7 +391,9 @@ export default function App() {
   }
 
   // Sort: pinned first, then by date (memoized to avoid recalculation)
+  // Always call hooks before any conditional returns
   const sortedLogs = useMemo(() => {
+    if (!logs || logs.length === 0) return []
     return [...logs].sort((a, b) => {
       if (a.pinned && !b.pinned) return -1
       if (!a.pinned && b.pinned) return 1
