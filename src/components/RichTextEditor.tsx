@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, memo } from 'react'
 
 interface RichTextEditorProps {
   value: string
@@ -6,42 +6,42 @@ interface RichTextEditorProps {
   placeholder?: string
 }
 
-export default function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
+const RichTextEditor = memo(function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
-  const isInternalChange = useRef(false)
+  const lastValueRef = useRef(value) // Track the last value we sent to parent
   const debounceTimer = useRef<NodeJS.Timeout | null>(null)
 
+  // Only sync external value changes (e.g., form reset, initial load)
   useEffect(() => {
-    // Only update if it's an external change and content actually differs
-    if (editorRef.current && !isInternalChange.current) {
-      const currentContent = editorRef.current.innerHTML
-      // Use requestAnimationFrame to batch DOM updates
-      requestAnimationFrame(() => {
-        if (editorRef.current && currentContent !== value) {
-          editorRef.current.innerHTML = value
-        }
-      })
+    if (editorRef.current) {
+      // Only update DOM if this is a genuinely external change
+      // (not a result of our own onChange call)
+      if (value !== lastValueRef.current) {
+        editorRef.current.innerHTML = value
+        lastValueRef.current = value
+      }
     }
-    isInternalChange.current = false
   }, [value])
 
   const handleInput = useCallback(() => {
-    if (editorRef.current) {
-      isInternalChange.current = true
-      
-      // Debounce onChange to reduce lag when typing - increased to 300ms for better performance
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current)
-      }
-      
-      debounceTimer.current = setTimeout(() => {
-        if (editorRef.current) {
-          onChange(editorRef.current.innerHTML)
-        }
-      }, 300) // 300ms debounce for better performance
+    if (!editorRef.current) return
+    
+    // Clear any pending debounce
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current)
     }
+    
+    // Debounce the state update, not the typing
+    debounceTimer.current = setTimeout(() => {
+      if (editorRef.current) {
+        const newValue = editorRef.current.innerHTML
+        lastValueRef.current = newValue // Track what we're sending
+        onChange(newValue)
+      }
+    }, 150) // 150ms is a good balance - fast enough to feel responsive
   }, [onChange])
 
+  // Cleanup debounce timer
   useEffect(() => {
     return () => {
       if (debounceTimer.current) {
@@ -50,37 +50,57 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     }
   }, [])
 
-  const execFormat = (command: string, value?: string) => {
+  // Flush pending changes on blur (so submit always has latest)
+  const handleBlur = useCallback(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current)
+      debounceTimer.current = null
+    }
+    if (editorRef.current) {
+      const newValue = editorRef.current.innerHTML
+      if (newValue !== lastValueRef.current) {
+        lastValueRef.current = newValue
+        onChange(newValue)
+      }
+    }
+  }, [onChange])
+
+  const execFormat = useCallback((command: string, value?: string) => {
     document.execCommand(command, false, value)
     editorRef.current?.focus()
+    // Trigger input to capture formatting change
     handleInput()
-  }
+  }, [handleInput])
 
-  const insertList = () => {
+  const insertList = useCallback(() => {
     execFormat('insertUnorderedList')
-  }
+  }, [execFormat])
 
-  const insertLink = () => {
+  const insertLink = useCallback(() => {
     const url = prompt('Ange länk URL:')
     if (url) {
       execFormat('createLink', url)
     }
-  }
+  }, [execFormat])
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.ctrlKey || e.metaKey) {
-      if (e.key === 'b') {
-        e.preventDefault()
-        execFormat('bold')
-      } else if (e.key === 'i') {
-        e.preventDefault()
-        execFormat('italic')
-      } else if (e.key === 'u') {
-        e.preventDefault()
-        execFormat('underline')
+      switch (e.key.toLowerCase()) {
+        case 'b':
+          e.preventDefault()
+          execFormat('bold')
+          break
+        case 'i':
+          e.preventDefault()
+          execFormat('italic')
+          break
+        case 'u':
+          e.preventDefault()
+          execFormat('underline')
+          break
       }
     }
-  }
+  }, [execFormat])
 
   return (
     <div className="rich-editor-container">
@@ -131,10 +151,13 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
         className="rich-editor"
         contentEditable
         onInput={handleInput}
+        onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         data-placeholder={placeholder}
         suppressContentEditableWarning
       />
     </div>
   )
-}
+})
+
+export default RichTextEditor
