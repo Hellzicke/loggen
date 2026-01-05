@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect, useRef } from 'react'
+import { useState, FormEvent, useEffect, useRef, memo, useCallback } from 'react'
 import type { LogMessage } from '../App'
 import RichTextEditor from './RichTextEditor'
 
@@ -13,7 +13,7 @@ interface ImageFile {
   uploadedAt: string
 }
 
-export default function LogForm({ onSuccess, onClose }: LogFormProps) {
+const LogForm = memo(function LogForm({ onSuccess, onClose }: LogFormProps) {
   const [author, setAuthor] = useState('')
   const [title, setTitle] = useState('')
   const [message, setMessage] = useState('')
@@ -32,6 +32,11 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
   }, [onClose])
+
+  // Memoize message handler to prevent unnecessary re-renders
+  const handleMessageChange = useCallback((value: string) => {
+    setMessage(value)
+  }, [])
 
   const loadAvailableImages = async () => {
     setLoadingImages(true)
@@ -166,7 +171,7 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
               <label>Meddelande</label>
               <RichTextEditor
                 value={message}
-                onChange={setMessage}
+                onChange={handleMessageChange}
                 placeholder="Vad vill du dela?"
               />
             </div>
@@ -254,4 +259,6 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
       </form>
     </div>
   )
-}
+})
+
+export default LogForm
