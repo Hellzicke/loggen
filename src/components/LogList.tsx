@@ -233,7 +233,11 @@ function EditForm({ initialTitle, initialMessage, initialImageUrl, logId, onSave
 
   const handleInput = () => {
     if (editorRef.current) {
-      setMessage(editorRef.current.innerHTML)
+      // Debounce the update to reduce lag
+      const content = editorRef.current.innerHTML
+      requestAnimationFrame(() => {
+        setMessage(content)
+      })
     }
   }
 
