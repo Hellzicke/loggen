@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import ConfirmModal from './ConfirmModal'
 
 interface MeetingPoint {
   id: number
@@ -29,6 +30,11 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
   const [pointDescription, setPointDescription] = useState('')
   const [author, setAuthor] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [editingPointId, setEditingPointId] = useState<number | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editAuthor, setEditAuthor] = useState('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null)
 
   const loadMeeting = useCallback(async () => {
     try {
@@ -86,9 +92,63 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
     }
   }
 
+  const handleStartEdit = (point: MeetingPoint) => {
+    setEditingPointId(point.id)
+    setEditTitle(point.title)
+    setEditDescription(point.description || '')
+    setEditAuthor(point.author)
+    setShowForm(false)
+    setShowDeleteConfirm(null)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingPointId(null)
+    setEditTitle('')
+    setEditDescription('')
+    setEditAuthor('')
+    setShowDeleteConfirm(null)
+  }
+
+  const handleSaveEdit = async (pointId: number) => {
+    if (!meeting || !editTitle.trim() || !editAuthor.trim()) return
+
+    setSubmitting(true)
+    try {
+      const res = await authenticatedFetch(`/api/meetings/${meeting.id}/points/${pointId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          description: editDescription.trim() || null,
+          author: editAuthor.trim()
+        })
+      })
+
+      if (res.ok) {
+        handleCancelEdit()
+        loadMeeting()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Kunde inte uppdatera punkt')
+      }
+    } catch (error) {
+      console.error('Error updating point:', error)
+      alert('Ett fel uppstod vid uppdatering av punkt')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const handleDeletePoint = async (pointId: number) => {
     if (!meeting) return
-    if (!confirm('Är du säker på att du vill ta bort denna punkt?')) return
+    setShowDeleteConfirm(null)
+    
+    // Close edit form if deleting the point being edited
+    if (editingPointId === pointId) {
+      handleCancelEdit()
+    }
 
     try {
       const res = await authenticatedFetch(`/api/meetings/${meeting.id}/points/${pointId}`, {
@@ -208,35 +268,111 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
         <div className="points-list">
           {meeting.points.map((point) => (
             <div key={point.id} className="point-item-card">
-              <div className="point-item-content">
-                <div className="point-item-main">
-                  <h4 className="point-title">{point.title}</h4>
-                  {point.description && (
-                    <p className="point-description">{point.description}</p>
-                  )}
-                  <div className="point-meta">
-                    <span>Förslag av: {point.author}</span>
-                    <span className="point-date">
-                      {new Date(point.createdAt).toLocaleDateString('sv-SE', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </span>
+              {editingPointId === point.id ? (
+                <div className="point-edit-form">
+                  <h4>Redigera agendapunkt</h4>
+                  <div className="input-group">
+                    <label>Ditt namn *</label>
+                    <input
+                      type="text"
+                      value={editAuthor}
+                      onChange={(e) => setEditAuthor(e.target.value)}
+                      required
+                      className="meeting-input"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Titel *</label>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      required
+                      className="meeting-input"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Beskrivning (valfritt)</label>
+                    <textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      rows={4}
+                      className="meeting-textarea"
+                    />
+                  </div>
+                  <div className="point-edit-actions">
+                    <button
+                      type="button"
+                      className="meeting-submit-btn"
+                      onClick={() => handleSaveEdit(point.id)}
+                      disabled={submitting || !editTitle.trim() || !editAuthor.trim()}
+                    >
+                      {submitting ? 'Sparar...' : 'Spara'}
+                    </button>
+                    <button
+                      type="button"
+                      className="point-cancel-btn"
+                      onClick={handleCancelEdit}
+                      disabled={submitting}
+                    >
+                      Avbryt
+                    </button>
+                    <button
+                      type="button"
+                      className="point-delete-in-edit-btn"
+                      onClick={() => setShowDeleteConfirm(point.id)}
+                      disabled={submitting}
+                    >
+                      Ta bort
+                    </button>
                   </div>
                 </div>
-                {!isPast && (
-                  <button
-                    className="point-delete-btn"
-                    onClick={() => handleDeletePoint(point.id)}
-                    title="Ta bort"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
+              ) : (
+                <div className="point-item-content">
+                  <div className="point-item-main">
+                    <h4 className="point-title">{point.title}</h4>
+                    {point.description && (
+                      <p className="point-description">{point.description}</p>
+                    )}
+                    <div className="point-meta">
+                      <span>Förslag av: {point.author}</span>
+                      <span className="point-date">
+                        {new Date(point.createdAt).toLocaleDateString('sv-SE', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                  {!isPast && (
+                    <div className="point-actions">
+                      <button
+                        className="point-edit-btn"
+                        onClick={() => handleStartEdit(point)}
+                        title="Redigera"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {showDeleteConfirm === point.id && (
+                <ConfirmModal
+                  title="Ta bort agendapunkt"
+                  message="Är du säker på att du vill ta bort denna punkt? Detta går inte att ångra."
+                  confirmText="Ta bort"
+                  cancelText="Avbryt"
+                  onConfirm={() => handleDeletePoint(point.id)}
+                  onCancel={() => setShowDeleteConfirm(null)}
+                />
+              )}
             </div>
           ))}
         </div>

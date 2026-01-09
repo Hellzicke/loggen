@@ -2,6 +2,18 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.8.0] - 2025-01-XX
+
+### Tillagt
+- Redigera agendapunkter i mötesfunktionen
+- Diskret redigera-knapp istället för rött kryss på mötespunkter
+- Möjlighet att radera agendapunkter från redigeringsläget
+- Bekräftelsedialog vid radering av agendapunkt
+
+### Ändrat
+- Förbättrad layout för mötesfunktionen som matchar resten av sidan
+- Konsistent styling mellan användar- och admin-vyer för möten
+
 ## [0.7.8] - 2025-01-XX
 
 ### Ändrat
