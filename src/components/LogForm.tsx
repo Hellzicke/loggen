@@ -127,16 +127,28 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
     }
   }
 
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only close if clicking directly on overlay, not on form or its children
+  const mouseDownTarget = useRef<EventTarget | null>(null)
+
+  const handleOverlayMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Store where the mouse was pressed down
     if (e.target === e.currentTarget) {
-      onClose()
+      mouseDownTarget.current = e.target
+    } else {
+      mouseDownTarget.current = null
     }
   }
 
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only close if mouse was pressed down AND released on overlay (not dragged from form)
+    if (e.target === e.currentTarget && mouseDownTarget.current === e.currentTarget) {
+      onClose()
+    }
+    mouseDownTarget.current = null
+  }
+
   return (
-    <div className="form-overlay" onClick={handleOverlayClick}>
-      <form className="log-form" onSubmit={handleSubmit} onClick={e => e.stopPropagation()}>
+    <div className="form-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
+      <form className="log-form" onSubmit={handleSubmit} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}>
         <div className="form-header">
           <h2>Skapa inlägg</h2>
           <button type="button" className="form-close" onClick={onClose}>
