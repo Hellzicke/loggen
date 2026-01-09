@@ -62,3 +62,22 @@ model Admin {
   createdAt DateTime @default(now())
 }
 
+model Meeting {
+  id          Int            @id @default(autoincrement())
+  title       String
+  scheduledAt DateTime
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  points      MeetingPoint[]
+}
+
+model MeetingPoint {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?  @default("")
+  author      String
+  meetingId   Int
+  meeting     Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+}
+

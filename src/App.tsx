@@ -7,6 +7,7 @@ import ArchiveModal from './components/ArchiveModal'
 import UnpinModal from './components/UnpinModal'
 import ConfirmModal from './components/ConfirmModal'
 import Login from './components/Login'
+import MeetingPoints from './components/MeetingPoints'
 
 export interface ReadSignature {
   id: number
@@ -476,10 +477,7 @@ export default function App() {
           </div>
         )}
         {activeView === 'mötespunkter' && (
-          <div className="coming-soon">
-            <h2>Mötespunkter</h2>
-            <p>Denna funktion kommer snart...</p>
-          </div>
+          <MeetingPoints authenticatedFetch={authenticatedFetch} />
         )}
       </main>
       {showForm && (

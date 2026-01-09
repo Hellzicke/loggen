@@ -317,6 +317,163 @@ app.delete('/api/admin/images/:filename', authenticateToken, async (req, res) =>
   }
 })
 
+// ========== MEETINGS ENDPOINTS ==========
+
+// Get next meeting (for regular users)
+app.get('/api/meetings/next', authenticateSharedPassword, async (_req, res) => {
+  try {
+    const now = new Date()
+    const meeting = await prisma.meeting.findFirst({
+      where: {
+        scheduledAt: { gte: now }
+      },
+      orderBy: {
+        scheduledAt: 'asc'
+      },
+      include: {
+        points: {
+          orderBy: {
+            createdAt: 'asc'
+          }
+        }
+      }
+    })
+    res.json(meeting)
+  } catch (error) {
+    console.error('Error fetching next meeting:', error)
+    res.status(500).json({ error: 'Failed to fetch meeting' })
+  }
+})
+
+// Get all meetings (admin only)
+app.get('/api/admin/meetings', authenticateToken, async (_req, res) => {
+  try {
+    const meetings = await prisma.meeting.findMany({
+      orderBy: {
+        scheduledAt: 'desc'
+      },
+      include: {
+        points: {
+          orderBy: {
+            createdAt: 'asc'
+          }
+        }
+      }
+    })
+    res.json(meetings)
+  } catch (error) {
+    console.error('Error fetching meetings:', error)
+    res.status(500).json({ error: 'Failed to fetch meetings' })
+  }
+})
+
+// Create meeting (admin only)
+app.post('/api/admin/meetings', authenticateToken, async (req, res) => {
+  const { title, scheduledAt } = req.body
+  
+  if (!title || !scheduledAt) {
+    return res.status(400).json({ error: 'Title and scheduledAt are required' })
+  }
+
+  try {
+    const meeting = await prisma.meeting.create({
+      data: {
+        title,
+        scheduledAt: new Date(scheduledAt)
+      },
+      include: {
+        points: true
+      }
+    })
+    res.json(meeting)
+  } catch (error) {
+    console.error('Error creating meeting:', error)
+    res.status(500).json({ error: 'Failed to create meeting' })
+  }
+})
+
+// Update meeting (admin only)
+app.put('/api/admin/meetings/:id', authenticateToken, async (req, res) => {
+  const meetingId = parseInt(req.params.id)
+  const { title, scheduledAt } = req.body
+
+  try {
+    const meeting = await prisma.meeting.update({
+      where: { id: meetingId },
+      data: {
+        ...(title && { title }),
+        ...(scheduledAt && { scheduledAt: new Date(scheduledAt) })
+      },
+      include: {
+        points: {
+          orderBy: {
+            createdAt: 'asc'
+          }
+        }
+      }
+    })
+    res.json(meeting)
+  } catch (error) {
+    console.error('Error updating meeting:', error)
+    res.status(500).json({ error: 'Failed to update meeting' })
+  }
+})
+
+// Delete meeting (admin only)
+app.delete('/api/admin/meetings/:id', authenticateToken, async (req, res) => {
+  const meetingId = parseInt(req.params.id)
+
+  try {
+    await prisma.meeting.delete({
+      where: { id: meetingId }
+    })
+    res.json({ success: true, id: meetingId })
+  } catch (error) {
+    console.error('Error deleting meeting:', error)
+    res.status(500).json({ error: 'Failed to delete meeting' })
+  }
+})
+
+// Add meeting point (regular users)
+app.post('/api/meetings/:id/points', authenticateSharedPassword, async (req, res) => {
+  const meetingId = parseInt(req.params.id)
+  const { title, description, author } = req.body
+
+  if (!title || !author) {
+    return res.status(400).json({ error: 'Title and author are required' })
+  }
+
+  try {
+    const point = await prisma.meetingPoint.create({
+      data: {
+        title,
+        description: description || '',
+        author,
+        meetingId
+      }
+    })
+    res.json(point)
+  } catch (error) {
+    console.error('Error creating meeting point:', error)
+    res.status(500).json({ error: 'Failed to create meeting point' })
+  }
+})
+
+// Delete meeting point (regular users - can delete their own)
+app.delete('/api/meetings/:id/points/:pointId', authenticateSharedPassword, async (req, res) => {
+  const pointId = parseInt(req.params.pointId)
+
+  try {
+    await prisma.meetingPoint.delete({
+      where: { id: pointId }
+    })
+    res.json({ success: true, id: pointId })
+  } catch (error) {
+    console.error('Error deleting meeting point:', error)
+    res.status(500).json({ error: 'Failed to delete meeting point' })
+  }
+})
+
 // Get changelog
 app.get('/api/changelog', (_req, res) => {
   try {
