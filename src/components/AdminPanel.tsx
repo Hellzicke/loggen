@@ -393,109 +393,52 @@ export default function AdminPanel() {
           </div>
         ) : activeTab === 'meetings' ? (
           <div className="admin-meetings">
-            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="admin-meetings-header">
               <h2>Möten</h2>
               <button 
-                className="create-btn"
+                className="admin-create-meeting-btn"
                 onClick={handleCreateMeeting}
-                style={{
-                  padding: '0.5rem 1rem',
-                  background: '#2563eb',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  fontWeight: '500'
-                }}
               >
                 Skapa nytt möte
               </button>
             </div>
 
             {showMeetingForm && (
-              <div className="meeting-form-overlay" style={{
-                position: 'fixed',
-                inset: 0,
-                background: 'rgba(0, 0, 0, 0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 10000
-              }}>
-                <div className="meeting-form" style={{
-                  background: 'white',
-                  padding: '2rem',
-                  borderRadius: '8px',
-                  maxWidth: '500px',
-                  width: '90%'
-                }}>
-                  <h3 style={{ marginTop: 0 }}>{editingMeeting ? 'Redigera möte' : 'Skapa nytt möte'}</h3>
+              <div className="meeting-form-overlay">
+                <div className="meeting-form-modal">
+                  <h3>{editingMeeting ? 'Redigera möte' : 'Skapa nytt möte'}</h3>
                   <form onSubmit={handleSaveMeeting}>
-                    <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                        Titel
-                      </label>
+                    <div className="input-group">
+                      <label>Titel</label>
                       <input
                         type="text"
                         value={meetingTitle}
                         onChange={(e) => setMeetingTitle(e.target.value)}
                         required
-                        style={{
-                          width: '100%',
-                          padding: '0.5rem',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '6px',
-                          fontSize: '0.875rem'
-                        }}
+                        className="admin-meeting-input"
                       />
                     </div>
-                    <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                        Datum och tid
-                      </label>
+                    <div className="input-group">
+                      <label>Datum och tid</label>
                       <input
                         type="datetime-local"
                         value={meetingDate}
                         onChange={(e) => setMeetingDate(e.target.value)}
                         required
-                        style={{
-                          width: '100%',
-                          padding: '0.5rem',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '6px',
-                          fontSize: '0.875rem'
-                        }}
+                        className="admin-meeting-input"
                       />
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                    <div className="admin-meeting-form-actions">
                       <button
                         type="button"
+                        className="admin-meeting-cancel-btn"
                         onClick={() => setShowMeetingForm(false)}
-                        style={{
-                          padding: '0.5rem 1rem',
-                          background: '#6b7280',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem'
-                        }}
                       >
                         Avbryt
                       </button>
                       <button
                         type="submit"
-                        style={{
-                          padding: '0.5rem 1rem',
-                          background: '#2563eb',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                          fontWeight: '500'
-                        }}
+                        className="admin-meeting-save-btn"
                       >
                         Spara
                       </button>
@@ -508,24 +451,12 @@ export default function AdminPanel() {
             {meetings.length === 0 ? (
               <div className="empty-state">Inga möten hittades</div>
             ) : (
-              <div className="meetings-list">
+              <div className="admin-meetings-list">
                 {meetings.map(meeting => (
-                  <div key={meeting.id} className="admin-meeting-item" style={{
-                    background: 'white',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    padding: '1rem',
-                    marginBottom: '1rem'
-                  }}>
-                    <div className="meeting-info">
-                      <h4 style={{ marginTop: 0, marginBottom: '0.5rem' }}>{meeting.title}</h4>
-                      <div className="meeting-meta" style={{
-                        display: 'flex',
-                        gap: '1rem',
-                        marginBottom: '0.5rem',
-                        fontSize: '0.875rem',
-                        color: '#6b7280'
-                      }}>
+                  <div key={meeting.id} className="admin-meeting-item">
+                    <div className="admin-meeting-info">
+                      <h4>{meeting.title}</h4>
+                      <div className="admin-meeting-meta">
                         <span>
                           {new Date(meeting.scheduledAt).toLocaleString('sv-SE', {
                             year: 'numeric',
@@ -538,23 +469,10 @@ export default function AdminPanel() {
                         <span>{meeting.points.length} punkter</span>
                       </div>
                     </div>
-                    <div className="meeting-actions" style={{
-                      display: 'flex',
-                      gap: '0.5rem',
-                      marginTop: '0.5rem'
-                    }}>
+                    <div className="admin-meeting-actions">
                       <button
-                        className="edit-btn"
+                        className="admin-meeting-edit-btn"
                         onClick={() => handleEditMeeting(meeting)}
-                        style={{
-                          padding: '0.375rem 0.75rem',
-                          background: '#2563eb',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '0.8125rem'
-                        }}
                       >
                         Redigera
                       </button>
@@ -562,15 +480,6 @@ export default function AdminPanel() {
                         className="delete-btn"
                         onClick={() => handleDeleteMeeting(meeting.id)}
                         disabled={deleting === meeting.id}
-                        style={{
-                          padding: '0.375rem 0.75rem',
-                          background: '#dc2626',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '0.8125rem'
-                        }}
                       >
                         {deleting === meeting.id ? 'Tar bort...' : 'Ta bort'}
                       </button>
