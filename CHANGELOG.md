@@ -2,6 +2,14 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.7.8] - 2025-01-XX
+
+### Ändrat
+- Förbättrad prestanda: Inaktiverade julanimationer i bakgrunden
+- Förbättrad prestanda: Tog bort backdrop-filter blur för bättre scroll-prestanda
+- Fixat: Signatur-tooltip visar nu alla personer som signerat utan begränsning
+- Fixat: Modal stängs inte längre när man markerar text i formulärfält
+
 ## [0.7.7] - 2025-01-XX
 
 ### Ändrat
