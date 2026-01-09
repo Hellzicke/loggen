@@ -113,11 +113,7 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
   if (!meeting) {
     return (
       <div className="meeting-points-container">
-        <div className="no-meeting" style={{
-          textAlign: 'center',
-          padding: '3rem',
-          color: '#6b7280'
-        }}>
+        <div className="no-meeting">
           <h2>Inget kommande möte</h2>
           <p>Det finns inget planerat möte just nu.</p>
         </div>
@@ -130,21 +126,9 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
 
   return (
     <div className="meeting-points-container">
-      <div className="meeting-header" style={{
-        background: 'white',
-        borderRadius: '8px',
-        padding: '1.5rem',
-        marginBottom: '1.5rem',
-        border: '1px solid #e5e7eb'
-      }}>
-        <h2 style={{ marginTop: 0, marginBottom: '0.5rem' }}>{meeting.title}</h2>
-        <div style={{
-          display: 'flex',
-          gap: '1rem',
-          alignItems: 'center',
-          fontSize: '0.875rem',
-          color: '#6b7280'
-        }}>
+      <div className="meeting-header-card">
+        <h2 className="meeting-title">{meeting.title}</h2>
+        <div className="meeting-meta">
           <span>
             {meetingDate.toLocaleString('sv-SE', {
               year: 'numeric',
@@ -154,30 +138,16 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
               minute: '2-digit'
             })}
           </span>
-          {isPast && <span style={{ color: '#dc2626', fontWeight: '500' }}>Mötet har redan ägt rum</span>}
+          {isPast && <span className="meeting-past-badge">Mötet har redan ägt rum</span>}
         </div>
       </div>
 
-      <div className="meeting-points-header" style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '1rem'
-      }}>
-        <h3 style={{ margin: 0 }}>Agendapunkter ({meeting.points.length})</h3>
+      <div className="meeting-points-header">
+        <h3>Agendapunkter ({meeting.points.length})</h3>
         {!isPast && (
           <button
+            className={`meeting-add-btn ${showForm ? 'meeting-add-btn--cancel' : ''}`}
             onClick={() => setShowForm(!showForm)}
-            style={{
-              padding: '0.5rem 1rem',
-              background: showForm ? '#6b7280' : '#2563eb',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              fontWeight: '500'
-            }}
           >
             {showForm ? 'Avbryt' : '+ Lägg till punkt'}
           </button>
@@ -185,85 +155,44 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
       </div>
 
       {showForm && !isPast && (
-        <div className="point-form" style={{
-          background: 'white',
-          borderRadius: '8px',
-          padding: '1.5rem',
-          marginBottom: '1.5rem',
-          border: '1px solid #e5e7eb'
-        }}>
-          <h4 style={{ marginTop: 0 }}>Ny agendapunkt</h4>
+        <div className="point-form-card">
+          <h4>Ny agendapunkt</h4>
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                Ditt namn *
-              </label>
+            <div className="input-group">
+              <label>Ditt namn *</label>
               <input
                 type="text"
                 value={author}
                 onChange={(e) => setAuthor(e.target.value)}
                 required
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem'
-                }}
+                className="meeting-input"
               />
             </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                Titel *
-              </label>
+            <div className="input-group">
+              <label>Titel *</label>
               <input
                 type="text"
                 value={pointTitle}
                 onChange={(e) => setPointTitle(e.target.value)}
                 required
                 placeholder="Ex: Uppdatering av projekt X"
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem'
-                }}
+                className="meeting-input"
               />
             </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                Beskrivning (valfritt)
-              </label>
+            <div className="input-group">
+              <label>Beskrivning (valfritt)</label>
               <textarea
                 value={pointDescription}
                 onChange={(e) => setPointDescription(e.target.value)}
                 rows={4}
                 placeholder="Beskriv vad du vill diskutera..."
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  fontFamily: 'inherit',
-                  resize: 'vertical'
-                }}
+                className="meeting-textarea"
               />
             </div>
             <button
               type="submit"
               disabled={submitting}
-              style={{
-                padding: '0.5rem 1rem',
-                background: submitting ? '#9ca3af' : '#2563eb',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: submitting ? 'not-allowed' : 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '500'
-              }}
+              className="meeting-submit-btn"
             >
               {submitting ? 'Lägger till...' : 'Lägg till'}
             </button>
@@ -272,41 +201,22 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
       )}
 
       {meeting.points.length === 0 ? (
-        <div className="no-points" style={{
-          textAlign: 'center',
-          padding: '2rem',
-          color: '#6b7280',
-          background: 'white',
-          borderRadius: '8px',
-          border: '1px solid #e5e7eb'
-        }}>
+        <div className="no-points">
           <p>Inga agendapunkter har lagts till ännu.</p>
         </div>
       ) : (
         <div className="points-list">
           {meeting.points.map((point) => (
-            <div
-              key={point.id}
-              className="point-item"
-              style={{
-                background: 'white',
-                borderRadius: '8px',
-                padding: '1rem',
-                marginBottom: '1rem',
-                border: '1px solid #e5e7eb'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ marginTop: 0, marginBottom: '0.5rem' }}>{point.title}</h4>
+            <div key={point.id} className="point-item-card">
+              <div className="point-item-content">
+                <div className="point-item-main">
+                  <h4 className="point-title">{point.title}</h4>
                   {point.description && (
-                    <p style={{ margin: '0 0 0.5rem 0', color: '#6b7280', fontSize: '0.875rem' }}>
-                      {point.description}
-                    </p>
+                    <p className="point-description">{point.description}</p>
                   )}
-                  <div style={{ fontSize: '0.8125rem', color: '#9ca3af' }}>
+                  <div className="point-meta">
                     <span>Förslag av: {point.author}</span>
-                    <span style={{ marginLeft: '1rem' }}>
+                    <span className="point-date">
                       {new Date(point.createdAt).toLocaleDateString('sv-SE', {
                         year: 'numeric',
                         month: 'short',
@@ -319,17 +229,8 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
                 </div>
                 {!isPast && (
                   <button
+                    className="point-delete-btn"
                     onClick={() => handleDeletePoint(point.id)}
-                    style={{
-                      padding: '0.25rem 0.5rem',
-                      background: '#dc2626',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '0.75rem',
-                      marginLeft: '1rem'
-                    }}
                     title="Ta bort"
                   >
                     ✕

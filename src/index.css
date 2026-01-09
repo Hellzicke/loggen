@@ -2517,6 +2517,185 @@ body:hover #root::before ~ .header {
   box-shadow: var(--shadow-sm);
 }
 
+/* Admin Meetings */
+.admin-meetings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.admin-meetings-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.admin-create-meeting-btn {
+  font-family: inherit;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.admin-create-meeting-btn:hover {
+  background: var(--accent-hover);
+}
+
+.meeting-form-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.meeting-form-modal {
+  background: var(--bg-card);
+  padding: 2rem;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: var(--shadow-md);
+}
+
+.meeting-form-modal h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.meeting-form-modal .input-group {
+  margin-bottom: 1rem;
+}
+
+.meeting-form-modal .input-group:last-of-type {
+  margin-bottom: 1.5rem;
+}
+
+.admin-meeting-input {
+  font-family: inherit;
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: border-color 0.15s ease;
+}
+
+.admin-meeting-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.admin-meeting-form-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.admin-meeting-cancel-btn {
+  font-family: inherit;
+  padding: 0.5rem 1rem;
+  background: var(--text-muted);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.15s ease;
+}
+
+.admin-meeting-cancel-btn:hover {
+  background: var(--text-secondary);
+}
+
+.admin-meeting-save-btn {
+  font-family: inherit;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background 0.15s ease;
+}
+
+.admin-meeting-save-btn:hover {
+  background: var(--accent-hover);
+}
+
+.admin-meetings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-meeting-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-meeting-info {
+  margin-bottom: 0.5rem;
+}
+
+.admin-meeting-info h4 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.admin-meeting-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.admin-meeting-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.admin-meeting-edit-btn {
+  font-family: inherit;
+  padding: 0.375rem 0.75rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background 0.15s ease;
+}
+
+.admin-meeting-edit-btn:hover {
+  background: var(--accent-hover);
+}
+
 /* Modal */
 .modal-overlay {
   position: fixed;
@@ -2896,6 +3075,246 @@ body:hover #root::before ~ .header {
   text-align: center;
   padding: 3rem;
   color: var(--text-muted);
+}
+
+/* Meeting Points */
+.meeting-points-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.no-meeting {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+.no-meeting h2 {
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.meeting-header-card {
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+
+.meeting-title {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.meeting-meta {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.meeting-past-badge {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.meeting-points-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.meeting-points-header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.meeting-add-btn {
+  font-family: inherit;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.meeting-add-btn:hover {
+  background: var(--accent-hover);
+}
+
+.meeting-add-btn--cancel {
+  background: var(--text-muted);
+}
+
+.meeting-add-btn--cancel:hover {
+  background: var(--text-secondary);
+}
+
+.point-form-card {
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+
+.point-form-card h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.point-form-card .input-group {
+  margin-bottom: 1rem;
+}
+
+.point-form-card .input-group:last-of-type {
+  margin-bottom: 1.5rem;
+}
+
+.meeting-input,
+.meeting-textarea {
+  font-family: inherit;
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: border-color 0.15s ease;
+}
+
+.meeting-input:focus,
+.meeting-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.meeting-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.meeting-submit-btn {
+  font-family: inherit;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.meeting-submit-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.meeting-submit-btn:disabled {
+  background: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.no-points {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+
+.points-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.point-item-card {
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+
+.point-item-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.point-item-main {
+  flex: 1;
+}
+
+.point-title {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.point-description {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.point-meta {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.point-date {
+  margin-left: 0;
+}
+
+.point-delete-btn {
+  padding: 0.25rem 0.5rem;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.point-delete-btn:hover {
+  background: #b91c1c;
 }
 
 /* Responsive */
