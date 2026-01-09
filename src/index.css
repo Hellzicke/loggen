@@ -3301,20 +3301,96 @@ body:hover #root::before ~ .header {
   margin-left: 0;
 }
 
-.point-delete-btn {
-  padding: 0.25rem 0.5rem;
+.point-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.point-edit-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.point-edit-btn:hover {
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+}
+
+.point-edit-form {
+  padding: 0;
+}
+
+.point-edit-form h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.point-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.point-cancel-btn {
+  font-family: inherit;
+  padding: 0.5rem 1rem;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.point-cancel-btn:hover:not(:disabled) {
+  background: var(--border);
+  color: var(--text-primary);
+}
+
+.point-cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.point-delete-in-edit-btn {
+  font-family: inherit;
+  padding: 0.5rem 1rem;
   background: #dc2626;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 0.75rem;
-  flex-shrink: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
   transition: background 0.15s ease;
+  margin-left: auto;
 }
 
-.point-delete-btn:hover {
+.point-delete-in-edit-btn:hover:not(:disabled) {
   background: #b91c1c;
+}
+
+.point-delete-in-edit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Responsive */

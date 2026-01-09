@@ -459,6 +459,31 @@ app.post('/api/meetings/:id/points', authenticateSharedPassword, async (req, res
   }
 })
 
+// Update meeting point (regular users)
+app.put('/api/meetings/:id/points/:pointId', authenticateSharedPassword, async (req, res) => {
+  const pointId = parseInt(req.params.pointId)
+  const { title, description, author } = req.body
+
+  if (!title || !author) {
+    return res.status(400).json({ error: 'Title and author are required' })
+  }
+
+  try {
+    const point = await prisma.meetingPoint.update({
+      where: { id: pointId },
+      data: {
+        title,
+        description: description || null,
+        author
+      }
+    })
+    res.json(point)
+  } catch (error) {
+    console.error('Error updating meeting point:', error)
+    res.status(500).json({ error: 'Failed to update meeting point' })
+  }
+})
+
 // Delete meeting point (regular users - can delete their own)
 app.delete('/api/meetings/:id/points/:pointId', authenticateSharedPassword, async (req, res) => {
   const pointId = parseInt(req.params.pointId)
