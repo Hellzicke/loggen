@@ -13,7 +13,8 @@
     "release": "npm version patch && git push && git push --tags",
     "release:minor": "npm version minor && git push && git push --tags",
     "release:major": "npm version major && git push && git push --tags",
-    "create-admin": "tsx scripts/create-admin.ts"
+    "create-admin": "tsx scripts/create-admin.ts",
+    "create-meeting-tables": "tsx scripts/create-meeting-tables.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
