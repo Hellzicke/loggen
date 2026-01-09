@@ -127,8 +127,15 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
     }
   }
 
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only close if clicking directly on overlay, not on form or its children
+    if (e.target === e.currentTarget) {
+      onClose()
+    }
+  }
+
   return (
-    <div className="form-overlay" onClick={onClose}>
+    <div className="form-overlay" onClick={handleOverlayClick}>
       <form className="log-form" onSubmit={handleSubmit} onClick={e => e.stopPropagation()}>
         <div className="form-header">
           <h2>Skapa inlägg</h2>
