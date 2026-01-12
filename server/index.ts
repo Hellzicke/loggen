@@ -319,7 +319,57 @@ app.delete('/api/admin/images/:filename', authenticateToken, async (req, res) =>
 
 // ========== MEETINGS ENDPOINTS ==========
 
-// Get next meeting (for regular users)
+// Get all upcoming meetings (for regular users)
+app.get('/api/meetings/upcoming', authenticateSharedPassword, async (_req, res) => {
+  try {
+    const now = new Date()
+    const meetings = await prisma.meeting.findMany({
+      where: {
+        scheduledAt: { gte: now }
+      },
+      orderBy: {
+        scheduledAt: 'asc'
+      },
+      include: {
+        points: {
+          orderBy: {
+            createdAt: 'asc'
+          }
+        }
+      }
+    })
+    res.json(meetings)
+  } catch (error) {
+    console.error('Error fetching upcoming meetings:', error)
+    res.status(500).json({ error: 'Failed to fetch meetings' })
+  }
+})
+
+// Get specific meeting by ID (for regular users)
+app.get('/api/meetings/:id', authenticateSharedPassword, async (req, res) => {
+  try {
+    const meetingId = parseInt(req.params.id)
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId },
+      include: {
+        points: {
+          orderBy: {
+            createdAt: 'asc'
+          }
+        }
+      }
+    })
+    if (!meeting) {
+      return res.status(404).json({ error: 'Meeting not found' })
+    }
+    res.json(meeting)
+  } catch (error) {
+    console.error('Error fetching meeting:', error)
+    res.status(500).json({ error: 'Failed to fetch meeting' })
+  }
+})
+
+// Get next meeting (for regular users) - kept for backwards compatibility
 app.get('/api/meetings/next', authenticateSharedPassword, async (_req, res) => {
   try {
     const now = new Date()

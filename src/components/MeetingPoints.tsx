@@ -23,6 +23,8 @@ interface MeetingPointsProps {
 }
 
 export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps) {
+  const [meetings, setMeetings] = useState<Meeting[]>([])
+  const [selectedMeetingId, setSelectedMeetingId] = useState<number | null>(null)
   const [meeting, setMeeting] = useState<Meeting | null>(null)
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -36,9 +38,31 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
   const [editAuthor, setEditAuthor] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null)
 
-  const loadMeeting = useCallback(async () => {
+  const loadMeetings = useCallback(async () => {
     try {
-      const res = await authenticatedFetch('/api/meetings/next')
+      const res = await authenticatedFetch('/api/meetings/upcoming')
+      if (res.ok) {
+        const data = await res.json()
+        setMeetings(data)
+        // Auto-select first meeting if available
+        if (data.length > 0 && !selectedMeetingId) {
+          setSelectedMeetingId(data[0].id)
+          setMeeting(data[0])
+        } else if (data.length === 0) {
+          setMeeting(null)
+          setSelectedMeetingId(null)
+        }
+      }
+    } catch (error) {
+      console.error('Error loading meetings:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [authenticatedFetch, selectedMeetingId])
+
+  const loadMeeting = useCallback(async (meetingId: number) => {
+    try {
+      const res = await authenticatedFetch(`/api/meetings/${meetingId}`)
       if (res.ok) {
         const data = await res.json()
         setMeeting(data)
@@ -47,14 +71,25 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
       }
     } catch (error) {
       console.error('Error loading meeting:', error)
-    } finally {
-      setLoading(false)
     }
   }, [authenticatedFetch])
 
+  const handleMeetingSelect = (meetingId: number) => {
+    setSelectedMeetingId(meetingId)
+    loadMeeting(meetingId)
+    setShowForm(false)
+    setEditingPointId(null)
+  }
+
   useEffect(() => {
-    loadMeeting()
-  }, [loadMeeting])
+    loadMeetings()
+  }, [loadMeetings])
+
+  useEffect(() => {
+    if (selectedMeetingId) {
+      loadMeeting(selectedMeetingId)
+    }
+  }, [selectedMeetingId, loadMeeting])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -79,7 +114,10 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
         setPointDescription('')
         setAuthor('')
         setShowForm(false)
-        loadMeeting()
+        loadMeetings()
+        if (selectedMeetingId) {
+          loadMeeting(selectedMeetingId)
+        }
       } else {
         const data = await res.json()
         alert(data.error || 'Kunde inte lägga till punkt')
@@ -128,7 +166,10 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
 
       if (res.ok) {
         handleCancelEdit()
-        loadMeeting()
+        loadMeetings()
+        if (selectedMeetingId) {
+          loadMeeting(selectedMeetingId)
+        }
       } else {
         const data = await res.json()
         alert(data.error || 'Kunde inte uppdatera punkt')
@@ -156,7 +197,10 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
       })
 
       if (res.ok) {
-        loadMeeting()
+        loadMeetings()
+        if (selectedMeetingId) {
+          loadMeeting(selectedMeetingId)
+        }
       } else {
         alert('Kunde inte ta bort punkten')
       }
@@ -170,12 +214,31 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
     return <div className="loading">Laddar...</div>
   }
 
+  if (loading) {
+    return <div className="loading">Laddar...</div>
+  }
+
+  if (meetings.length === 0) {
+    return (
+      <div className="meeting-points-container">
+        <div className="no-meeting">
+          <h2>Inga kommande möten</h2>
+          <p>Det finns inga planerade möten just nu.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!meeting && selectedMeetingId) {
+    return <div className="loading">Laddar möte...</div>
+  }
+
   if (!meeting) {
     return (
       <div className="meeting-points-container">
         <div className="no-meeting">
-          <h2>Inget kommande möte</h2>
-          <p>Det finns inget planerat möte just nu.</p>
+          <h2>Välj ett möte</h2>
+          <p>Välj ett möte från listan för att se agendapunkter.</p>
         </div>
       </div>
     )
@@ -186,6 +249,35 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
 
   return (
     <div className="meeting-points-container">
+      {meetings.length > 1 && (
+        <div className="meetings-selector">
+          <h3>Välj möte</h3>
+          <div className="meetings-list-selector">
+            {meetings.map((m) => {
+              const mDate = new Date(m.scheduledAt)
+              return (
+                <button
+                  key={m.id}
+                  className={`meeting-selector-btn ${selectedMeetingId === m.id ? 'meeting-selector-btn--active' : ''}`}
+                  onClick={() => handleMeetingSelect(m.id)}
+                >
+                  <div className="meeting-selector-title">{m.title}</div>
+                  <div className="meeting-selector-date">
+                    {mDate.toLocaleString('sv-SE', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </div>
+                  <div className="meeting-selector-points">{m.points.length} punkter</div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
       <div className="meeting-header-card">
         <div className="meeting-header-badge">Möte</div>
         <h2 className="meeting-title">{meeting.title}</h2>

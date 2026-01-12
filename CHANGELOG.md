@@ -9,6 +9,8 @@ Alla ändringar i projektet dokumenteras här.
 - Tydligare visning av vilket möte agendapunkterna tillhör
 - Visuella indikatorer (badge och accent-färger) för att visa att punkterna hänger ihop med ett specifikt möte
 - Rubriken ändrad till "Agendapunkter för detta möte" för tydlighet
+- Fixat tidszonshantering för mötesdatum - behåller nu vald lokal tid vid sparande och visning
+- Visar nu alla kommande möten med möjlighet att välja vilket möte man vill se agendapunkter för
 
 ## [0.8.0] - 2025-01-XX
 
