@@ -187,9 +187,10 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
   return (
     <div className="meeting-points-container">
       <div className="meeting-header-card">
+        <div className="meeting-header-badge">Möte</div>
         <h2 className="meeting-title">{meeting.title}</h2>
         <div className="meeting-meta">
-          <span>
+          <span className="meeting-date-display">
             {meetingDate.toLocaleString('sv-SE', {
               year: 'numeric',
               month: 'long',
@@ -202,17 +203,18 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
         </div>
       </div>
 
-      <div className="meeting-points-header">
-        <h3>Agendapunkter ({meeting.points.length})</h3>
-        {!isPast && (
-          <button
-            className={`meeting-add-btn ${showForm ? 'meeting-add-btn--cancel' : ''}`}
-            onClick={() => setShowForm(!showForm)}
-          >
-            {showForm ? 'Avbryt' : '+ Lägg till punkt'}
-          </button>
-        )}
-      </div>
+      <div className="meeting-points-section">
+        <div className="meeting-points-header">
+          <h3>Agendapunkter för detta möte ({meeting.points.length})</h3>
+          {!isPast && (
+            <button
+              className={`meeting-add-btn ${showForm ? 'meeting-add-btn--cancel' : ''}`}
+              onClick={() => setShowForm(!showForm)}
+            >
+              {showForm ? 'Avbryt' : '+ Lägg till punkt'}
+            </button>
+          )}
+        </div>
 
       {showForm && !isPast && (
         <div className="point-form-card">
@@ -267,7 +269,8 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
       ) : (
         <div className="points-list">
           {meeting.points.map((point) => (
-            <div key={point.id} className="point-item-card">
+            <div key={point.id} className="point-item-card point-item-card--linked">
+              <div className="point-meeting-indicator"></div>
               {editingPointId === point.id ? (
                 <div className="point-edit-form">
                   <h4>Redigera agendapunkt</h4>
@@ -377,6 +380,7 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
           ))}
         </div>
       )}
+      </div>
     </div>
   )
 }
