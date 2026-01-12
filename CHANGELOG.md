@@ -2,6 +2,20 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.9.0] - 2025-01-XX
+
+### Tillagt
+- Markera agendapunkter som gåtts igenom med checkbox
+- Kommentarsfunktion på agendapunkter för att dokumentera beslut och anteckningar
+- Arkiveringsfunktion för möten - möjlighet att arkivera möten efter att de ägt rum
+- Vy för arkiverade möten - se tidigare möten och vad som diskuterades
+- Visar när agendapunkter markerades som klara
+
+### Ändrat
+- Förbättrad hantering av möten under och efter själva mötet
+- Möjlighet att lägga till anteckningar även efter att mötet är över
+- Checkbox för att markera punkter som klara är alltid tillgänglig (även för arkiverade möten)
+
 ## [0.8.1] - 2025-01-XX
 
 ### Ändrat

@@ -325,7 +325,8 @@ app.get('/api/meetings/upcoming', authenticateSharedPassword, async (_req, res) 
     const now = new Date()
     const meetings = await prisma.meeting.findMany({
       where: {
-        scheduledAt: { gte: now }
+        scheduledAt: { gte: now },
+        archived: false
       },
       orderBy: {
         scheduledAt: 'asc'
@@ -342,6 +343,62 @@ app.get('/api/meetings/upcoming', authenticateSharedPassword, async (_req, res) 
   } catch (error) {
     console.error('Error fetching upcoming meetings:', error)
     res.status(500).json({ error: 'Failed to fetch meetings' })
+  }
+})
+
+// Get archived meetings (for regular users)
+app.get('/api/meetings/archived', authenticateSharedPassword, async (_req, res) => {
+  try {
+    const meetings = await prisma.meeting.findMany({
+      where: {
+        archived: true
+      },
+      orderBy: {
+        archivedAt: 'desc'
+      },
+      include: {
+        points: {
+          orderBy: {
+            createdAt: 'asc'
+          }
+        }
+      }
+    })
+    res.json(meetings)
+  } catch (error) {
+    console.error('Error fetching archived meetings:', error)
+    res.status(500).json({ error: 'Failed to fetch archived meetings' })
+  }
+})
+
+// Archive a meeting (regular users - can archive after scheduled time)
+app.post('/api/meetings/:id/archive', authenticateSharedPassword, async (req, res) => {
+  const meetingId = parseInt(req.params.id)
+
+  try {
+    const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } })
+    if (!meeting) {
+      return res.status(404).json({ error: 'Meeting not found' })
+    }
+
+    const updated = await prisma.meeting.update({
+      where: { id: meetingId },
+      data: {
+        archived: true,
+        archivedAt: new Date()
+      },
+      include: {
+        points: {
+          orderBy: {
+            createdAt: 'asc'
+          }
+        }
+      }
+    })
+    res.json(updated)
+  } catch (error) {
+    console.error('Error archiving meeting:', error)
+    res.status(500).json({ error: 'Failed to archive meeting' })
   }
 })
 
@@ -375,7 +432,8 @@ app.get('/api/meetings/next', authenticateSharedPassword, async (_req, res) => {
     const now = new Date()
     const meeting = await prisma.meeting.findFirst({
       where: {
-        scheduledAt: { gte: now }
+        scheduledAt: { gte: now },
+        archived: false
       },
       orderBy: {
         scheduledAt: 'asc'
@@ -512,20 +570,26 @@ app.post('/api/meetings/:id/points', authenticateSharedPassword, async (req, res
 // Update meeting point (regular users)
 app.put('/api/meetings/:id/points/:pointId', authenticateSharedPassword, async (req, res) => {
   const pointId = parseInt(req.params.pointId)
-  const { title, description, author } = req.body
+  const { title, description, author, completed, notes } = req.body
 
-  if (!title || !author) {
-    return res.status(400).json({ error: 'Title and author are required' })
+  if (title !== undefined && (!title || !author)) {
+    return res.status(400).json({ error: 'Title and author are required when updating title' })
   }
 
   try {
+    const updateData: any = {}
+    if (title !== undefined) updateData.title = title
+    if (description !== undefined) updateData.description = description || null
+    if (author !== undefined) updateData.author = author
+    if (completed !== undefined) {
+      updateData.completed = completed
+      updateData.completedAt = completed ? new Date() : null
+    }
+    if (notes !== undefined) updateData.notes = notes || null
+
     const point = await prisma.meetingPoint.update({
       where: { id: pointId },
-      data: {
-        title,
-        description: description || null,
-        author
-      }
+      data: updateData
     })
     res.json(point)
   } catch (error) {
