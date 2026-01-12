@@ -2,6 +2,14 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.8.1] - 2025-01-XX
+
+### Ändrat
+- Förbättrad visuell koppling mellan agendapunkter och möte
+- Tydligare visning av vilket möte agendapunkterna tillhör
+- Visuella indikatorer (badge och accent-färger) för att visa att punkterna hänger ihop med ett specifikt möte
+- Rubriken ändrad till "Agendapunkter för detta möte" för tydlighet
+
 ## [0.8.0] - 2025-01-XX
 
 ### Tillagt
