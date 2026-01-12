@@ -196,7 +196,14 @@ export default function AdminPanel() {
   const handleEditMeeting = (meeting: Meeting) => {
     setEditingMeeting(meeting)
     setMeetingTitle(meeting.title)
-    setMeetingDate(new Date(meeting.scheduledAt).toISOString().slice(0, 16))
+    // Convert UTC date to local time for datetime-local input
+    const date = new Date(meeting.scheduledAt)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    setMeetingDate(`${year}-${month}-${day}T${hours}:${minutes}`)
     setShowMeetingForm(true)
   }
 
@@ -211,6 +218,19 @@ export default function AdminPanel() {
         : '/api/admin/meetings'
       const method = editingMeeting ? 'PUT' : 'POST'
 
+      // datetime-local gives us "YYYY-MM-DDTHH:mm" in local time
+      // We need to preserve the exact time the user selected
+      // Parse the datetime-local value and create a Date object in local time
+      const [datePart, timePart] = meetingDate.split('T')
+      const [year, month, day] = datePart.split('-').map(Number)
+      const [hours, minutes] = timePart.split(':').map(Number)
+      
+      // Create date object in local timezone (this constructor uses local time)
+      const localDate = new Date(year, month - 1, day, hours, minutes, 0, 0)
+      // Convert to ISO string - this will convert local time to UTC
+      // When displayed later, toLocaleString will convert back to local time
+      const scheduledAtISO = localDate.toISOString()
+
       const res = await fetch(url, {
         method,
         headers: {
@@ -219,7 +239,7 @@ export default function AdminPanel() {
         },
         body: JSON.stringify({
           title: meetingTitle,
-          scheduledAt: meetingDate
+          scheduledAt: scheduledAtISO
         })
       })
 
