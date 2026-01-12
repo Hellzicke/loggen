@@ -3081,7 +3081,70 @@ body:hover #root::before ~ .header {
 .meeting-points-container {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
+}
+
+.meetings-selector {
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+
+.meetings-selector h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.meetings-list-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.meeting-selector-btn {
+  font-family: inherit;
+  text-align: left;
+  padding: 1rem;
+  background: var(--bg-primary);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.meeting-selector-btn:hover {
+  background: var(--border);
+  border-color: var(--accent);
+}
+
+.meeting-selector-btn--active {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(24, 119, 242, 0.15);
+}
+
+.meeting-selector-title {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.meeting-selector-date {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.meeting-selector-points {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
 }
 
 .no-meeting {
