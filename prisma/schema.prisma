@@ -66,6 +66,8 @@ model Meeting {
   id          Int            @id @default(autoincrement())
   title       String
   scheduledAt DateTime
+  archived    Boolean        @default(false)
+  archivedAt  DateTime?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   points      MeetingPoint[]
@@ -76,6 +78,9 @@ model MeetingPoint {
   title       String
   description String?  @default("")
   author      String
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+  notes       String?  @default("")
   meetingId   Int
   meeting     Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())

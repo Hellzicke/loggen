@@ -6,6 +6,9 @@ interface MeetingPoint {
   title: string
   description: string | null
   author: string
+  completed: boolean
+  completedAt: string | null
+  notes: string | null
   createdAt: string
 }
 
@@ -13,6 +16,8 @@ interface Meeting {
   id: number
   title: string
   scheduledAt: string
+  archived: boolean
+  archivedAt: string | null
   createdAt: string
   updatedAt: string
   points: MeetingPoint[]
@@ -42,7 +47,7 @@ function getMeetingColor(meetingId: number): { primary: string; light: string; b
   return colors[index]
 }
 
-export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps) {
+export default function MeetingPoints({ authenticatedFetch, showArchived = false }: MeetingPointsProps) {
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [selectedMeetingId, setSelectedMeetingId] = useState<number | null>(null)
   const [meeting, setMeeting] = useState<Meeting | null>(null)
@@ -56,11 +61,16 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editAuthor, setEditAuthor] = useState('')
+  const [editNotes, setEditNotes] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null)
+  const [showNotesEditor, setShowNotesEditor] = useState<number | null>(null)
+  const [notesText, setNotesText] = useState('')
+  const [archiving, setArchiving] = useState(false)
 
   const loadMeetings = useCallback(async () => {
     try {
-      const res = await authenticatedFetch('/api/meetings/upcoming')
+      const endpoint = showArchived ? '/api/meetings/archived' : '/api/meetings/upcoming'
+      const res = await authenticatedFetch(endpoint)
       if (res.ok) {
         const data = await res.json()
         setMeetings(data)
@@ -78,7 +88,7 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
     } finally {
       setLoading(false)
     }
-  }, [authenticatedFetch, selectedMeetingId])
+  }, [authenticatedFetch, selectedMeetingId, showArchived])
 
   const loadMeeting = useCallback(async (meetingId: number) => {
     try {
@@ -155,8 +165,87 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
     setEditTitle(point.title)
     setEditDescription(point.description || '')
     setEditAuthor(point.author)
+    setEditNotes(point.notes || '')
     setShowForm(false)
     setShowDeleteConfirm(null)
+    setShowNotesEditor(null)
+  }
+
+  const handleToggleComplete = async (pointId: number, currentlyCompleted: boolean) => {
+    if (!meeting) return
+
+    try {
+      const res = await authenticatedFetch(`/api/meetings/${meeting.id}/points/${pointId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          completed: !currentlyCompleted
+        })
+      })
+
+      if (res.ok) {
+        loadMeetings()
+        if (selectedMeetingId) {
+          loadMeeting(selectedMeetingId)
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling completion:', error)
+    }
+  }
+
+  const handleSaveNotes = async (pointId: number) => {
+    if (!meeting) return
+
+    try {
+      const res = await authenticatedFetch(`/api/meetings/${meeting.id}/points/${pointId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          notes: notesText
+        })
+      })
+
+      if (res.ok) {
+        setShowNotesEditor(null)
+        setNotesText('')
+        loadMeetings()
+        if (selectedMeetingId) {
+          loadMeeting(selectedMeetingId)
+        }
+      }
+    } catch (error) {
+      console.error('Error saving notes:', error)
+    }
+  }
+
+  const handleArchiveMeeting = async () => {
+    if (!meeting) return
+    if (!confirm('Är du säker på att du vill arkivera detta möte? Du kan fortfarande se det i arkivet efteråt.')) return
+
+    setArchiving(true)
+    try {
+      const res = await authenticatedFetch(`/api/meetings/${meeting.id}/archive`, {
+        method: 'POST'
+      })
+
+      if (res.ok) {
+        loadMeetings()
+        setSelectedMeetingId(null)
+        setMeeting(null)
+      } else {
+        alert('Kunde inte arkivera mötet')
+      }
+    } catch (error) {
+      console.error('Error archiving meeting:', error)
+      alert('Ett fel uppstod vid arkivering av möte')
+    } finally {
+      setArchiving(false)
+    }
   }
 
   const handleCancelEdit = () => {
@@ -180,7 +269,8 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
         body: JSON.stringify({
           title: editTitle.trim(),
           description: editDescription.trim() || null,
-          author: editAuthor.trim()
+          author: editAuthor.trim(),
+          notes: editNotes.trim() || null
         })
       })
 
@@ -335,21 +425,41 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
               minute: '2-digit'
             })}
           </span>
-          {isPast && <span className="meeting-past-badge">Mötet har redan ägt rum</span>}
+          {isPast && !meeting.archived && <span className="meeting-past-badge">Mötet har redan ägt rum</span>}
+          {meeting.archived && meeting.archivedAt && (
+            <span className="meeting-archived-badge">
+              Arkiverad: {new Date(meeting.archivedAt).toLocaleDateString('sv-SE', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </span>
+          )}
         </div>
       </div>
 
       <div className="meeting-points-section">
         <div className="meeting-points-header">
           <h3>Agendapunkter för detta möte ({meeting.points.length})</h3>
-          {!isPast && (
-            <button
-              className={`meeting-add-btn ${showForm ? 'meeting-add-btn--cancel' : ''}`}
-              onClick={() => setShowForm(!showForm)}
-            >
-              {showForm ? 'Avbryt' : '+ Lägg till punkt'}
-            </button>
-          )}
+          <div className="meeting-points-header-actions">
+            {isPast && !meeting.archived && (
+              <button
+                className="meeting-archive-btn"
+                onClick={handleArchiveMeeting}
+                disabled={archiving}
+              >
+                {archiving ? 'Arkiverar...' : 'Arkivera möte'}
+              </button>
+            )}
+            {!isPast && !meeting.archived && (
+              <button
+                className={`meeting-add-btn ${showForm ? 'meeting-add-btn--cancel' : ''}`}
+                onClick={() => setShowForm(!showForm)}
+              >
+                {showForm ? 'Avbryt' : '+ Lägg till punkt'}
+              </button>
+            )}
+          </div>
         </div>
 
       {showForm && !isPast && (
@@ -451,15 +561,25 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
                       className="meeting-textarea"
                     />
                   </div>
+                  <div className="input-group">
+                    <label>Anteckningar/Beslut (valfritt)</label>
+                    <textarea
+                      value={editNotes}
+                      onChange={(e) => setEditNotes(e.target.value)}
+                      rows={3}
+                      placeholder="T.ex. beslut som tagits, åtgärder att vidta..."
+                      className="meeting-textarea"
+                    />
+                  </div>
                   <div className="point-edit-actions">
                     <button
                       type="button"
                       className="meeting-submit-btn"
-                      onClick={() => handleSaveEdit(point.id)}
-                      disabled={submitting || !editTitle.trim() || !editAuthor.trim()}
-                    >
-                      {submitting ? 'Sparar...' : 'Spara'}
-                    </button>
+                    onClick={() => handleSaveEdit(point.id)}
+                    disabled={submitting || !editTitle.trim() || !editAuthor.trim()}
+                  >
+                    {submitting ? 'Sparar...' : 'Spara'}
+                  </button>
                     <button
                       type="button"
                       className="point-cancel-btn"
@@ -481,35 +601,113 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
               ) : (
                 <div className="point-item-content">
                   <div className="point-item-main">
-                    <h4 className="point-title">{point.title}</h4>
+                    <div className="point-header-row">
+                      <label className="point-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={point.completed}
+                          onChange={() => handleToggleComplete(point.id, point.completed)}
+                          disabled={false}
+                          className="point-checkbox"
+                        />
+                        <h4 className={`point-title ${point.completed ? 'point-title--completed' : ''}`}>
+                          {point.title}
+                        </h4>
+                      </label>
+                    </div>
                     {point.description && (
                       <p className="point-description">{point.description}</p>
                     )}
-                    <div className="point-meta">
-                      <span>Förslag av: {point.author}</span>
-                      <span className="point-date">
-                        {new Date(point.createdAt).toLocaleDateString('sv-SE', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                    </div>
+                    {point.notes && (
+                      <div className="point-notes">
+                        <strong>Anteckningar/Beslut:</strong>
+                        <p>{point.notes}</p>
+                      </div>
+                    )}
+                    {showNotesEditor === point.id ? (
+                      <div className="point-notes-editor">
+                        <textarea
+                          value={notesText}
+                          onChange={(e) => setNotesText(e.target.value)}
+                          placeholder="Lägg till anteckningar eller beslut..."
+                          rows={3}
+                          className="meeting-textarea"
+                        />
+                        <div className="point-notes-actions">
+                          <button
+                            type="button"
+                            className="meeting-submit-btn"
+                            onClick={() => handleSaveNotes(point.id)}
+                          >
+                            Spara
+                          </button>
+                          <button
+                            type="button"
+                            className="point-cancel-btn"
+                            onClick={() => {
+                              setShowNotesEditor(null)
+                              setNotesText('')
+                            }}
+                          >
+                            Avbryt
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="point-meta">
+                        <span>Förslag av: {point.author}</span>
+                        <span className="point-date">
+                          {new Date(point.createdAt).toLocaleDateString('sv-SE', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                        {point.completed && point.completedAt && (
+                          <span className="point-completed-date">
+                            Genomgången: {new Date(point.completedAt).toLocaleDateString('sv-SE', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  {!isPast && (
+                  {!meeting.archived && (
                     <div className="point-actions">
-                      <button
-                        className="point-edit-btn"
-                        onClick={() => handleStartEdit(point)}
-                        title="Redigera"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-                        </svg>
-                      </button>
+                      {showNotesEditor !== point.id && (
+                        <button
+                          className="point-notes-btn"
+                          onClick={() => {
+                            setShowNotesEditor(point.id)
+                            setNotesText(point.notes || '')
+                          }}
+                          title="Lägg till anteckningar"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+                          </svg>
+                        </button>
+                      )}
+                      {!isPast && (
+                        <button
+                          className="point-edit-btn"
+                          onClick={() => handleStartEdit(point)}
+                          title="Redigera"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

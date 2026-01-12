@@ -65,6 +65,7 @@ export default function App() {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
   const [greetingPositions, setGreetingPositions] = useState<Array<{top: number, left: number}>>([])
   const [activeView, setActiveView] = useState<'logg' | 'förslagslåda' | 'mötespunkter'>('logg')
+  const [showArchivedMeetings, setShowArchivedMeetings] = useState(false)
 
   // Check if it's Christmas (24-26 December)
   const isChristmas = () => {
@@ -443,6 +444,8 @@ export default function App() {
         archiveCount={archivedLogs.length}
         activeView={activeView}
         onViewChange={setActiveView}
+        onArchivedMeetingsClick={() => setShowArchivedMeetings(!showArchivedMeetings)}
+        showArchivedMeetings={showArchivedMeetings}
       />
       <main className="main">
         {activeView === 'logg' && (
@@ -477,7 +480,7 @@ export default function App() {
           </div>
         )}
         {activeView === 'mötespunkter' && (
-          <MeetingPoints authenticatedFetch={authenticatedFetch} />
+          <MeetingPoints authenticatedFetch={authenticatedFetch} showArchived={showArchivedMeetings} />
         )}
       </main>
       {showForm && (
