@@ -3167,8 +3167,7 @@ body:hover #root::before ~ .header {
   padding: 1.5rem;
   margin-bottom: 1.5rem;
   box-shadow: var(--shadow-sm);
-  border: 2px solid var(--accent);
-  border-left: 4px solid var(--accent);
+  border: 2px solid;
   position: relative;
 }
 
@@ -3176,7 +3175,6 @@ body:hover #root::before ~ .header {
   position: absolute;
   top: -12px;
   left: 1rem;
-  background: var(--accent);
   color: white;
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
@@ -3358,7 +3356,7 @@ body:hover #root::before ~ .header {
 }
 
 .point-item-card--linked {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid;
   padding-left: 1.25rem;
 }
 
@@ -3368,10 +3366,8 @@ body:hover #root::before ~ .header {
   top: 1.5rem;
   width: 12px;
   height: 12px;
-  background: var(--accent);
   border-radius: 50%;
   border: 2px solid var(--bg-card);
-  box-shadow: 0 0 0 2px var(--accent);
 }
 
 .point-item-content {

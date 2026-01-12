@@ -22,6 +22,26 @@ interface MeetingPointsProps {
   authenticatedFetch: (url: string, options?: RequestInit) => Promise<Response>
 }
 
+// Generate consistent color for each meeting based on ID
+function getMeetingColor(meetingId: number): { primary: string; light: string; border: string } {
+  const colors = [
+    { primary: '#1877f2', light: '#e7f3ff', border: '#1877f2' }, // Blå
+    { primary: '#42b883', light: '#e8f5e9', border: '#42b883' }, // Grön
+    { primary: '#f5576c', light: '#ffe5e9', border: '#f5576c' }, // Röd/Rosa
+    { primary: '#667eea', light: '#ede7f6', border: '#667eea' }, // Lila
+    { primary: '#f093fb', light: '#fce4ec', border: '#f093fb' }, // Rosa
+    { primary: '#4facfe', light: '#e3f2fd', border: '#4facfe' }, // Ljusblå
+    { primary: '#43e97b', light: '#e8f5e9', border: '#43e97b' }, // Mintgrön
+    { primary: '#fa709a', light: '#fce4ec', border: '#fa709a' }, // Korall
+    { primary: '#ff6b6b', light: '#ffebee', border: '#ff6b6b' }, // Röd
+    { primary: '#6c5ce7', light: '#ede7f6', border: '#6c5ce7' }, // Lila
+    { primary: '#00b894', light: '#e0f2f1', border: '#00b894' }, // Turkos
+    { primary: '#fd79a8', light: '#fce4ec', border: '#fd79a8' }, // Rosa
+  ]
+  const index = (meetingId - 1) % colors.length
+  return colors[index]
+}
+
 export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps) {
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [selectedMeetingId, setSelectedMeetingId] = useState<number | null>(null)
@@ -246,6 +266,7 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
 
   const meetingDate = new Date(meeting.scheduledAt)
   const isPast = meetingDate < new Date()
+  const meetingColor = getMeetingColor(meeting.id)
 
   return (
     <div className="meeting-points-container">
@@ -255,11 +276,20 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
           <div className="meetings-list-selector">
             {meetings.map((m) => {
               const mDate = new Date(m.scheduledAt)
+              const mColor = getMeetingColor(m.id)
               return (
                 <button
                   key={m.id}
                   className={`meeting-selector-btn ${selectedMeetingId === m.id ? 'meeting-selector-btn--active' : ''}`}
                   onClick={() => handleMeetingSelect(m.id)}
+                  style={{
+                    borderLeftColor: mColor.primary,
+                    borderLeftWidth: '4px',
+                    ...(selectedMeetingId === m.id ? {
+                      background: mColor.light,
+                      borderColor: mColor.primary
+                    } : {})
+                  }}
                 >
                   <div className="meeting-selector-title">{m.title}</div>
                   <div className="meeting-selector-date">
@@ -278,8 +308,22 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
           </div>
         </div>
       )}
-      <div className="meeting-header-card">
-        <div className="meeting-header-badge">Möte</div>
+      <div 
+        className="meeting-header-card"
+        style={{
+          borderColor: meetingColor.primary,
+          borderLeftColor: meetingColor.primary,
+          borderLeftWidth: '4px'
+        }}
+      >
+        <div 
+          className="meeting-header-badge"
+          style={{
+            background: meetingColor.primary
+          }}
+        >
+          Möte
+        </div>
         <h2 className="meeting-title">{meeting.title}</h2>
         <div className="meeting-meta">
           <span className="meeting-date-display">
@@ -361,8 +405,20 @@ export default function MeetingPoints({ authenticatedFetch }: MeetingPointsProps
       ) : (
         <div className="points-list">
           {meeting.points.map((point) => (
-            <div key={point.id} className="point-item-card point-item-card--linked">
-              <div className="point-meeting-indicator"></div>
+            <div 
+              key={point.id} 
+              className="point-item-card point-item-card--linked"
+              style={{
+                borderLeftColor: meetingColor.primary
+              }}
+            >
+              <div 
+                className="point-meeting-indicator"
+                style={{
+                  background: meetingColor.primary,
+                  boxShadow: `0 0 0 2px ${meetingColor.primary}`
+                }}
+              ></div>
               {editingPointId === point.id ? (
                 <div className="point-edit-form">
                   <h4>Redigera agendapunkt</h4>
