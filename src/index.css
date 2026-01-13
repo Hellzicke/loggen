@@ -2652,6 +2652,100 @@ body:hover #root::before ~ .header {
   gap: 1rem;
 }
 
+/* User Statistics */
+.admin-user-stats {
+  margin-top: 1rem;
+}
+
+.stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--border);
+}
+
+.stats-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--text-primary);
+}
+
+.stats-summary {
+  display: flex;
+  gap: 2rem;
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+}
+
+.stats-summary strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.user-stats-table {
+  overflow-x: auto;
+}
+
+.user-stats-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+}
+
+.user-stats-table thead {
+  background: var(--bg-primary);
+}
+
+.user-stats-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-stats-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
+.user-stats-table tbody tr:hover {
+  background: var(--bg-primary);
+}
+
+.user-stats-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.percentage-bar-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.percentage-bar {
+  height: 8px;
+  background: var(--accent);
+  border-radius: 4px;
+  min-width: 2px;
+  transition: width 0.3s ease;
+}
+
+.percentage-text {
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 50px;
+  text-align: right;
+}
+
 .admin-meeting-item {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -3171,14 +3265,12 @@ body:hover #root::before ~ .header {
   background: var(--bg-card);
   border-radius: 8px;
   padding: 0;
-  padding-top: 12px;
   margin-bottom: 1.5rem;
   box-shadow: var(--shadow-sm);
   border: 2px solid;
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
-  overflow: visible;
-  position: relative;
+  overflow: hidden;
 }
 
 .meeting-header-card {

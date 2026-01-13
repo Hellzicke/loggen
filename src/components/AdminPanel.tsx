@@ -47,12 +47,26 @@ interface Meeting {
   points: MeetingPoint[]
 }
 
+interface UserStats {
+  name: string
+  postsCreated: number
+  signaturesCount: number
+  signaturesPercentage: number
+  commentsCount: number
+}
+
+interface UserStatsResponse {
+  totalLogs: number
+  users: UserStats[]
+}
+
 export default function AdminPanel() {
   const [overview, setOverview] = useState<Overview | null>(null)
   const [logs, setLogs] = useState<LogMessage[]>([])
   const [images, setImages] = useState<Image[]>([])
   const [meetings, setMeetings] = useState<Meeting[]>([])
-  const [activeTab, setActiveTab] = useState<'overview' | 'logs' | 'images' | 'meetings'>('overview')
+  const [userStats, setUserStats] = useState<UserStatsResponse | null>(null)
+  const [activeTab, setActiveTab] = useState<'overview' | 'logs' | 'images' | 'meetings' | 'stats'>('overview')
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<number | null>(null)
   const [showMeetingForm, setShowMeetingForm] = useState(false)
@@ -95,6 +109,12 @@ export default function AdminPanel() {
         if (res.ok) {
           const data = await res.json()
           setMeetings(data)
+        }
+      } else if (activeTab === 'stats') {
+        const res = await fetch('/api/admin/user-stats', { headers })
+        if (res.ok) {
+          const data = await res.json()
+          setUserStats(data)
         }
       }
     } catch (error) {
@@ -305,6 +325,12 @@ export default function AdminPanel() {
         >
           Möten ({meetings.length})
         </button>
+        <button 
+          className={activeTab === 'stats' ? 'active' : ''} 
+          onClick={() => setActiveTab('stats')}
+        >
+          Användarstatistik
+        </button>
       </div>
 
       <div className="admin-content">
@@ -508,6 +534,45 @@ export default function AdminPanel() {
                 ))}
               </div>
             )}
+          </div>
+        ) : activeTab === 'stats' && userStats ? (
+          <div className="admin-user-stats">
+            <div className="stats-header">
+              <h2>Användarstatistik</h2>
+              <div className="stats-summary">
+                <span>Totalt antal inlägg: <strong>{userStats.totalLogs}</strong></span>
+                <span>Antal användare: <strong>{userStats.users.length}</strong></span>
+              </div>
+            </div>
+            <div className="user-stats-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Användare</th>
+                    <th>Inlägg skapade</th>
+                    <th>Signaturer</th>
+                    <th>% av inlägg signerade</th>
+                    <th>Kommentarer</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userStats.users.map((user, index) => (
+                    <tr key={user.name}>
+                      <td><strong>{user.name}</strong></td>
+                      <td>{user.postsCreated}</td>
+                      <td>{user.signaturesCount}</td>
+                      <td>
+                        <div className="percentage-bar-container">
+                          <div className="percentage-bar" style={{ width: `${Math.min(user.signaturesPercentage, 100)}%` }}></div>
+                          <span className="percentage-text">{user.signaturesPercentage}%</span>
+                        </div>
+                      </td>
+                      <td>{user.commentsCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : null}
       </div>
