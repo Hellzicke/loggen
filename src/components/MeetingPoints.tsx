@@ -399,46 +399,48 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
         </div>
       )}
       <div 
-        className="meeting-header-card"
+        className="meeting-wrapper"
         style={{
           borderColor: meetingColor.primary,
           borderLeftColor: meetingColor.primary,
-          borderLeftWidth: '4px'
+          borderLeftWidth: '4px',
+          background: `linear-gradient(to right, ${meetingColor.light}15 0%, transparent 4px)`
         }}
       >
-        <div 
-          className="meeting-header-badge"
-          style={{
-            background: meetingColor.primary
-          }}
-        >
-          Möte
-        </div>
-        <h2 className="meeting-title">{meeting.title}</h2>
-        <div className="meeting-meta">
-          <span className="meeting-date-display">
-            {meetingDate.toLocaleString('sv-SE', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-          </span>
-          {isPast && !meeting.archived && <span className="meeting-past-badge">Mötet har redan ägt rum</span>}
-          {meeting.archived && meeting.archivedAt && (
-            <span className="meeting-archived-badge">
-              Arkiverad: {new Date(meeting.archivedAt).toLocaleDateString('sv-SE', {
+        <div className="meeting-header-card">
+          <div 
+            className="meeting-header-badge"
+            style={{
+              background: meetingColor.primary
+            }}
+          >
+            Möte
+          </div>
+          <h2 className="meeting-title">{meeting.title}</h2>
+          <div className="meeting-meta">
+            <span className="meeting-date-display">
+              {meetingDate.toLocaleString('sv-SE', {
                 year: 'numeric',
                 month: 'long',
-                day: 'numeric'
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
               })}
             </span>
-          )}
+            {isPast && !meeting.archived && <span className="meeting-past-badge">Mötet har redan ägt rum</span>}
+            {meeting.archived && meeting.archivedAt && (
+              <span className="meeting-archived-badge">
+                Arkiverad: {new Date(meeting.archivedAt).toLocaleDateString('sv-SE', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
 
-      <div className="meeting-points-section">
+        <div className="meeting-points-section">
         <div className="meeting-points-header">
           <h3>Agendapunkter för detta möte ({meeting.points.length})</h3>
           <div className="meeting-points-header-actions">
@@ -463,7 +465,22 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
         </div>
 
       {showForm && !isPast && (
-        <div className="point-form-card">
+        <div 
+          className="point-form-card"
+          style={{
+            borderLeftColor: meetingColor.primary,
+            borderLeftWidth: '3px',
+            background: `linear-gradient(to right, ${meetingColor.light}10 0%, transparent 3px)`
+          }}
+        >
+          <div 
+            className="point-form-badge"
+            style={{
+              background: meetingColor.primary
+            }}
+          >
+            Lägg till punkt till detta möte
+          </div>
           <h4>Ny agendapunkt</h4>
           <form onSubmit={handleSubmit}>
             <div className="input-group">
@@ -726,6 +743,7 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
           ))}
         </div>
       )}
+        </div>
       </div>
     </div>
   )

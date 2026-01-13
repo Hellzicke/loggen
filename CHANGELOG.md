@@ -2,7 +2,7 @@
 
 Alla ändringar i projektet dokumenteras här.
 
-## [0.9.0] - 2025-01-XX
+## [0.9.0] - 2026-01-12
 
 ### Tillagt
 - Markera agendapunkter som gåtts igenom med checkbox
