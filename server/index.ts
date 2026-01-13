@@ -542,6 +542,94 @@ app.delete('/api/admin/meetings/:id', authenticateToken, async (req, res) => {
   }
 })
 
+// Get user statistics (admin only)
+app.get('/api/admin/user-stats', authenticateToken, async (_req, res) => {
+  try {
+    // Get all unique users from different sources
+    const [allLogs, allSignatures, allComments] = await Promise.all([
+      prisma.logMessage.findMany({ select: { id: true, author: true } }),
+      prisma.readSignature.findMany({ select: { name: true, logId: true } }),
+      prisma.comment.findMany({ select: { author: true } })
+    ])
+
+    const totalLogs = allLogs.length
+    const userStatsMap = new Map<string, {
+      name: string
+      postsCreated: number
+      signaturesCount: number
+      signaturesPercentage: number
+      commentsCount: number
+    }>()
+
+    // Count posts created by each user
+    allLogs.forEach(log => {
+      const name = log.author
+      if (!userStatsMap.has(name)) {
+        userStatsMap.set(name, {
+          name,
+          postsCreated: 0,
+          signaturesCount: 0,
+          signaturesPercentage: 0,
+          commentsCount: 0
+        })
+      }
+      const stats = userStatsMap.get(name)!
+      stats.postsCreated++
+    })
+
+    // Count signatures for each user
+    allSignatures.forEach(sig => {
+      const name = sig.name
+      if (!userStatsMap.has(name)) {
+        userStatsMap.set(name, {
+          name,
+          postsCreated: 0,
+          signaturesCount: 0,
+          signaturesPercentage: 0,
+          commentsCount: 0
+        })
+      }
+      const stats = userStatsMap.get(name)!
+      stats.signaturesCount++
+    })
+
+    // Count comments for each user
+    allComments.forEach(comment => {
+      const name = comment.author
+      if (!userStatsMap.has(name)) {
+        userStatsMap.set(name, {
+          name,
+          postsCreated: 0,
+          signaturesCount: 0,
+          signaturesPercentage: 0,
+          commentsCount: 0
+        })
+      }
+      const stats = userStatsMap.get(name)!
+      stats.commentsCount++
+    })
+
+    // Calculate percentages
+    const userStats = Array.from(userStatsMap.values()).map(stats => ({
+      ...stats,
+      signaturesPercentage: totalLogs > 0 
+        ? Math.round((stats.signaturesCount / totalLogs) * 100 * 100) / 100 
+        : 0
+    }))
+
+    // Sort by signatures count (most active first)
+    userStats.sort((a, b) => b.signaturesCount - a.signaturesCount)
+
+    res.json({
+      totalLogs,
+      users: userStats
+    })
+  } catch (error) {
+    console.error('Error fetching user stats:', error)
+    res.status(500).json({ error: 'Failed to fetch user statistics' })
+  }
+})
+
 // Add meeting point (regular users)
 app.post('/api/meetings/:id/points', authenticateSharedPassword, async (req, res) => {
   const meetingId = parseInt(req.params.id)

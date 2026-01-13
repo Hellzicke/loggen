@@ -408,14 +408,6 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
         }}
       >
         <div className="meeting-header-card">
-          <div 
-            className="meeting-header-badge"
-            style={{
-              background: meetingColor.primary
-            }}
-          >
-            Möte
-          </div>
           <h2 className="meeting-title">{meeting.title}</h2>
           <div className="meeting-meta">
             <span className="meeting-date-display">
