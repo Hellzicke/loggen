@@ -2,6 +2,14 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.9.1] - 2026-01-12
+
+### Fixat
+- Fixat NaN-problem i changelog-datum när datum saknas eller är "XX"
+- Förbättrad visuell koppling mellan mötesheader och agendapunkter - de är nu i samma visuella container
+- Formuläret för att lägga till agendapunkter visar nu tydligt vilket möte det tillhör med badge
+- Fixat att "MÖTE"-badgen inte längre är delvis dold bakom kanten
+
 ## [0.9.0] - 2026-01-12
 
 ### Tillagt
