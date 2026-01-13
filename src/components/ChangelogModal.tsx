@@ -60,6 +60,12 @@ function parseChangelog(markdown: string): ChangelogEntry[] {
 function formatDate(dateStr: string): string {
   const [year, month, day] = dateStr.split('-')
   const months = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
+  
+  // Handle "XX" placeholder or invalid day
+  if (day === 'XX' || isNaN(parseInt(day))) {
+    return `${months[parseInt(month) - 1]} ${year}`
+  }
+  
   return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`
 }
 
