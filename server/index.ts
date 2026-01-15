@@ -322,10 +322,8 @@ app.delete('/api/admin/images/:filename', authenticateToken, async (req, res) =>
 // Get all upcoming meetings (for regular users)
 app.get('/api/meetings/upcoming', authenticateSharedPassword, async (_req, res) => {
   try {
-    const now = new Date()
     const meetings = await prisma.meeting.findMany({
       where: {
-        scheduledAt: { gte: now },
         archived: false
       },
       orderBy: {
@@ -429,23 +427,33 @@ app.get('/api/meetings/:id', authenticateSharedPassword, async (req, res) => {
 // Get next meeting (for regular users) - kept for backwards compatibility
 app.get('/api/meetings/next', authenticateSharedPassword, async (_req, res) => {
   try {
+    // "Next" should prefer an upcoming (future) meeting, but should not hide
+    // past meetings that haven't been manually archived yet.
     const now = new Date()
-    const meeting = await prisma.meeting.findFirst({
-      where: {
-        scheduledAt: { gte: now },
-        archived: false
-      },
-      orderBy: {
-        scheduledAt: 'asc'
-      },
-      include: {
-        points: {
-          orderBy: {
-            createdAt: 'asc'
-          }
+    const include = {
+      points: {
+        orderBy: {
+          createdAt: 'asc' as const
         }
       }
+    }
+
+    let meeting = await prisma.meeting.findFirst({
+      where: {
+        archived: false,
+        scheduledAt: { gte: now }
+      },
+      orderBy: { scheduledAt: 'asc' },
+      include
     })
+
+    if (!meeting) {
+      meeting = await prisma.meeting.findFirst({
+        where: { archived: false },
+        orderBy: { scheduledAt: 'asc' },
+        include
+      })
+    }
     res.json(meeting)
   } catch (error) {
     console.error('Error fetching next meeting:', error)
