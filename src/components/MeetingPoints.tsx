@@ -324,16 +324,12 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
     return <div className="loading">Laddar...</div>
   }
 
-  if (loading) {
-    return <div className="loading">Laddar...</div>
-  }
-
   if (meetings.length === 0) {
     return (
       <div className="meeting-points-container">
         <div className="no-meeting">
-          <h2>Inga kommande möten</h2>
-          <p>Det finns inga planerade möten just nu.</p>
+          <h2>{showArchived ? 'Inga arkiverade möten' : 'Inga aktiva möten'}</h2>
+          <p>{showArchived ? 'Det finns inga arkiverade möten ännu.' : 'Det finns inga aktiva möten just nu.'}</p>
         </div>
       </div>
     )
