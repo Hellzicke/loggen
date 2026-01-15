@@ -402,7 +402,6 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
                         </div>
                         <div className="archived-meeting-summary-meta">
                           <span>{m.points.length} punkter</span>
-                          <span className="archived-meeting-expand-hint">Fäll ut</span>
                           <span className="meeting-archived-badge">Arkiverad</span>
                         </div>
                       </summary>

@@ -3581,6 +3581,8 @@ body:hover #root::before ~ .header {
 .archived-meeting-summary::after {
   content: '▾';
   color: var(--text-muted);
+  font-size: 1.15rem;
+  line-height: 1;
   margin-left: 0.5rem;
   flex: 0 0 auto;
 }
@@ -3605,14 +3607,6 @@ body:hover #root::before ~ .header {
   align-items: center;
   gap: 0.5rem;
   white-space: nowrap;
-}
-
-.archived-meeting-expand-hint {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  border: 1px dashed var(--border);
-  padding: 0.15rem 0.45rem;
-  border-radius: 999px;
 }
 
 .meeting-archived-badge {
