@@ -511,14 +511,16 @@ app.post('/api/admin/meetings', authenticateToken, async (req, res) => {
 // Update meeting (admin only)
 app.put('/api/admin/meetings/:id', authenticateToken, async (req, res) => {
   const meetingId = parseInt(req.params.id)
-  const { title, scheduledAt } = req.body
+  const { title, scheduledAt, archived } = req.body
 
   try {
     const meeting = await prisma.meeting.update({
       where: { id: meetingId },
       data: {
         ...(title && { title }),
-        ...(scheduledAt && { scheduledAt: new Date(scheduledAt) })
+        ...(scheduledAt && { scheduledAt: new Date(scheduledAt) }),
+        ...(archived === true && { archived: true, archivedAt: new Date() }),
+        ...(archived === false && { archived: false, archivedAt: null })
       },
       include: {
         points: {

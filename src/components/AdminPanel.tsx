@@ -42,6 +42,8 @@ interface Meeting {
   id: number
   title: string
   scheduledAt: string
+  archived: boolean
+  archivedAt: string | null
   createdAt: string
   updatedAt: string
   points: MeetingPoint[]
@@ -293,6 +295,42 @@ export default function AdminPanel() {
     }
   }
 
+  const handleToggleArchiveMeeting = async (meeting: Meeting) => {
+    const token = getAuthToken()
+    if (!token) return
+
+    const willArchive = !meeting.archived
+    const confirmMsg = willArchive
+      ? 'Är du säker på att du vill arkivera detta möte?'
+      : 'Är du säker på att du vill avarkivera detta möte?'
+
+    if (!confirm(confirmMsg)) return
+
+    setDeleting(meeting.id)
+    try {
+      const res = await fetch(`/api/admin/meetings/${meeting.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ archived: willArchive })
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setMeetings(prev => prev.map(m => m.id === meeting.id ? updated : m))
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Kunde inte uppdatera arkivering')
+      }
+    } catch (error) {
+      console.error('Error toggling meeting archive:', error)
+      alert('Ett fel uppstod vid uppdatering av arkivering')
+    } finally {
+      setDeleting(null)
+    }
+  }
+
   return (
     <div className="admin-panel">
       <div className="admin-header">
@@ -513,9 +551,28 @@ export default function AdminPanel() {
                           })}
                         </span>
                         <span>{meeting.points.length} punkter</span>
+                        {meeting.archived && (
+                          <span className="badge">Arkiverad</span>
+                        )}
                       </div>
+                      {meeting.archived && meeting.archivedAt && (
+                        <div className="admin-meeting-archived-at">
+                          Arkiverad: {new Date(meeting.archivedAt).toLocaleDateString('sv-SE', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </div>
+                      )}
                     </div>
                     <div className="admin-meeting-actions">
+                      <button
+                        className="admin-meeting-archive-btn"
+                        onClick={() => handleToggleArchiveMeeting(meeting)}
+                        disabled={deleting === meeting.id}
+                      >
+                        {meeting.archived ? 'Avarkivera' : 'Arkivera'}
+                      </button>
                       <button
                         className="admin-meeting-edit-btn"
                         onClick={() => handleEditMeeting(meeting)}
