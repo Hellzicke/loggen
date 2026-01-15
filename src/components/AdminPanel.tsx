@@ -78,6 +78,28 @@ export default function AdminPanel() {
 
   const getAuthToken = () => localStorage.getItem('adminToken')
 
+  const formatMeetingDateTime = (scheduledAt: string) =>
+    new Date(scheduledAt).toLocaleString('sv-SE', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+
+  const getMonthKey = (scheduledAt: string) => {
+    const d = new Date(scheduledAt)
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    return `${year}-${month}`
+  }
+
+  const formatMonthLabel = (monthKey: string) => {
+    // monthKey: YYYY-MM
+    const [y, m] = monthKey.split('-').map(Number)
+    return new Date(y, m - 1, 1).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long' })
+  }
+
   const fetchData = async () => {
     const token = getAuthToken()
     if (!token) {
@@ -535,61 +557,161 @@ export default function AdminPanel() {
             {meetings.length === 0 ? (
               <div className="empty-state">Inga möten hittades</div>
             ) : (
-              <div className="admin-meetings-list">
-                {meetings.map(meeting => (
-                  <div key={meeting.id} className="admin-meeting-item">
-                    <div className="admin-meeting-info">
-                      <h4>{meeting.title}</h4>
-                      <div className="admin-meeting-meta">
-                        <span>
-                          {new Date(meeting.scheduledAt).toLocaleString('sv-SE', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                        <span>{meeting.points.length} punkter</span>
-                        {meeting.archived && (
-                          <span className="badge">Arkiverad</span>
-                        )}
-                      </div>
-                      {meeting.archived && meeting.archivedAt && (
-                        <div className="admin-meeting-archived-at">
-                          Arkiverad: {new Date(meeting.archivedAt).toLocaleDateString('sv-SE', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
+              (() => {
+                const activeMeetings = meetings.filter(m => !m.archived)
+                const archivedMeetings = meetings.filter(m => m.archived)
+
+                const archivedGroups = archivedMeetings.reduce<Record<string, Meeting[]>>((acc, m) => {
+                  const key = getMonthKey(m.scheduledAt)
+                  if (!acc[key]) acc[key] = []
+                  acc[key].push(m)
+                  return acc
+                }, {})
+
+                const archivedGroupKeys = Object.keys(archivedGroups)
+                  .sort((a, b) => b.localeCompare(a)) // newest month first
+
+                // Sort meetings within each group by date (newest first)
+                for (const key of archivedGroupKeys) {
+                  archivedGroups[key].sort((a, b) =>
+                    new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime()
+                  )
+                }
+
+                return (
+                  <div className="admin-meetings-sections">
+                    <div className="admin-meetings-section">
+                      <h3>Aktiva möten ({activeMeetings.length})</h3>
+                      {activeMeetings.length === 0 ? (
+                        <div className="empty-state">Inga aktiva möten</div>
+                      ) : (
+                        <div className="admin-meetings-list">
+                          {activeMeetings.map(meeting => (
+                            <div key={meeting.id} className="admin-meeting-item">
+                              <div className="admin-meeting-info">
+                                <h4>{meeting.title}</h4>
+                                <div className="admin-meeting-meta">
+                                  <span>{formatMeetingDateTime(meeting.scheduledAt)}</span>
+                                  <span>{meeting.points.length} punkter</span>
+                                </div>
+                              </div>
+                              <div className="admin-meeting-actions">
+                                <button
+                                  className="admin-meeting-archive-btn"
+                                  onClick={() => handleToggleArchiveMeeting(meeting)}
+                                  disabled={deleting === meeting.id}
+                                >
+                                  Arkivera
+                                </button>
+                                <button
+                                  className="admin-meeting-edit-btn"
+                                  onClick={() => handleEditMeeting(meeting)}
+                                >
+                                  Redigera
+                                </button>
+                                <button
+                                  className="delete-btn"
+                                  onClick={() => handleDeleteMeeting(meeting.id)}
+                                  disabled={deleting === meeting.id}
+                                >
+                                  {deleting === meeting.id ? 'Tar bort...' : 'Ta bort'}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
-                    <div className="admin-meeting-actions">
-                      <button
-                        className="admin-meeting-archive-btn"
-                        onClick={() => handleToggleArchiveMeeting(meeting)}
-                        disabled={deleting === meeting.id}
-                      >
-                        {meeting.archived ? 'Avarkivera' : 'Arkivera'}
-                      </button>
-                      <button
-                        className="admin-meeting-edit-btn"
-                        onClick={() => handleEditMeeting(meeting)}
-                      >
-                        Redigera
-                      </button>
-                      <button
-                        className="delete-btn"
-                        onClick={() => handleDeleteMeeting(meeting.id)}
-                        disabled={deleting === meeting.id}
-                      >
-                        {deleting === meeting.id ? 'Tar bort...' : 'Ta bort'}
-                      </button>
+
+                    <div className="admin-meetings-section">
+                      <h3>Arkiverade möten ({archivedMeetings.length})</h3>
+                      {archivedMeetings.length === 0 ? (
+                        <div className="empty-state">Inga arkiverade möten</div>
+                      ) : (
+                        <div className="admin-archived-meetings">
+                          {archivedGroupKeys.map(monthKey => (
+                            <details key={monthKey} className="admin-archived-month" open={archivedGroupKeys[0] === monthKey}>
+                              <summary className="admin-archived-month-summary">
+                                <span>{formatMonthLabel(monthKey)}</span>
+                                <span className="admin-archived-month-count">{archivedGroups[monthKey].length} möten</span>
+                              </summary>
+
+                              <div className="admin-archived-month-list">
+                                {archivedGroups[monthKey].map(meeting => (
+                                  <details key={meeting.id} className="admin-archived-meeting">
+                                    <summary className="admin-archived-meeting-summary">
+                                      <div className="admin-archived-meeting-summary-main">
+                                        <strong>{meeting.title}</strong>
+                                        <span className="admin-archived-meeting-date">{formatMeetingDateTime(meeting.scheduledAt)}</span>
+                                      </div>
+                                      <div className="admin-archived-meeting-summary-meta">
+                                        <span>{meeting.points.length} punkter</span>
+                                        <span className="badge">Arkiverad</span>
+                                      </div>
+                                    </summary>
+
+                                    <div className="admin-archived-meeting-body">
+                                      {meeting.archivedAt && (
+                                        <div className="admin-meeting-archived-at">
+                                          Arkiverad: {new Date(meeting.archivedAt).toLocaleDateString('sv-SE', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric'
+                                          })}
+                                        </div>
+                                      )}
+
+                                      {meeting.points.length === 0 ? (
+                                        <div className="empty-state">Inga punkter i detta möte</div>
+                                      ) : (
+                                        <ul className="admin-meeting-points-list">
+                                          {meeting.points.map(p => (
+                                            <li key={p.id} className="admin-meeting-point">
+                                              <div className="admin-meeting-point-title">{p.title}</div>
+                                              <div className="admin-meeting-point-meta">
+                                                <span>{p.author}</span>
+                                                <span>{new Date(p.createdAt).toLocaleDateString('sv-SE')}</span>
+                                              </div>
+                                              {p.description && <div className="admin-meeting-point-desc">{p.description}</div>}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      )}
+
+                                      <div className="admin-meeting-actions">
+                                        <button
+                                          className="admin-meeting-archive-btn"
+                                          onClick={() => handleToggleArchiveMeeting(meeting)}
+                                          disabled={deleting === meeting.id}
+                                        >
+                                          Avarkivera
+                                        </button>
+                                        <button
+                                          className="admin-meeting-edit-btn"
+                                          onClick={() => handleEditMeeting(meeting)}
+                                        >
+                                          Redigera
+                                        </button>
+                                        <button
+                                          className="delete-btn"
+                                          onClick={() => handleDeleteMeeting(meeting.id)}
+                                          disabled={deleting === meeting.id}
+                                        >
+                                          {deleting === meeting.id ? 'Tar bort...' : 'Ta bort'}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </details>
+                                ))}
+                              </div>
+                            </details>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
+                )
+              })()
             )}
           </div>
         ) : activeTab === 'stats' && userStats ? (
