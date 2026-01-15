@@ -371,6 +371,9 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
     return (
       <div className="meeting-points-container">
         <div className="archived-meetings">
+          <div className="archived-meetings-hint">
+            Klicka på ett möte för att fälla ut och se agendapunkterna som behandlades.
+          </div>
           {groupKeys.map((monthKey, monthIndex) => (
             <details key={monthKey} className="archived-month" open={monthIndex === 0}>
               <summary className="archived-month-summary">
@@ -399,6 +402,7 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
                         </div>
                         <div className="archived-meeting-summary-meta">
                           <span>{m.points.length} punkter</span>
+                          <span className="archived-meeting-expand-hint">Fäll ut</span>
                           <span className="meeting-archived-badge">Arkiverad</span>
                         </div>
                       </summary>
