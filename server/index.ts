@@ -33,7 +33,7 @@ if (!existsSync(uploadsDir)) {
   mkdirSync(uploadsDir, { recursive: true })
 }
 
-// Configure multer for image uploads
+// Configure multer for uploads
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     cb(null, uploadsDir)
@@ -44,7 +44,7 @@ const storage = multer.diskStorage({
   }
 })
 
-const upload = multer({
+const imageUpload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (_req, file, cb) => {
@@ -52,6 +52,30 @@ const upload = multer({
       cb(null, true)
     } else {
       cb(new Error('Only image files are allowed'))
+    }
+  }
+})
+
+const ALLOWED_ATTACHMENT_MIME_TYPES = new Set([
+  'application/pdf',
+  'text/plain',
+  'application/zip',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation', // pptx
+  'application/msword', // doc
+  'application/vnd.ms-excel', // xls
+  'application/vnd.ms-powerpoint' // ppt
+])
+
+const attachmentUpload = multer({
+  storage,
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB limit
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_ATTACHMENT_MIME_TYPES.has(file.mimetype)) {
+      cb(null, true)
+    } else {
+      cb(new Error('File type not allowed'))
     }
   }
 })
@@ -750,6 +774,9 @@ app.get('/api/logs', authenticateSharedPassword, async (_req, res) => {
         },
         reactions: {
           orderBy: { createdAt: 'asc' }
+        },
+        attachments: {
+          orderBy: { createdAt: 'asc' }
         }
       }
     })
@@ -781,6 +808,9 @@ app.get('/api/logs/archived', authenticateSharedPassword, async (_req, res) => {
         },
         reactions: {
           orderBy: { createdAt: 'asc' }
+        },
+        attachments: {
+          orderBy: { createdAt: 'asc' }
         }
       }
     })
@@ -792,11 +822,25 @@ app.get('/api/logs/archived', authenticateSharedPassword, async (_req, res) => {
 })
 
 // Upload image
-app.post('/api/upload', authenticateSharedPassword, upload.single('image'), (req, res) => {
+app.post('/api/upload', authenticateSharedPassword, imageUpload.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' })
   }
   res.json({ url: `/uploads/${req.file.filename}` })
+})
+
+// Upload attachment and return metadata + URL (not yet linked to a log)
+app.post('/api/attachments/upload', authenticateSharedPassword, attachmentUpload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' })
+  }
+  res.json({
+    filename: req.file.filename,
+    originalName: req.file.originalname,
+    mimeType: req.file.mimetype,
+    size: req.file.size,
+    url: `/uploads/${req.file.filename}`
+  })
 })
 
 // Get all uploaded images
@@ -824,7 +868,7 @@ app.get('/api/images', authenticateSharedPassword, async (_req, res) => {
 
 // Create a new log message
 app.post('/api/logs', authenticateSharedPassword, async (req, res) => {
-  const { title, message, author, imageUrl } = req.body
+  const { title, message, author, imageUrl, attachments } = req.body
 
   if (!message || !author) {
     return res.status(400).json({ error: 'Message and author are required' })
@@ -837,12 +881,26 @@ app.post('/api/logs', authenticateSharedPassword, async (req, res) => {
         message,
         author,
         version,
-        imageUrl: imageUrl || null
+        imageUrl: imageUrl || null,
+        ...(Array.isArray(attachments) && attachments.length > 0
+          ? {
+              attachments: {
+                create: attachments.map((a: any) => ({
+                  filename: a.filename,
+                  originalName: a.originalName,
+                  mimeType: a.mimeType,
+                  size: a.size,
+                  url: a.url
+                }))
+              }
+            }
+          : {})
       },
       include: {
         signatures: true,
         comments: true,
-        reactions: true
+        reactions: true,
+        attachments: { orderBy: { createdAt: 'asc' } }
       }
     })
     res.status(201).json(log)
@@ -855,19 +913,37 @@ app.post('/api/logs', authenticateSharedPassword, async (req, res) => {
 // Edit a log message
 app.put('/api/logs/:id', authenticateSharedPassword, async (req, res) => {
   const logId = parseInt(req.params.id)
-  const { title, message, imageUrl } = req.body
+  const { title, message, imageUrl, attachments } = req.body
 
   if (!message) {
     return res.status(400).json({ error: 'Message is required' })
   }
 
   try {
+    if (Array.isArray(attachments)) {
+      // Replace attachments for this log
+      await prisma.logAttachment.deleteMany({ where: { logId } })
+    }
+
     const updated = await prisma.logMessage.update({
       where: { id: logId },
       data: { 
         title: title?.trim() || '',
         message: message.trim(),
-        imageUrl: imageUrl || null
+        imageUrl: imageUrl || null,
+        ...(Array.isArray(attachments)
+          ? {
+              attachments: {
+                create: attachments.map((a: any) => ({
+                  filename: a.filename,
+                  originalName: a.originalName,
+                  mimeType: a.mimeType,
+                  size: a.size,
+                  url: a.url
+                }))
+              }
+            }
+          : {})
       },
       include: {
         signatures: true,
@@ -875,7 +951,8 @@ app.put('/api/logs/:id', authenticateSharedPassword, async (req, res) => {
           where: { parentId: null },
           include: { replies: true }
         },
-        reactions: true
+        reactions: true,
+        attachments: { orderBy: { createdAt: 'asc' } }
       }
     })
     res.json(updated)

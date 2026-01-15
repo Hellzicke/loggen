@@ -22,6 +22,21 @@ model LogMessage {
   signatures  ReadSignature[]
   comments    Comment[]
   reactions   Reaction[]
+  attachments LogAttachment[]
+}
+
+model LogAttachment {
+  id           Int        @id @default(autoincrement())
+  logId        Int
+  log          LogMessage @relation(fields: [logId], references: [id], onDelete: Cascade)
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  url          String
+  createdAt    DateTime   @default(now())
+
+  @@index([logId])
 }
 
 model Reaction {

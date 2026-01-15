@@ -34,6 +34,17 @@ export interface Reaction {
   createdAt: string
 }
 
+export interface LogAttachment {
+  id: number
+  logId: number
+  filename: string
+  originalName: string
+  mimeType: string
+  size: number
+  url: string
+  createdAt: string
+}
+
 export interface LogMessage {
   id: number
   title: string
@@ -49,6 +60,7 @@ export interface LogMessage {
   signatures: ReadSignature[]
   comments: Comment[]
   reactions: Reaction[]
+  attachments?: LogAttachment[]
 }
 
 export default function App() {
@@ -310,11 +322,11 @@ export default function App() {
     }))
   }
 
-  const handleEditLog = async (logId: number, title: string, message: string, imageUrl: string | null) => {
+  const handleEditLog = async (logId: number, title: string, message: string, imageUrl: string | null, attachments: any[] = []) => {
     try {
       const res = await authenticatedFetch(`/api/logs/${logId}`, {
         method: 'PUT',
-        body: JSON.stringify({ title, message, imageUrl })
+        body: JSON.stringify({ title, message, imageUrl, attachments })
       })
       if (res.ok) {
         const updated = await res.json()
