@@ -444,7 +444,11 @@ export default function App() {
         archiveCount={archivedLogs.length}
         activeView={activeView}
         onViewChange={setActiveView}
-        onArchivedMeetingsClick={() => setShowArchivedMeetings(!showArchivedMeetings)}
+        onArchivedMeetingsClick={() => {
+          // Ensure the toggle has visible effect even if user is not currently on "mötespunkter"
+          setActiveView('mötespunkter')
+          setShowArchivedMeetings(prev => !prev)
+        }}
         showArchivedMeetings={showArchivedMeetings}
       />
       <main className="main">
