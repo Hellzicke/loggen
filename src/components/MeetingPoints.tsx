@@ -225,12 +225,7 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
 
   const handleArchiveMeeting = async () => {
     if (!meeting) return
-    const meetingDate = new Date(meeting.scheduledAt)
-    const isPast = meetingDate < new Date()
-    const confirmMessage = isPast
-      ? 'Är du säker på att du vill arkivera detta möte? Du kan fortfarande se det i arkivet efteråt.'
-      : 'Detta möte verkar ligga i framtiden. Är du säker på att du vill arkivera det ändå?'
-    if (!confirm(confirmMessage)) return
+    if (!confirm('Är du säker på att du vill arkivera detta möte? Du kan fortfarande se det i arkivet efteråt.')) return
 
     setArchiving(true)
     try {
@@ -437,7 +432,7 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
         <div className="meeting-points-header">
           <h3>Agendapunkter för detta möte ({meeting.points.length})</h3>
           <div className="meeting-points-header-actions">
-            {!meeting.archived && (
+            {isPast && !meeting.archived && (
               <button
                 className="meeting-archive-btn"
                 onClick={handleArchiveMeeting}
