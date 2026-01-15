@@ -2,6 +2,21 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.9.2] - 2026-01-15
+
+### Tillagt
+- Admin: Synka och hantera arkivering av möten (arkivera/avarkivera + visar arkiveringsdatum)
+- Admin: Hopfällbara arkiverade möten grupperade per månad
+- Användarsida: Arkiverade möten grupperade per månad och hopfällbara per möte
+
+### Ändrat
+- Möten försvinner inte automatiskt när tiden passerat (ligger kvar som aktiva tills de arkiveras manuellt)
+- Mötesväljaren ("Välj möte") är mer kompakt och tydligare som val-sektion
+
+### Fixat
+- Beskrivning på agendapunkter bevarar radbrytningar (multiline)
+- Växling mellan Aktiva/Arkiverade möten uppdaterar faktiskt listan/valet
+
 ## [0.9.1] - 2026-01-12
 
 ### Fixat
