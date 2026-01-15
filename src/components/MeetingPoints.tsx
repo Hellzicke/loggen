@@ -115,6 +115,13 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
     loadMeetings()
   }, [loadMeetings])
 
+  // When toggling between active/archived, reset selection so the UI actually switches list & meeting.
+  useEffect(() => {
+    setSelectedMeetingId(null)
+    setMeeting(null)
+    setLoading(true)
+  }, [showArchived])
+
   useEffect(() => {
     if (selectedMeetingId) {
       loadMeeting(selectedMeetingId)
