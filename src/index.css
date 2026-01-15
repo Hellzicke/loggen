@@ -2652,6 +2652,117 @@ body:hover #root::before ~ .header {
   gap: 1rem;
 }
 
+.admin-meetings-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.admin-meetings-section h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+}
+
+.admin-archived-meetings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-archived-month {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-archived-month-summary {
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+}
+
+.admin-archived-month-count {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.admin-archived-month-list {
+  padding: 0.25rem 1rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-archived-meeting {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.admin-archived-meeting-summary {
+  cursor: pointer;
+  padding: 0.75rem 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.admin-archived-meeting-summary-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-archived-meeting-date {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.admin-archived-meeting-summary-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.admin-archived-meeting-body {
+  padding: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.admin-meeting-points-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-meeting-point-title {
+  font-weight: 600;
+}
+
+.admin-meeting-point-meta {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.admin-meeting-point-desc {
+  margin-top: 0.25rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+}
+
 /* User Statistics */
 .admin-user-stats {
   margin-top: 1rem;
