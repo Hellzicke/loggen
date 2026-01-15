@@ -47,6 +47,19 @@ function getMeetingColor(meetingId: number): { primary: string; light: string; b
   return colors[index]
 }
 
+function getMonthKey(isoDate: string) {
+  const d = new Date(isoDate)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  return `${year}-${month}`
+}
+
+function formatMonthLabel(monthKey: string) {
+  // monthKey: YYYY-MM
+  const [y, m] = monthKey.split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long' })
+}
+
 export default function MeetingPoints({ authenticatedFetch, showArchived = false }: MeetingPointsProps) {
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [selectedMeetingId, setSelectedMeetingId] = useState<number | null>(null)
@@ -74,8 +87,8 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
       if (res.ok) {
         const data = await res.json()
         setMeetings(data)
-        // Auto-select first meeting if available
-        if (data.length > 0 && !selectedMeetingId) {
+        // Auto-select first meeting if available (active meetings view only)
+        if (!showArchived && data.length > 0 && !selectedMeetingId) {
           setSelectedMeetingId(data[0].id)
           setMeeting(data[0])
         } else if (data.length === 0) {
@@ -342,6 +355,180 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
     )
   }
 
+  if (showArchived) {
+    const groups = meetings.reduce<Record<string, Meeting[]>>((acc, m) => {
+      const key = getMonthKey(m.scheduledAt)
+      if (!acc[key]) acc[key] = []
+      acc[key].push(m)
+      return acc
+    }, {})
+
+    const groupKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a))
+    for (const k of groupKeys) {
+      groups[k].sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime())
+    }
+
+    return (
+      <div className="meeting-points-container">
+        <div className="archived-meetings">
+          {groupKeys.map((monthKey, monthIndex) => (
+            <details key={monthKey} className="archived-month" open={monthIndex === 0}>
+              <summary className="archived-month-summary">
+                <span>{formatMonthLabel(monthKey)}</span>
+                <span className="archived-month-count">{groups[monthKey].length} möten</span>
+              </summary>
+
+              <div className="archived-month-list">
+                {groups[monthKey].map((m) => {
+                  const mDate = new Date(m.scheduledAt)
+                  const meetingColor = getMeetingColor(m.id)
+                  return (
+                    <details key={m.id} className="archived-meeting">
+                      <summary className="archived-meeting-summary">
+                        <div className="archived-meeting-summary-main">
+                          <strong>{m.title}</strong>
+                          <span className="archived-meeting-date">
+                            {mDate.toLocaleString('sv-SE', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                        <div className="archived-meeting-summary-meta">
+                          <span>{m.points.length} punkter</span>
+                          <span className="meeting-archived-badge">Arkiverad</span>
+                        </div>
+                      </summary>
+
+                      <div
+                        className="meeting-wrapper"
+                        style={{
+                          borderColor: meetingColor.primary,
+                          borderLeftColor: meetingColor.primary,
+                          borderLeftWidth: '4px',
+                          background: `linear-gradient(to right, ${meetingColor.light}15 0%, transparent 4px)`
+                        }}
+                      >
+                        <div
+                          className="meeting-header-card"
+                          style={{
+                            borderColor: meetingColor.primary,
+                            borderLeftColor: meetingColor.primary,
+                            borderLeftWidth: '4px'
+                          }}
+                        >
+                          <h2 className="meeting-title">{m.title}</h2>
+                          <div className="meeting-meta">
+                            <span className="meeting-date-display">
+                              {mDate.toLocaleString('sv-SE', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                            {m.archivedAt && (
+                              <span className="meeting-archived-badge">
+                                Arkiverad: {new Date(m.archivedAt).toLocaleDateString('sv-SE', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="meeting-points-section">
+                          <div className="meeting-points-header">
+                            <h3>Agendapunkter för detta möte ({m.points.length})</h3>
+                          </div>
+
+                          {m.points.length === 0 ? (
+                            <div className="no-points">
+                              <p>Inga agendapunkter.</p>
+                            </div>
+                          ) : (
+                            <div className="points-list">
+                              {m.points.map((p) => (
+                                <div
+                                  key={p.id}
+                                  className="point-item-card point-item-card--linked"
+                                  style={{ borderLeftColor: meetingColor.primary }}
+                                >
+                                  <div
+                                    className="point-meeting-indicator"
+                                    style={{
+                                      background: meetingColor.primary,
+                                      boxShadow: `0 0 0 2px ${meetingColor.primary}`
+                                    }}
+                                  ></div>
+                                  <div className="point-item-content">
+                                    <div className="point-item-main">
+                                      <div className="point-header-row">
+                                        <label className="point-checkbox-label">
+                                          <input
+                                            type="checkbox"
+                                            checked={p.completed}
+                                            disabled={true}
+                                            className="point-checkbox"
+                                          />
+                                          <h4 className={`point-title ${p.completed ? 'point-title--completed' : ''}`}>
+                                            {p.title}
+                                          </h4>
+                                        </label>
+                                      </div>
+                                      {p.description && <p className="point-description">{p.description}</p>}
+                                      {p.notes && (
+                                        <div className="point-notes">
+                                          <strong>Anteckningar/Beslut:</strong>
+                                          <p>{p.notes}</p>
+                                        </div>
+                                      )}
+                                      <div className="point-meta">
+                                        <span>Förslag av: {p.author}</span>
+                                        <span className="point-date">
+                                          {new Date(p.createdAt).toLocaleDateString('sv-SE', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          })}
+                                        </span>
+                                        {p.completed && p.completedAt && (
+                                          <span className="point-completed-date">
+                                            Klar: {new Date(p.completedAt).toLocaleDateString('sv-SE', {
+                                              year: 'numeric',
+                                              month: 'short',
+                                              day: 'numeric'
+                                            })}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </details>
+                  )
+                })}
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   if (!meeting && selectedMeetingId) {
     return <div className="loading">Laddar möte...</div>
   }
@@ -365,7 +552,8 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
     <div className="meeting-points-container">
       {meetings.length > 1 && (
         <div className="meetings-selector">
-          <h3>Välj möte</h3>
+              <h3>Välj möte</h3>
+              <div className="meetings-selector-hint">Agendapunkter för valt möte visas under.</div>
           <div className="meetings-list-selector">
             {meetings.map((m) => {
               const mDate = new Date(m.scheduledAt)
@@ -619,7 +807,7 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
                           type="checkbox"
                           checked={point.completed}
                           onChange={() => handleToggleComplete(point.id, point.completed)}
-                          disabled={false}
+                          disabled={meeting.archived || (isPast && !meeting.archived)}
                           className="point-checkbox"
                         />
                         <h4 className={`point-title ${point.completed ? 'point-title--completed' : ''}`}>
