@@ -1,5 +1,5 @@
 import { useState, FormEvent, useEffect, useRef } from 'react'
-import type { LogMessage } from '../App'
+import type { LogAttachment, LogMessage } from '../App'
 import RichTextEditor, { RichTextEditorRef } from './RichTextEditor'
 
 interface LogFormProps {
@@ -22,7 +22,10 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
   const [showImagePicker, setShowImagePicker] = useState(false)
   const [availableImages, setAvailableImages] = useState<ImageFile[]>([])
   const [loadingImages, setLoadingImages] = useState(false)
+  const [attachments, setAttachments] = useState<Array<Omit<LogAttachment, 'id' | 'logId' | 'createdAt'>>>([])
+  const [uploadingAttachment, setUploadingAttachment] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const attachmentInputRef = useRef<HTMLInputElement>(null)
   const editorRef = useRef<RichTextEditorRef>(null)
 
   useEffect(() => {
@@ -88,6 +91,39 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
     setShowImagePicker(false)
   }
 
+  const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploadingAttachment(true)
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const token = localStorage.getItem('authToken')
+      const res = await fetch('/api/attachments/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setAttachments(prev => [...prev, data])
+        if (attachmentInputRef.current) attachmentInputRef.current.value = ''
+      } else {
+        const err = await res.json().catch(() => null)
+        alert(err?.error || 'Kunde inte ladda upp fil')
+      }
+    } catch (error) {
+      console.error('Failed to upload attachment:', error)
+      alert('Kunde inte ladda upp fil')
+    } finally {
+      setUploadingAttachment(false)
+    }
+  }
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     
@@ -112,7 +148,8 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
           author: author.trim(), 
           title: title.trim(),
           message: message.trim(),
-          imageUrl
+          imageUrl,
+          attachments
         })
       })
 
@@ -260,6 +297,47 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
                         ))}
                       </div>
                     )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="input-group">
+              <label htmlFor="attachment">Bifogade dokument (valfritt)</label>
+              <input
+                ref={attachmentInputRef}
+                id="attachment"
+                type="file"
+                onChange={handleAttachmentUpload}
+                style={{ display: 'none' }}
+              />
+              <div className="attachment-upload-area">
+                <button
+                  type="button"
+                  className="attachment-upload-btn"
+                  onClick={() => attachmentInputRef.current?.click()}
+                  disabled={uploadingAttachment}
+                >
+                  {uploadingAttachment ? 'Laddar upp...' : '+ Ladda upp dokument'}
+                </button>
+                {attachments.length > 0 && (
+                  <div className="attachments-list">
+                    {attachments.map((a, idx) => (
+                      <div key={`${a.filename}-${idx}`} className="attachment-item">
+                        <a href={a.url} target="_blank" rel="noreferrer" className="attachment-link">
+                          {a.originalName}
+                        </a>
+                        <button
+                          type="button"
+                          className="attachment-remove"
+                          onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
+                          title="Ta bort bilaga"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

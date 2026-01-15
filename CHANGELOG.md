@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.9.3] - 2026-01-15
+
+### Tillagt
+- Logg: Stöd för bifogade dokument (upload + visning på inlägg + redigering)
+
 ## [0.9.2] - 2026-01-15
 
 ### Tillagt

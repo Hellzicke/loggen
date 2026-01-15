@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, memo } from 'react'
-import type { LogMessage, ReadSignature, Comment, Reaction } from '../App'
+import type { LogAttachment, LogMessage, ReadSignature, Comment, Reaction } from '../App'
 import ImageModal from './ImageModal'
 
 interface LogListProps {
@@ -8,7 +8,7 @@ interface LogListProps {
   onSign: (logId: number, signature: ReadSignature) => void
   onPin: (logId: number) => void
   onComment: (logId: number, comment: Comment, parentId?: number) => void
-  onEditLog: (logId: number, title: string, message: string, imageUrl: string | null) => void
+  onEditLog: (logId: number, title: string, message: string, imageUrl: string | null, attachments: Array<Omit<LogAttachment, 'id' | 'logId' | 'createdAt'>>) => void
   onDeleteComment: (logId: number, commentId: number, parentId?: number) => void
   onReaction: (logId: number, emoji: string) => void
   onDeleteLog: (logId: number) => void
@@ -194,8 +194,9 @@ interface EditFormProps {
   initialTitle: string
   initialMessage: string
   initialImageUrl: string | null
+  initialAttachments?: LogAttachment[]
   logId: number
-  onSave: (title: string, message: string, imageUrl: string | null) => void
+  onSave: (title: string, message: string, imageUrl: string | null, attachments: Array<Omit<LogAttachment, 'id' | 'logId' | 'createdAt'>>) => void
   onCancel: () => void
   onDelete: (logId: number) => void
 }
@@ -206,16 +207,27 @@ interface ImageFile {
   uploadedAt: string
 }
 
-function EditForm({ initialTitle, initialMessage, initialImageUrl, logId, onSave, onCancel, onDelete }: EditFormProps) {
+function EditForm({ initialTitle, initialMessage, initialImageUrl, initialAttachments = [], logId, onSave, onCancel, onDelete }: EditFormProps) {
   const [title, setTitle] = useState(initialTitle)
   const [message, setMessage] = useState(initialMessage)
   const [imageUrl, setImageUrl] = useState<string | null>(initialImageUrl)
+  const [attachments, setAttachments] = useState<Array<Omit<LogAttachment, 'id' | 'logId' | 'createdAt'>>>(() =>
+    initialAttachments.map(a => ({
+      filename: a.filename,
+      originalName: a.originalName,
+      mimeType: a.mimeType,
+      size: a.size,
+      url: a.url
+    }))
+  )
+  const [uploadingAttachment, setUploadingAttachment] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [showImagePicker, setShowImagePicker] = useState(false)
   const [availableImages, setAvailableImages] = useState<ImageFile[]>([])
   const [loadingImages, setLoadingImages] = useState(false)
   const editorRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const attachmentInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (editorRef.current) {
@@ -294,6 +306,39 @@ function EditForm({ initialTitle, initialMessage, initialImageUrl, logId, onSave
   const handleSelectImage = (url: string) => {
     setImageUrl(url)
     setShowImagePicker(false)
+  }
+
+  const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploadingAttachment(true)
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const token = localStorage.getItem('authToken')
+      const res = await fetch('/api/attachments/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setAttachments(prev => [...prev, data])
+        if (attachmentInputRef.current) attachmentInputRef.current.value = ''
+      } else {
+        const err = await res.json().catch(() => null)
+        alert(err?.error || 'Kunde inte ladda upp fil')
+      }
+    } catch (error) {
+      console.error('Failed to upload attachment:', error)
+      alert('Kunde inte ladda upp fil')
+    } finally {
+      setUploadingAttachment(false)
+    }
   }
 
   const plainText = message.replace(/<[^>]*>/g, '').trim()
@@ -394,10 +439,50 @@ function EditForm({ initialTitle, initialMessage, initialImageUrl, logId, onSave
           </div>
         </div>
       </div>
+      <div className="form-row">
+        <div className="input-group">
+          <label>Bifogade dokument (valfritt)</label>
+          <input
+            ref={attachmentInputRef}
+            type="file"
+            onChange={handleAttachmentUpload}
+            style={{ display: 'none' }}
+          />
+          <div className="attachment-upload-area">
+            <button
+              type="button"
+              className="attachment-upload-btn"
+              onClick={() => attachmentInputRef.current?.click()}
+              disabled={uploadingAttachment}
+            >
+              {uploadingAttachment ? 'Laddar upp...' : '+ Ladda upp dokument'}
+            </button>
+            {attachments.length > 0 && (
+              <div className="attachments-list">
+                {attachments.map((a, idx) => (
+                  <div key={`${a.filename}-${idx}`} className="attachment-item">
+                    <a href={a.url} target="_blank" rel="noreferrer" className="attachment-link">
+                      {a.originalName}
+                    </a>
+                    <button
+                      type="button"
+                      className="attachment-remove"
+                      onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
+                      title="Ta bort bilaga"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
       <div className="edit-actions">
         <button 
           className="edit-save" 
-          onClick={() => onSave(title, message, imageUrl)}
+          onClick={() => onSave(title, message, imageUrl, attachments)}
           disabled={!plainText}
         >
           Spara
@@ -660,9 +745,10 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                 initialTitle={log.title}
                 initialMessage={log.message}
                 initialImageUrl={log.imageUrl}
+                initialAttachments={log.attachments || []}
                 logId={log.id}
-                onSave={(title, message, imageUrl) => {
-                  onEditLog(log.id, title, message, imageUrl)
+                onSave={(title, message, imageUrl, attachments) => {
+                  onEditLog(log.id, title, message, imageUrl, attachments)
                   setEditingId(null)
                 }}
                 onCancel={() => setEditingId(null)}
@@ -680,6 +766,20 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                 {log.imageUrl && (
                   <div className="log-image" onClick={() => setFullscreenImage(log.imageUrl!)}>
                     <img src={log.imageUrl} alt="Inläggsbild" />
+                  </div>
+                )}
+                {log.attachments && log.attachments.length > 0 && (
+                  <div className="log-attachments">
+                    <div className="log-attachments-title">Bifogade dokument</div>
+                    <ul className="log-attachments-list">
+                      {log.attachments.map((a) => (
+                        <li key={a.id} className="log-attachment-item">
+                          <a href={a.url} target="_blank" rel="noreferrer" className="log-attachment-link">
+                            {a.originalName}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </div>
