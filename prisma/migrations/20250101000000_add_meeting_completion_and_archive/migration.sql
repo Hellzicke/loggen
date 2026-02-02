@@ -7,3 +7,5 @@ ALTER TABLE "MeetingPoint" ADD COLUMN "completed" BOOLEAN NOT NULL DEFAULT false
 ALTER TABLE "MeetingPoint" ADD COLUMN "completedAt" TIMESTAMP(3);
 ALTER TABLE "MeetingPoint" ADD COLUMN "notes" TEXT DEFAULT '';
 
+
+

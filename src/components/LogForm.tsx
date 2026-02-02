@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect, useRef } from 'react'
+import { useState, FormEvent, useRef } from 'react'
 import type { LogAttachment, LogMessage } from '../App'
 import RichTextEditor, { RichTextEditorRef } from './RichTextEditor'
 
@@ -28,13 +28,6 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
   const attachmentInputRef = useRef<HTMLInputElement>(null)
   const editorRef = useRef<RichTextEditorRef>(null)
 
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [onClose])
 
   const loadAvailableImages = async () => {
     setLoadingImages(true)
@@ -164,28 +157,9 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
     }
   }
 
-  const mouseDownTarget = useRef<EventTarget | null>(null)
-
-  const handleOverlayMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Store where the mouse was pressed down
-    if (e.target === e.currentTarget) {
-      mouseDownTarget.current = e.target
-    } else {
-      mouseDownTarget.current = null
-    }
-  }
-
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only close if mouse was pressed down AND released on overlay (not dragged from form)
-    if (e.target === e.currentTarget && mouseDownTarget.current === e.currentTarget) {
-      onClose()
-    }
-    mouseDownTarget.current = null
-  }
-
   return (
-    <div className="form-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
-      <form className="log-form" onSubmit={handleSubmit} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}>
+    <div className="form-overlay">
+      <form className="log-form" onSubmit={handleSubmit}>
         <div className="form-header">
           <h2>Skapa inlägg</h2>
           <button type="button" className="form-close" onClick={onClose}>
