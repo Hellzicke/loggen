@@ -19,3 +19,5 @@ CREATE INDEX "LogAttachment_logId_idx" ON "LogAttachment"("logId");
 ALTER TABLE "LogAttachment" ADD CONSTRAINT "LogAttachment_logId_fkey" FOREIGN KEY ("logId") REFERENCES "LogMessage"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 
+
+
