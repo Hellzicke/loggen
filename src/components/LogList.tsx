@@ -785,10 +785,6 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
               </div>
             )}
             
-            {fullscreenImage && (
-              <ImageModal imageUrl={fullscreenImage} onClose={() => setFullscreenImage(null)} />
-            )}
-            
             {/* Reactions */}
             <div className="reactions-section">
               <div className="reaction-trigger">
@@ -937,6 +933,9 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
           </article>
         )
       })}
+      {fullscreenImage && (
+        <ImageModal imageUrl={fullscreenImage} onClose={() => setFullscreenImage(null)} />
+      )}
     </div>
   )
 }
