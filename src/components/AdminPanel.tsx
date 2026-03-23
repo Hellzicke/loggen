@@ -49,6 +49,24 @@ interface Meeting {
   points: MeetingPoint[]
 }
 
+interface AdminSuggestion {
+  id: number
+  title: string
+  description: string
+  author: string
+  category: string
+  status: string
+  decision: string | null
+  decidedBy: string | null
+  decidedAt: string | null
+  lockedAt: string | null
+  archived: boolean
+  archivedAt: string | null
+  createdAt: string
+  votes: { id: number; name: string }[]
+  comments: { id: number; message: string; author: string }[]
+}
+
 interface UserStats {
   name: string
   postsCreated: number
@@ -68,7 +86,8 @@ export default function AdminPanel() {
   const [images, setImages] = useState<Image[]>([])
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [userStats, setUserStats] = useState<UserStatsResponse | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'logs' | 'images' | 'meetings' | 'stats'>('overview')
+  const [suggestions, setSuggestions] = useState<AdminSuggestion[]>([])
+  const [activeTab, setActiveTab] = useState<'overview' | 'logs' | 'images' | 'meetings' | 'suggestions' | 'stats'>('overview')
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<number | null>(null)
   const [showMeetingForm, setShowMeetingForm] = useState(false)
@@ -133,6 +152,12 @@ export default function AdminPanel() {
         if (res.ok) {
           const data = await res.json()
           setMeetings(data)
+        }
+      } else if (activeTab === 'suggestions') {
+        const res = await fetch('/api/admin/suggestions', { headers })
+        if (res.ok) {
+          const data = await res.json()
+          setSuggestions(data)
         }
       } else if (activeTab === 'stats') {
         const res = await fetch('/api/admin/user-stats', { headers })
@@ -379,14 +404,20 @@ export default function AdminPanel() {
         >
           Bilder ({images.length})
         </button>
-        <button 
-          className={activeTab === 'meetings' ? 'active' : ''} 
+        <button
+          className={activeTab === 'meetings' ? 'active' : ''}
           onClick={() => setActiveTab('meetings')}
         >
           Möten ({meetings.length})
         </button>
-        <button 
-          className={activeTab === 'stats' ? 'active' : ''} 
+        <button
+          className={activeTab === 'suggestions' ? 'active' : ''}
+          onClick={() => setActiveTab('suggestions')}
+        >
+          Förslag ({suggestions.length})
+        </button>
+        <button
+          className={activeTab === 'stats' ? 'active' : ''}
           onClick={() => setActiveTab('stats')}
         >
           Användarstatistik
@@ -714,6 +745,12 @@ export default function AdminPanel() {
               })()
             )}
           </div>
+        ) : activeTab === 'suggestions' ? (
+          <AdminSuggestionsTab
+            suggestions={suggestions}
+            setSuggestions={setSuggestions}
+            getAuthToken={getAuthToken}
+          />
         ) : activeTab === 'stats' && userStats ? (
           <div className="admin-user-stats">
             <div className="stats-header">
@@ -755,6 +792,179 @@ export default function AdminPanel() {
           </div>
         ) : null}
       </div>
+    </div>
+  )
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  open: 'Öppet',
+  in_review: 'Under behandling',
+  decided: 'Beslutat',
+  locked: 'Låst',
+}
+
+const STATUS_OPTIONS = [
+  { value: 'open', label: 'Öppet' },
+  { value: 'in_review', label: 'Under behandling' },
+  { value: 'decided', label: 'Beslutat' },
+  { value: 'locked', label: 'Låst' },
+]
+
+function AdminSuggestionsTab({ suggestions, setSuggestions, getAuthToken }: {
+  suggestions: AdminSuggestion[]
+  setSuggestions: React.Dispatch<React.SetStateAction<AdminSuggestion[]>>
+  getAuthToken: () => string | null
+}) {
+  const [actionId, setActionId] = useState<number | null>(null)
+  const [newStatus, setNewStatus] = useState('')
+  const [decision, setDecision] = useState('')
+  const [decidedBy, setDecidedBy] = useState('')
+
+  const handleUpdateStatus = async (suggestionId: number) => {
+    const token = getAuthToken()
+    if (!token) return
+
+    try {
+      const body: any = {}
+      if (newStatus) body.status = newStatus
+      if (decision) body.decision = decision
+      if (decidedBy) body.decidedBy = decidedBy
+
+      const res = await fetch(`/api/admin/suggestions/${suggestionId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setSuggestions(prev => prev.map(s => s.id === suggestionId ? updated : s))
+        setActionId(null)
+        setNewStatus('')
+        setDecision('')
+        setDecidedBy('')
+      }
+    } catch (error) {
+      console.error('Error updating suggestion:', error)
+    }
+  }
+
+  const handleDelete = async (suggestionId: number) => {
+    if (!confirm('Är du säker på att du vill ta bort detta förslag?')) return
+    const token = getAuthToken()
+    try {
+      const res = await fetch(`/api/admin/suggestions/${suggestionId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (res.ok) {
+        setSuggestions(prev => prev.filter(s => s.id !== suggestionId))
+      }
+    } catch (error) {
+      console.error('Error deleting suggestion:', error)
+    }
+  }
+
+  return (
+    <div className="admin-suggestions">
+      <h2>Förslag</h2>
+      {suggestions.length === 0 ? (
+        <div className="empty-state">Inga förslag</div>
+      ) : (
+        <div className="admin-suggestions-list">
+          {suggestions.map(s => (
+            <div key={s.id} className="admin-suggestion-item">
+              <div className="admin-suggestion-header">
+                <div>
+                  <h4>{s.title}</h4>
+                  <div className="log-meta">
+                    <span>{s.author}</span>
+                    <span>{new Date(s.createdAt).toLocaleDateString('sv-SE')}</span>
+                    <span className="badge">{STATUS_LABELS[s.status] || s.status}</span>
+                    <span className="badge">{s.category}</span>
+                    <span>{s.votes.length} röster</span>
+                    <span>{s.comments.length} kommentarer</span>
+                    {s.archived && <span className="badge">Arkiverad</span>}
+                  </div>
+                </div>
+                <div className="admin-meeting-actions">
+                  <button
+                    className="admin-meeting-edit-btn"
+                    onClick={() => {
+                      setActionId(actionId === s.id ? null : s.id)
+                      setNewStatus(s.status)
+                      setDecision(s.decision || '')
+                      setDecidedBy(s.decidedBy || '')
+                    }}
+                  >
+                    Hantera
+                  </button>
+                  <button className="delete-btn" onClick={() => handleDelete(s.id)}>
+                    Ta bort
+                  </button>
+                </div>
+              </div>
+
+              {actionId === s.id && (
+                <div className="admin-suggestion-action-panel">
+                  <div className="suggestion-form-row">
+                    <div className="input-group" style={{ flex: 1 }}>
+                      <label>Status</label>
+                      <select
+                        value={newStatus}
+                        onChange={e => setNewStatus(e.target.value)}
+                        className="suggestion-form-select"
+                      >
+                        {STATUS_OPTIONS.map(o => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="input-group" style={{ flex: 1 }}>
+                      <label>Beslutsfattare</label>
+                      <input
+                        type="text"
+                        value={decidedBy}
+                        onChange={e => setDecidedBy(e.target.value)}
+                        placeholder="Namn"
+                        className="suggestion-form-input"
+                        style={{ marginBottom: 0 }}
+                      />
+                    </div>
+                  </div>
+                  <div className="input-group">
+                    <label>Beslut / Kommentar</label>
+                    <textarea
+                      value={decision}
+                      onChange={e => setDecision(e.target.value)}
+                      placeholder="T.ex. 'Det beslutades att...'"
+                      className="suggestion-form-textarea"
+                      rows={2}
+                      style={{ marginBottom: 0 }}
+                    />
+                  </div>
+                  <div className="admin-meeting-form-actions" style={{ marginTop: '0.5rem' }}>
+                    <button
+                      className="admin-meeting-cancel-btn"
+                      onClick={() => setActionId(null)}
+                    >
+                      Avbryt
+                    </button>
+                    <button
+                      className="admin-meeting-save-btn"
+                      onClick={() => handleUpdateStatus(s.id)}
+                    >
+                      Spara
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

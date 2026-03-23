@@ -101,3 +101,46 @@ model MeetingPoint {
   createdAt   DateTime @default(now())
 }
 
+model Suggestion {
+  id          Int                 @id @default(autoincrement())
+  title       String
+  description String
+  author      String
+  category    String              @default("övrigt")
+  status      String              @default("open")
+  decision    String?
+  decidedBy   String?
+  decidedAt   DateTime?
+  lockedAt    DateTime?
+  archived    Boolean             @default(false)
+  archivedAt  DateTime?
+  createdAt   DateTime            @default(now())
+  votes       SuggestionVote[]
+  comments    SuggestionComment[]
+}
+
+model SuggestionVote {
+  id           Int        @id @default(autoincrement())
+  name         String
+  suggestionId Int
+  suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([suggestionId, name])
+  @@index([suggestionId])
+}
+
+model SuggestionComment {
+  id           Int                 @id @default(autoincrement())
+  message      String
+  author       String
+  suggestionId Int
+  suggestion   Suggestion          @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  parentId     Int?
+  parent       SuggestionComment?  @relation("SuggestionCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      SuggestionComment[] @relation("SuggestionCommentReplies")
+  createdAt    DateTime            @default(now())
+
+  @@index([suggestionId])
+}
+

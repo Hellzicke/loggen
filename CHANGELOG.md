@@ -2,7 +2,19 @@
 
 Alla ändringar i projektet dokumenteras här.
 
-## [0.9.4] - 2026-03-23
+## [0.10.0] - 2026-03-23
+
+### Tillagt
+- Förslagslåda: Personal kan lämna förslag och idéer (förbättringar, inköp, rutiner, aktiviteter, övrigt)
+- Förslagslåda: Röstning — visa stöd för förslag med tumme upp (kan tas bort)
+- Förslagslåda: Kommentarer och svar på förslag
+- Förslagslåda: Kategorifilter (förbättring, inköp, rutin, aktivitet, övrigt)
+- Förslagslåda: Statusflöde — Öppet → Under behandling → Beslutat → Låst
+- Förslagslåda: Beslutsfält synligt när chef/admin fattat beslut
+- Förslagslåda: Låsta förslag kan inte längre kommenteras eller röstas på
+- Förslagslåda: Automatisk arkivering 30 dagar efter låsning
+- Förslagslåda: Arkivvy för gamla förslag
+- Admin: Hantera förslag — ändra status, skriva beslut, låsa förslag, ta bort
 
 ### Fixat
 - Bilder dubblerades/tripplades vid klick — ImageModal renderades en gång per inlägg istället för en gång totalt

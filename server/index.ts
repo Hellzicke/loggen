@@ -1264,6 +1264,239 @@ app.delete('/api/logs/:id', authenticateSharedPassword, async (req, res) => {
   }
 })
 
+// ========== SUGGESTION BOX ENDPOINTS ==========
+
+const SUGGESTION_INCLUDE = {
+  votes: { orderBy: { createdAt: 'asc' as const } },
+  comments: {
+    where: { parentId: null },
+    orderBy: { createdAt: 'asc' as const },
+    include: {
+      replies: { orderBy: { createdAt: 'asc' as const } }
+    }
+  }
+}
+
+// Auto-archive locked suggestions older than 30 days
+async function autoArchiveLockedSuggestions() {
+  const cutoffDate = new Date(Date.now() - ARCHIVE_DAYS * MS_PER_DAY)
+  await prisma.suggestion.updateMany({
+    where: {
+      archived: false,
+      lockedAt: { not: null, lt: cutoffDate }
+    },
+    data: {
+      archived: true,
+      archivedAt: new Date()
+    }
+  })
+}
+
+// Get active suggestions
+app.get('/api/suggestions', authenticateSharedPassword, async (_req, res) => {
+  try {
+    await autoArchiveLockedSuggestions()
+    const suggestions = await prisma.suggestion.findMany({
+      where: { archived: false },
+      orderBy: { createdAt: 'desc' },
+      include: SUGGESTION_INCLUDE
+    })
+    res.json(suggestions)
+  } catch (error) {
+    console.error('Error fetching suggestions:', error)
+    res.status(500).json({ error: 'Failed to fetch suggestions' })
+  }
+})
+
+// Get archived suggestions
+app.get('/api/suggestions/archived', authenticateSharedPassword, async (_req, res) => {
+  try {
+    const suggestions = await prisma.suggestion.findMany({
+      where: { archived: true },
+      orderBy: { archivedAt: 'desc' },
+      include: SUGGESTION_INCLUDE
+    })
+    res.json(suggestions)
+  } catch (error) {
+    console.error('Error fetching archived suggestions:', error)
+    res.status(500).json({ error: 'Failed to fetch archived suggestions' })
+  }
+})
+
+// Create suggestion
+app.post('/api/suggestions', authenticateSharedPassword, async (req, res) => {
+  const { title, description, author, category } = req.body
+  if (!title || !description || !author) {
+    return res.status(400).json({ error: 'Title, description and author are required' })
+  }
+
+  try {
+    const suggestion = await prisma.suggestion.create({
+      data: {
+        title: title.trim(),
+        description: description.trim(),
+        author: author.trim(),
+        category: category || 'övrigt'
+      },
+      include: SUGGESTION_INCLUDE
+    })
+    res.status(201).json(suggestion)
+  } catch (error) {
+    console.error('Error creating suggestion:', error)
+    res.status(500).json({ error: 'Failed to create suggestion' })
+  }
+})
+
+// Vote on suggestion
+app.post('/api/suggestions/:id/vote', authenticateSharedPassword, async (req, res) => {
+  const suggestionId = parseInt(req.params.id)
+  const { name } = req.body
+  if (!name) {
+    return res.status(400).json({ error: 'Name is required' })
+  }
+
+  try {
+    const suggestion = await prisma.suggestion.findUnique({ where: { id: suggestionId } })
+    if (!suggestion || suggestion.lockedAt) {
+      return res.status(400).json({ error: 'Cannot vote on locked suggestion' })
+    }
+
+    const vote = await prisma.suggestionVote.create({
+      data: { name: name.trim(), suggestionId }
+    })
+    res.status(201).json(vote)
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      return res.status(409).json({ error: 'Already voted' })
+    }
+    console.error('Error voting:', error)
+    res.status(500).json({ error: 'Failed to vote' })
+  }
+})
+
+// Remove vote
+app.delete('/api/suggestions/:id/vote', authenticateSharedPassword, async (req, res) => {
+  const suggestionId = parseInt(req.params.id)
+  const { name } = req.body
+  if (!name) {
+    return res.status(400).json({ error: 'Name is required' })
+  }
+
+  try {
+    await prisma.suggestionVote.deleteMany({
+      where: { suggestionId, name: name.trim() }
+    })
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error removing vote:', error)
+    res.status(500).json({ error: 'Failed to remove vote' })
+  }
+})
+
+// Comment on suggestion
+app.post('/api/suggestions/:id/comments', authenticateSharedPassword, async (req, res) => {
+  const suggestionId = parseInt(req.params.id)
+  const { message, author, parentId } = req.body
+  if (!message || !author) {
+    return res.status(400).json({ error: 'Message and author are required' })
+  }
+
+  try {
+    const suggestion = await prisma.suggestion.findUnique({ where: { id: suggestionId } })
+    if (!suggestion || suggestion.lockedAt) {
+      return res.status(400).json({ error: 'Cannot comment on locked suggestion' })
+    }
+
+    const comment = await prisma.suggestionComment.create({
+      data: {
+        message: message.trim(),
+        author: author.trim(),
+        suggestionId,
+        parentId: parentId || null
+      },
+      include: { replies: true }
+    })
+    res.status(201).json(comment)
+  } catch (error) {
+    console.error('Error commenting:', error)
+    res.status(500).json({ error: 'Failed to comment' })
+  }
+})
+
+// Delete suggestion comment
+app.delete('/api/suggestions/comments/:id', authenticateSharedPassword, async (req, res) => {
+  const commentId = parseInt(req.params.id)
+  try {
+    await prisma.suggestionComment.delete({ where: { id: commentId } })
+    res.json({ success: true, id: commentId })
+  } catch (error) {
+    console.error('Error deleting suggestion comment:', error)
+    res.status(500).json({ error: 'Failed to delete comment' })
+  }
+})
+
+// Admin: Update suggestion status / decision / lock
+app.put('/api/admin/suggestions/:id', authenticateToken, async (req, res) => {
+  const suggestionId = parseInt(req.params.id)
+  const { status, decision, decidedBy } = req.body
+
+  try {
+    const current = await prisma.suggestion.findUnique({ where: { id: suggestionId } })
+    if (!current) {
+      return res.status(404).json({ error: 'Suggestion not found' })
+    }
+
+    const updateData: any = {}
+    if (status) updateData.status = status
+    if (decision !== undefined) updateData.decision = decision
+    if (decidedBy) updateData.decidedBy = decidedBy
+    if (status === 'decided' || status === 'locked') {
+      if (!current.decidedAt && (status === 'decided' || decision)) {
+        updateData.decidedAt = new Date()
+      }
+    }
+    if (status === 'locked') {
+      updateData.lockedAt = new Date()
+    }
+
+    const updated = await prisma.suggestion.update({
+      where: { id: suggestionId },
+      data: updateData,
+      include: SUGGESTION_INCLUDE
+    })
+    res.json(updated)
+  } catch (error) {
+    console.error('Error updating suggestion:', error)
+    res.status(500).json({ error: 'Failed to update suggestion' })
+  }
+})
+
+// Admin: Delete suggestion
+app.delete('/api/admin/suggestions/:id', authenticateToken, async (req, res) => {
+  const suggestionId = parseInt(req.params.id)
+  try {
+    await prisma.suggestion.delete({ where: { id: suggestionId } })
+    res.json({ success: true, id: suggestionId })
+  } catch (error) {
+    console.error('Error deleting suggestion:', error)
+    res.status(500).json({ error: 'Failed to delete suggestion' })
+  }
+})
+
+// Admin: Get all suggestions
+app.get('/api/admin/suggestions', authenticateToken, async (_req, res) => {
+  try {
+    const suggestions = await prisma.suggestion.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: SUGGESTION_INCLUDE
+    })
+    res.json(suggestions)
+  } catch (error) {
+    console.error('Error fetching suggestions:', error)
+    res.status(500).json({ error: 'Failed to fetch suggestions' })
+  }
+})
+
 // Delete a comment (and its replies via cascade)
 app.delete('/api/comments/:id', authenticateSharedPassword, async (req, res) => {
   const commentId = parseInt(req.params.id)
