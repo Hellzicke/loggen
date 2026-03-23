@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [0.9.4] - 2026-03-23
+
+### Fixat
+- Bilder dubblerades/tripplades vid klick — ImageModal renderades en gång per inlägg istället för en gång totalt
+
 ## [0.9.3] - 2026-01-15
 
 ### Tillagt
