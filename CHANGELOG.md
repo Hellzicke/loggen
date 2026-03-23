@@ -2,7 +2,7 @@
 
 Alla ändringar i projektet dokumenteras här.
 
-## [0.10.0] - 2026-03-23
+## [1.0.0] - 2026-03-23
 
 ### Tillagt
 - Förslagslåda: Personal kan lämna förslag och idéer (förbättringar, inköp, rutiner, aktiviteter, övrigt)
