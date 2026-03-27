@@ -14,6 +14,8 @@ const app = express()
 const prisma = new PrismaClient()
 const PORT = process.env.PORT || 3001
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+const AUTH_JWT_SECRET = process.env.AUTH_JWT_SECRET || JWT_SECRET
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'https://auth.redcodeteam.com'
 const SHARED_PASSWORD = process.env.SHARED_PASSWORD || 'password'
 
 const ARCHIVE_DAYS = 30
@@ -83,7 +85,7 @@ const attachmentUpload = multer({
 app.use(express.json())
 app.use('/uploads', express.static(uploadsDir))
 
-// Auth middleware for admin
+// Auth middleware for admin — accepterar både lokala och centrala auth-tokens
 const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers['authorization']
   const token = authHeader && authHeader.split(' ')[1]
@@ -92,6 +94,20 @@ const authenticateToken = (req: express.Request, res: express.Response, next: ex
     return res.status(401).json({ error: 'Access denied' })
   }
 
+  // Försök med centrala auth-tjänstens secret först
+  try {
+    const decoded = jwt.verify(token, AUTH_JWT_SECRET) as any
+    if (decoded.sub && decoded.appAccess) {
+      // Token från auth-tjänsten
+      if (!decoded.appAccess.includes('personalloggen') && decoded.role !== 'superadmin') {
+        return res.status(403).json({ error: 'Ingen åtkomst till denna app' })
+      }
+      req.user = { id: decoded.sub, username: decoded.email }
+      return next()
+    }
+  } catch {}
+
+  // Fallback: lokalt JWT (för befintliga admin-tokens)
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: number, username: string }
     req.user = decoded
@@ -195,25 +211,36 @@ app.post('/api/auth/login', async (req, res) => {
   res.json({ token })
 })
 
-// Admin login
+// Admin login — proxy till central auth-tjänst, fallback till lokal
 app.post('/api/admin/login', async (req, res) => {
-  const { username, password } = req.body
+  const { username, password, email } = req.body
+  const loginEmail = email || username
 
+  // Försök central auth först
+  try {
+    const response = await fetch(`${AUTH_SERVICE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: loginEmail, password }),
+    })
+    const data = await response.json() as any
+    if (response.ok) {
+      if (!data.admin?.appAccess?.includes('personalloggen') && data.admin?.role !== 'superadmin') {
+        return res.status(403).json({ error: 'Du har inte åtkomst till denna app' })
+      }
+      return res.json({ token: data.accessToken, refreshToken: data.refreshToken, username: data.admin?.name || loginEmail })
+    }
+  } catch {}
+
+  // Fallback: lokal admin-login
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password required' })
   }
-
   try {
     const admin = await prisma.admin.findUnique({ where: { username } })
-    if (!admin) {
-      return res.status(401).json({ error: 'Invalid credentials' })
-    }
-
+    if (!admin) return res.status(401).json({ error: 'Invalid credentials' })
     const valid = await bcrypt.compare(password, admin.password)
-    if (!valid) {
-      return res.status(401).json({ error: 'Invalid credentials' })
-    }
-
+    if (!valid) return res.status(401).json({ error: 'Invalid credentials' })
     const token = jwt.sign({ id: admin.id, username: admin.username }, JWT_SECRET, { expiresIn: '24h' })
     res.json({ token, username: admin.username })
   } catch (error) {
