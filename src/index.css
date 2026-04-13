@@ -545,7 +545,8 @@ body:hover #root::before ~ .header {
 }
 
 .input-group input,
-.input-group textarea {
+.input-group textarea,
+.input-group select {
   font-family: inherit;
   font-size: 1rem;
   padding: 0.75rem;
@@ -554,6 +555,44 @@ body:hover #root::before ~ .header {
   border-radius: 8px;
   color: var(--text-primary);
   transition: border-color 0.15s ease;
+}
+
+.input-group select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.5rem;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%23888' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  cursor: pointer;
+}
+
+.input-group select optgroup {
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+}
+
+.input-group select option {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  font-weight: 400;
+}
+
+.author-manual-link {
+  background: none;
+  border: none;
+  padding: 0.25rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  align-self: flex-start;
+}
+
+.author-manual-link:hover {
+  color: var(--accent);
 }
 
 .input-group textarea {
@@ -1372,7 +1411,8 @@ body:hover #root::before ~ .header {
 }
 
 .input-group input:focus,
-.input-group textarea:focus {
+.input-group textarea:focus,
+.input-group select:focus {
   outline: none;
   border-color: var(--accent);
 }
