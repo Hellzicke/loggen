@@ -1468,8 +1468,6 @@ body:hover #root::before ~ .header {
   contain: layout style paint;
   transform: translateZ(0);
 }
-  z-index: 10;
-}
 
 .log-item--pinned {
   border-left: 3px solid var(--accent);
