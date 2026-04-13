@@ -25,7 +25,9 @@ export default function Header({ version, onVersionClick, onArchiveClick, archiv
   useEffect(() => {
     if (!openMenu) return
     const handleClickOutside = (e: MouseEvent) => {
-      if (navRef.current && !navRef.current.contains(e.target as Node)) {
+      const target = e.target as HTMLElement
+      if (target.closest('.nav-item-wrapper') || target.closest('.nav-dropdown')) return
+      if (navRef.current && !navRef.current.contains(target)) {
         setOpenMenu(null)
       }
     }
