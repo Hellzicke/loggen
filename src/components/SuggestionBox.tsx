@@ -633,12 +633,11 @@ function CreateSuggestionForm({ onSubmit, onCancel, initialType = 'förslag', lo
     <div className="suggestion-form">
       <h3>{formTitle}</h3>
       <div className="suggestion-form-row">
-        <input
-          type="text"
+        <EmployeeNameInput
           value={author}
-          onChange={e => setAuthor(e.target.value)}
-          placeholder="Ditt namn"
-          className="suggestion-form-input"
+          onChange={setAuthor}
+          selectClassName="suggestion-form-input"
+          inputClassName="suggestion-form-input"
           autoFocus
         />
         {!lockedType && (
@@ -713,12 +712,11 @@ function SuggestionCommentForm({ onSubmit, onCancel, placeholder }: {
 
   return (
     <div className="comment-form">
-      <input
-        type="text"
+      <EmployeeNameInput
         value={author}
-        onChange={e => setAuthor(e.target.value)}
-        placeholder="Ditt namn"
-        className="comment-input"
+        onChange={setAuthor}
+        selectClassName="comment-input"
+        inputClassName="comment-input"
       />
       <textarea
         value={message}

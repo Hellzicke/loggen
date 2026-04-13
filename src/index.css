@@ -4259,6 +4259,16 @@ select.vote-name-input {
   box-shadow: 0 0 0 2px var(--accent-light);
 }
 
+select.suggestion-form-input {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  cursor: pointer;
+}
+
 .suggestion-form-select {
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--border);
