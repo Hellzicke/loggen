@@ -126,6 +126,7 @@ model Suggestion {
 model SuggestionVote {
   id           Int        @id @default(autoincrement())
   name         String
+  value        Int        @default(1)
   suggestionId Int
   suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
   createdAt    DateTime   @default(now())

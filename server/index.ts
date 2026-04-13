@@ -1464,13 +1464,15 @@ app.post('/api/suggestions', authenticateSharedPassword, async (req, res) => {
   }
 })
 
-// Vote on suggestion
+// Vote on suggestion (value: 1 for upvote, -1 for downvote)
+// Clicking the same direction again removes the vote; opposite direction flips it.
 app.post('/api/suggestions/:id/vote', authenticateSharedPassword, async (req, res) => {
   const suggestionId = parseInt(req.params.id)
-  const { name } = req.body
+  const { name, value } = req.body
   if (!name) {
     return res.status(400).json({ error: 'Name is required' })
   }
+  const voteValue = value === -1 ? -1 : 1
 
   try {
     const suggestion = await prisma.suggestion.findUnique({ where: { id: suggestionId } })
@@ -1478,14 +1480,23 @@ app.post('/api/suggestions/:id/vote', authenticateSharedPassword, async (req, re
       return res.status(400).json({ error: 'Cannot vote on locked suggestion' })
     }
 
-    const vote = await prisma.suggestionVote.create({
-      data: { name: name.trim(), suggestionId }
+    const trimmedName = name.trim()
+    const existing = await prisma.suggestionVote.findUnique({
+      where: { suggestionId_name: { suggestionId, name: trimmedName } }
+    })
+
+    if (existing && existing.value === voteValue) {
+      await prisma.suggestionVote.delete({ where: { id: existing.id } })
+      return res.json({ removed: true })
+    }
+
+    const vote = await prisma.suggestionVote.upsert({
+      where: { suggestionId_name: { suggestionId, name: trimmedName } },
+      create: { name: trimmedName, suggestionId, value: voteValue },
+      update: { value: voteValue }
     })
     res.status(201).json(vote)
-  } catch (error: unknown) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
-      return res.status(409).json({ error: 'Already voted' })
-    }
+  } catch (error) {
     console.error('Error voting:', error)
     res.status(500).json({ error: 'Failed to vote' })
   }

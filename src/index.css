@@ -4396,6 +4396,59 @@ body:hover #root::before ~ .header {
   cursor: not-allowed;
 }
 
+.suggestion-vote-btn--down:hover:not(:disabled) {
+  border-color: #e5484d;
+  color: #e5484d;
+  background: #ffe5e9;
+}
+
+.suggestion-vote-btn.voted--up {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-light);
+}
+
+.suggestion-vote-btn.voted--down {
+  border-color: #e5484d;
+  color: #e5484d;
+  background: #ffe5e9;
+}
+
+.suggestion-vote-prompt {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  margin-top: 0.5rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+
+.suggestion-vote-prompt label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.suggestion-current-voter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.suggestion-switch-user {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.8rem;
+  text-decoration: underline;
+  padding: 0;
+}
+
 .suggestion-voters {
   font-size: 0.75rem;
   color: var(--text-muted);

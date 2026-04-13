@@ -4,6 +4,7 @@ import ConfirmModal from './ConfirmModal'
 interface SuggestionVote {
   id: number
   name: string
+  value: number
   suggestionId: number
   createdAt: string
 }
@@ -122,7 +123,11 @@ export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps
   const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set())
   const [commentingId, setCommentingId] = useState<number | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
-  const [voteName, setVoteName] = useState(() => localStorage.getItem('suggestionVoteName') || '')
+  // Namn sparas i minnet bara för nuvarande session, så nästa person vid datorn
+  // börjar med blankt fält. Rensas vid sidomladdning eller via "Byt användare".
+  const [currentVoter, setCurrentVoter] = useState<string>('')
+  const [votePromptFor, setVotePromptFor] = useState<{ suggestionId: number; value: 1 | -1 } | null>(null)
+  const [promptName, setPromptName] = useState('')
 
   const fetchSuggestions = useCallback(async () => {
     try {
@@ -154,43 +159,43 @@ export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps
     if (showArchived) fetchArchivedSuggestions()
   }, [showArchived, fetchArchivedSuggestions])
 
-  const handleVote = async (suggestionId: number) => {
-    if (!voteName.trim()) return
-
-    const name = voteName.trim()
-    localStorage.setItem('suggestionVoteName', name)
-
-    const suggestion = suggestions.find(s => s.id === suggestionId)
-    const hasVoted = suggestion?.votes.some(v => v.name === name)
-
+  const submitVote = async (suggestionId: number, value: 1 | -1, name: string) => {
+    const trimmed = name.trim()
+    if (!trimmed) return
     try {
-      if (hasVoted) {
-        await authenticatedFetch(`/api/suggestions/${suggestionId}/vote`, {
-          method: 'DELETE',
-          body: JSON.stringify({ name })
-        })
-        setSuggestions(prev => prev.map(s =>
-          s.id === suggestionId
-            ? { ...s, votes: s.votes.filter(v => v.name !== name) }
-            : s
-        ))
-      } else {
-        const res = await authenticatedFetch(`/api/suggestions/${suggestionId}/vote`, {
-          method: 'POST',
-          body: JSON.stringify({ name })
-        })
-        if (res.ok) {
-          const vote = await res.json()
-          setSuggestions(prev => prev.map(s =>
-            s.id === suggestionId
-              ? { ...s, votes: [...s.votes, vote] }
-              : s
-          ))
-        }
-      }
+      const res = await authenticatedFetch(`/api/suggestions/${suggestionId}/vote`, {
+        method: 'POST',
+        body: JSON.stringify({ name: trimmed, value })
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      setSuggestions(prev => prev.map(s => {
+        if (s.id !== suggestionId) return s
+        const others = s.votes.filter(v => v.name !== trimmed)
+        if (data.removed) return { ...s, votes: others }
+        return { ...s, votes: [...others, data] }
+      }))
     } catch (error) {
       console.error('Failed to vote:', error)
     }
+  }
+
+  const handleVoteClick = (suggestionId: number, value: 1 | -1) => {
+    if (currentVoter.trim()) {
+      submitVote(suggestionId, value, currentVoter)
+    } else {
+      setVotePromptFor({ suggestionId, value })
+      setPromptName('')
+    }
+  }
+
+  const confirmPromptVote = () => {
+    if (!votePromptFor || !promptName.trim()) return
+    const name = promptName.trim()
+    setCurrentVoter(name)
+    submitVote(votePromptFor.suggestionId, votePromptFor.value, name)
+    setVotePromptFor(null)
+    setPromptName('')
   }
 
   const handleComment = async (suggestionId: number, message: string, author: string, parentId?: number) => {
@@ -268,7 +273,9 @@ export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps
       const statusOrder: Record<string, number> = { open: 0, in_review: 1, decided: 2, locked: 3 }
       const orderDiff = (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0)
       if (orderDiff !== 0) return orderDiff
-      return b.votes.length - a.votes.length
+      const scoreA = a.votes.reduce((sum, v) => sum + (v.value ?? 1), 0)
+      const scoreB = b.votes.reduce((sum, v) => sum + (v.value ?? 1), 0)
+      return scoreB - scoreA
     })
 
   const countComments = (comments: SuggestionComment[]): number =>
@@ -295,19 +302,18 @@ export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps
           </select>
         </div>
         <div className="suggestion-actions-right">
-          <div className="suggestion-vote-name">
-            <label>Ditt namn för röstning:</label>
-            <input
-              type="text"
-              value={voteName}
-              onChange={e => {
-                setVoteName(e.target.value)
-                localStorage.setItem('suggestionVoteName', e.target.value)
-              }}
-              placeholder="Ditt namn"
-              className="vote-name-input"
-            />
-          </div>
+          {currentVoter && (
+            <div className="suggestion-current-voter">
+              Röstar som: <strong>{currentVoter}</strong>
+              <button
+                type="button"
+                className="suggestion-switch-user"
+                onClick={() => setCurrentVoter('')}
+              >
+                Byt användare
+              </button>
+            </div>
+          )}
           <button
             className={`suggestion-archive-toggle ${showArchived ? 'active' : ''}`}
             onClick={() => setShowArchived(!showArchived)}
@@ -334,7 +340,12 @@ export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps
         const commentCount = countComments(suggestion.comments)
         const isExpanded = expandedComments.has(suggestion.id)
         const isLocked = !!suggestion.lockedAt
-        const hasVoted = suggestion.votes.some(v => v.name === voteName.trim())
+        const myVote = currentVoter.trim()
+          ? suggestion.votes.find(v => v.name === currentVoter.trim())?.value
+          : undefined
+        const upCount = suggestion.votes.filter(v => (v.value ?? 1) === 1).length
+        const downCount = suggestion.votes.filter(v => v.value === -1).length
+        const isPrompted = votePromptFor?.suggestionId === suggestion.id
 
         return (
           <article key={suggestion.id} className={`suggestion-item suggestion-item--${suggestion.status}`}>
@@ -380,22 +391,67 @@ export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps
             {/* Voting */}
             <div className="suggestion-vote-section">
               <button
-                className={`suggestion-vote-btn ${hasVoted ? 'voted' : ''}`}
-                onClick={() => handleVote(suggestion.id)}
-                disabled={isLocked || !voteName.trim()}
-                title={!voteName.trim() ? 'Ange ditt namn först' : hasVoted ? 'Ta bort röst' : 'Rösta för detta förslag'}
+                className={`suggestion-vote-btn ${myVote === 1 ? 'voted voted--up' : ''}`}
+                onClick={() => handleVoteClick(suggestion.id, 1)}
+                disabled={isLocked}
+                title={myVote === 1 ? 'Ta bort röst' : 'Rösta för förslaget'}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill={hasVoted ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill={myVote === 1 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
                   <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
                 </svg>
-                <span>{suggestion.votes.length}</span>
+                <span>{upCount}</span>
+              </button>
+              <button
+                className={`suggestion-vote-btn suggestion-vote-btn--down ${myVote === -1 ? 'voted voted--down' : ''}`}
+                onClick={() => handleVoteClick(suggestion.id, -1)}
+                disabled={isLocked}
+                title={myVote === -1 ? 'Ta bort röst' : 'Rösta emot förslaget'}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill={myVote === -1 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" style={{ transform: 'rotate(180deg)' }}>
+                  <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
+                </svg>
+                <span>{downCount}</span>
               </button>
               {suggestion.votes.length > 0 && (
                 <span className="suggestion-voters">
-                  {suggestion.votes.map(v => v.name).join(', ')}
+                  {suggestion.votes.map(v => `${v.name}${v.value === -1 ? ' (emot)' : ''}`).join(', ')}
                 </span>
               )}
             </div>
+            {isPrompted && (
+              <div className="suggestion-vote-prompt">
+                <label>
+                  {votePromptFor?.value === 1 ? 'Rösta FÖR' : 'Rösta EMOT'} — ditt namn:
+                </label>
+                <input
+                  type="text"
+                  value={promptName}
+                  onChange={e => setPromptName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') confirmPromptVote()
+                    if (e.key === 'Escape') setVotePromptFor(null)
+                  }}
+                  placeholder="Ditt namn"
+                  autoFocus
+                  className="vote-name-input"
+                />
+                <button
+                  type="button"
+                  className="comment-submit"
+                  onClick={confirmPromptVote}
+                  disabled={!promptName.trim()}
+                >
+                  Rösta
+                </button>
+                <button
+                  type="button"
+                  className="comment-cancel"
+                  onClick={() => setVotePromptFor(null)}
+                >
+                  Avbryt
+                </button>
+              </div>
+            )}
 
             {/* Comments */}
             <div className="log-divider"></div>
