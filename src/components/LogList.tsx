@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, memo } from 'react'
 import type { LogAttachment, LogMessage, ReadSignature, Comment, Reaction } from '../App'
 import ImageModal from './ImageModal'
+import EmployeeNameInput from './EmployeeNameInput'
 
 interface LogListProps {
   logs: LogMessage[]
@@ -166,12 +167,11 @@ function SignForm({ logId, onSign, onCancel }: SignFormProps) {
 
   return (
     <div className="sign-form-inline">
-      <input
-        type="text"
+      <EmployeeNameInput
         value={name}
-        onChange={e => setName(e.target.value)}
-        placeholder="Ditt namn"
-        className="sign-input-inline"
+        onChange={setName}
+        selectClassName="sign-input-inline"
+        inputClassName="sign-input-inline"
         autoFocus
         onKeyDown={e => e.key === 'Enter' && handleSubmit()}
       />
@@ -551,12 +551,11 @@ function CommentForm({ logId, parentId, onComment, onCancel, placeholder }: Comm
 
   return (
     <div className="comment-form">
-      <input
-        type="text"
+      <EmployeeNameInput
         value={author}
-        onChange={e => setAuthor(e.target.value)}
-        placeholder="Ditt namn"
-        className="comment-input"
+        onChange={setAuthor}
+        selectClassName="comment-input"
+        inputClassName="comment-input"
       />
       <textarea
         value={message}

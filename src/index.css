@@ -2048,6 +2048,18 @@ body:hover #root::before ~ .header {
   border-color: var(--accent);
 }
 
+select.sign-input-inline {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 1.75rem;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  cursor: pointer;
+  width: auto;
+  min-width: 140px;
+}
+
 .sign-submit-inline {
   font-family: inherit;
   font-size: 0.75rem;
@@ -2273,6 +2285,16 @@ body:hover #root::before ~ .header {
 .comment-textarea:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+select.comment-input {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  cursor: pointer;
 }
 
 .comment-actions {
