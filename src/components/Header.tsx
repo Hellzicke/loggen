@@ -131,44 +131,6 @@ export default function Header({ version, onVersionClick, onArchiveClick, archiv
             )}
           </div>
 
-          <div className={`nav-item-wrapper ${openMenu === 'utveckling' ? 'nav-item-wrapper--open' : ''}`}>
-            <button
-              className={`nav-item ${activeView === 'utveckling' ? 'active' : ''}`}
-              onClick={() => setOpenMenu(openMenu === 'utveckling' ? null : 'utveckling')}
-              aria-expanded={openMenu === 'utveckling'}
-              aria-haspopup="true"
-            >
-              Utveckling
-              <svg className={`nav-arrow ${openMenu === 'utveckling' ? 'nav-arrow--open' : ''}`} width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-            {openMenu === 'utveckling' && (
-              <div className="nav-dropdown" role="menu">
-                <button
-                  className={`nav-dropdown-item ${activeView === 'utveckling' && suggestionFilter === 'bugg' ? 'nav-dropdown-item--current' : ''}`}
-                  onClick={() => { onViewChange('utveckling'); onSuggestionFilterChange?.('bugg'); setOpenMenu(null) }}
-                  role="menuitem"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 20c-3.5 0-6-2.5-6-6v-3a6 6 0 0112 0v3c0 3.5-2.5 6-6 6zM8 8V6a4 4 0 118 0v2M2 12h4M18 12h4M3 4l3 3M21 4l-3 3M3 20l3-3M21 20l-3-3" />
-                  </svg>
-                  <span>Buggrapporter</span>
-                </button>
-                <button
-                  className={`nav-dropdown-item ${activeView === 'utveckling' && suggestionFilter === 'funktion' ? 'nav-dropdown-item--current' : ''}`}
-                  onClick={() => { onViewChange('utveckling'); onSuggestionFilterChange?.('funktion'); setOpenMenu(null) }}
-                  role="menuitem"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
-                  </svg>
-                  <span>Funktionsönskemål</span>
-                </button>
-              </div>
-            )}
-          </div>
-
           <div className={`nav-item-wrapper ${openMenu === 'mötespunkter' ? 'nav-item-wrapper--open' : ''}`}>
             <button
               className={`nav-item ${activeView === 'mötespunkter' ? 'active' : ''}`}
@@ -220,9 +182,55 @@ export default function Header({ version, onVersionClick, onArchiveClick, archiv
         </nav>
       </div>
       <div className="header-actions">
-        <a href="/admin" className="admin-link">
-          Admin
-        </a>
+        <div className={`nav-item-wrapper nav-item-wrapper--compact ${openMenu === 'utveckling' ? 'nav-item-wrapper--open' : ''}`}>
+          <button
+            className={`nav-item nav-item--compact ${activeView === 'utveckling' ? 'active' : ''}`}
+            onClick={() => setOpenMenu(openMenu === 'utveckling' ? null : 'utveckling')}
+            aria-expanded={openMenu === 'utveckling'}
+            aria-haspopup="true"
+            title="Utveckling & admin"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+            </svg>
+            <svg className={`nav-arrow ${openMenu === 'utveckling' ? 'nav-arrow--open' : ''}`} width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          {openMenu === 'utveckling' && (
+            <div className="nav-dropdown nav-dropdown--right" role="menu">
+              <button
+                className={`nav-dropdown-item ${activeView === 'utveckling' && suggestionFilter === 'bugg' ? 'nav-dropdown-item--current' : ''}`}
+                onClick={() => { onViewChange('utveckling'); onSuggestionFilterChange?.('bugg'); setOpenMenu(null) }}
+                role="menuitem"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 20c-3.5 0-6-2.5-6-6v-3a6 6 0 0112 0v3c0 3.5-2.5 6-6 6zM8 8V6a4 4 0 118 0v2M2 12h4M18 12h4M3 4l3 3M21 4l-3 3M3 20l3-3M21 20l-3-3" />
+                </svg>
+                <span>Buggrapporter</span>
+              </button>
+              <button
+                className={`nav-dropdown-item ${activeView === 'utveckling' && suggestionFilter === 'funktion' ? 'nav-dropdown-item--current' : ''}`}
+                onClick={() => { onViewChange('utveckling'); onSuggestionFilterChange?.('funktion'); setOpenMenu(null) }}
+                role="menuitem"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+                </svg>
+                <span>Funktionsönskemål</span>
+              </button>
+              <div className="nav-dropdown-divider" />
+              <a href="/admin" className="nav-dropdown-item" role="menuitem">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                <span>Admin</span>
+              </a>
+            </div>
+          )}
+        </div>
         {version && (
           <button className="version-badge" onClick={onVersionClick}>
             v{version}

@@ -2,6 +2,13 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.3.2] - 2026-04-13
+
+### Ändrat
+- Flyttat Utveckling-menyn från huvudnavigationen till en kugghjuls-knapp till höger bredvid versionsbadge
+- Admin-länken ligger nu som en post i den menyn istället för en separat länk
+- Dropdownen innehåller: Buggrapporter, Funktionsönskemål, Admin
+
 ## [1.3.1] - 2026-04-13
 
 ### Ändrat
