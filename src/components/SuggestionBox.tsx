@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import ConfirmModal from './ConfirmModal'
+import EmployeeNameInput from './EmployeeNameInput'
 
 interface SuggestionVote {
   id: number
@@ -472,17 +473,16 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag' 
                 <label>
                   {votePromptFor?.value === 1 ? 'Rösta FÖR' : 'Rösta EMOT'} — ditt namn:
                 </label>
-                <input
-                  type="text"
+                <EmployeeNameInput
                   value={promptName}
-                  onChange={e => setPromptName(e.target.value)}
+                  onChange={setPromptName}
+                  selectClassName="vote-name-input"
+                  inputClassName="vote-name-input"
+                  autoFocus
                   onKeyDown={e => {
                     if (e.key === 'Enter') confirmPromptVote()
                     if (e.key === 'Escape') setVotePromptFor(null)
                   }}
-                  placeholder="Ditt namn"
-                  autoFocus
-                  className="vote-name-input"
                 />
                 <button
                   type="button"

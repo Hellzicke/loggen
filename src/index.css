@@ -3962,6 +3962,18 @@ select.comment-input {
   color: var(--text-primary);
 }
 
+select.vote-name-input {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 1.75rem;
+  width: auto;
+  min-width: 140px;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  cursor: pointer;
+}
+
 .suggestion-archive-toggle {
   background: none;
   border: 1px solid var(--border);
