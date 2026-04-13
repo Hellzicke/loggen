@@ -17,6 +17,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 const AUTH_JWT_SECRET = process.env.AUTH_JWT_SECRET || JWT_SECRET
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'https://auth.redcodeteam.com'
 const SHARED_PASSWORD = process.env.SHARED_PASSWORD || 'password'
+const SCHEMA_API_URL = process.env.SCHEMA_API_URL
+const SCHEMA_API_KEY = process.env.SCHEMA_API_KEY
 
 const ARCHIVE_DAYS = 30
 const MS_PER_DAY = 24 * 60 * 60 * 1000
@@ -958,6 +960,27 @@ app.post('/api/attachments/upload', authenticateSharedPassword, attachmentUpload
     size: req.file.size,
     url: `/uploads/${req.file.filename}`
   })
+})
+
+// Proxy: hämta alla anställda från schema-tjänsten (med API-nyckel server-side)
+app.get('/api/employees', authenticateSharedPassword, async (_req, res) => {
+  if (!SCHEMA_API_URL || !SCHEMA_API_KEY) {
+    return res.status(503).json({ error: 'Schema-integration ej konfigurerad' })
+  }
+  try {
+    const response = await fetch(
+      `${SCHEMA_API_URL.replace(/\/$/, '')}/api/employees`,
+      { headers: { 'X-API-Key': SCHEMA_API_KEY } }
+    )
+    if (!response.ok) {
+      return res.status(response.status).json({ error: 'Kunde inte hämta personallista' })
+    }
+    const data = await response.json()
+    res.json(data)
+  } catch (err) {
+    console.error('employees proxy error:', err)
+    res.status(502).json({ error: 'Schema-tjänsten ej nåbar' })
+  }
 })
 
 // Get all uploaded images

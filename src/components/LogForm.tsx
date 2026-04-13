@@ -1,4 +1,4 @@
-import { useState, FormEvent, useRef } from 'react'
+import { useState, FormEvent, useRef, useEffect } from 'react'
 import type { LogAttachment, LogMessage } from '../App'
 import RichTextEditor, { RichTextEditorRef } from './RichTextEditor'
 
@@ -27,6 +27,19 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const attachmentInputRef = useRef<HTMLInputElement>(null)
   const editorRef = useRef<RichTextEditorRef>(null)
+  const [employees, setEmployees] = useState<Array<{ employeeId: string; name: string }> | null>(null)
+  const [manualName, setManualName] = useState(false)
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    fetch('/api/employees', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then((list: Array<{ employeeId: string; name: string }>) => {
+        setEmployees(list)
+        if (list.length === 0) setManualName(true)
+      })
+      .catch(() => setManualName(true))
+  }, [])
 
 
   const loadAvailableImages = async () => {
@@ -170,15 +183,39 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
           <div className="form-row">
             <div className="input-group">
               <label htmlFor="author">Namn</label>
-              <input
-                id="author"
-                type="text"
-                value={author}
-                onChange={e => setAuthor(e.target.value)}
-                placeholder="Ditt namn"
-                autoFocus
-                required
-              />
+              {!manualName && employees && employees.length > 0 ? (
+                <>
+                  <select
+                    id="author"
+                    value={author}
+                    onChange={e => setAuthor(e.target.value)}
+                    required
+                    autoFocus
+                  >
+                    <option value="" disabled>Välj ditt namn</option>
+                    {employees.map(emp => (
+                      <option key={emp.employeeId} value={emp.name}>{emp.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => { setManualName(true); setAuthor('') }}
+                    style={{ background: 'none', border: 'none', padding: '4px 0', color: '#888', fontSize: '0.85em', cursor: 'pointer', textDecoration: 'underline', alignSelf: 'flex-start' }}
+                  >
+                    Skriv namn manuellt
+                  </button>
+                </>
+              ) : (
+                <input
+                  id="author"
+                  type="text"
+                  value={author}
+                  onChange={e => setAuthor(e.target.value)}
+                  placeholder="Ditt namn"
+                  autoFocus
+                  required
+                />
+              )}
             </div>
           </div>
           <div className="form-row">
