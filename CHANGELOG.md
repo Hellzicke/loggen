@@ -2,6 +2,18 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.0] - 2026-04-13
+
+### Ändrat
+- Visuell uppdatering som närmar sig Fish2:s stil
+- Ny färgpalett: sky-blå accent (#0ea5e9) + teal sekundär, istället för Facebook-blå
+- Mjukare slate-grå bakgrund med gradient-mesh (fyra radiella färgblobs)
+- Systemfont-stack (-apple-system/Segoe UI) istället för DM Sans för konsistens med Fish2
+- Mjukare, mer konsistenta skuggor (kort får hover-skugga)
+- Större border-radius på kort (12px) för lugnare utseende
+- Taktil knapp-feedback: lätt scale(0.98) vid klick
+- Synliga fokusringar vid tangentbordsnavigering
+
 ## [1.3.2] - 2026-04-13
 
 ### Ändrat

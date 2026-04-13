@@ -5,20 +5,24 @@
 }
 
 :root {
-  /* Standard färger */
-  --bg-primary: #f0f2f5;
+  /* Färgpalett — justerad mot Fish2 (sky + teal) */
+  --bg-primary: #f8fafc;
   --bg-secondary: #ffffff;
   --bg-card: #ffffff;
-  --border: #dddfe2;
-  --text-primary: #050505;
-  --text-secondary: #65676b;
-  --text-muted: #8a8d91;
-  --accent: #1877f2;
-  --accent-hover: #166fe5;
-  --accent-light: #e7f3ff;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 2px 12px rgba(0, 0, 0, 0.1);
-  
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --accent: #0ea5e9;
+  --accent-hover: #0284c7;
+  --accent-light: #e0f2fe;
+  --accent-secondary: #14b8a6;
+  --radius-card: 12px;
+  --radius-sm: 8px;
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.04);
+
   /* Juliga extra färger */
   --christmas-green: #228B22;
   --christmas-gold: #fbbf24;
@@ -42,18 +46,40 @@
 }
 
 body {
-  font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background: var(--bg-primary);
-  background-image: 
-    radial-gradient(circle at 20% 50%, rgba(196, 30, 58, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(34, 139, 34, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 40% 80%, rgba(251, 191, 36, 0.02) 0%, transparent 50%);
+  background-image:
+    radial-gradient(circle at 18% 22%, rgba(14, 165, 233, 0.14) 0%, transparent 48%),
+    radial-gradient(circle at 82% 18%, rgba(20, 184, 166, 0.12) 0%, transparent 48%),
+    radial-gradient(circle at 72% 82%, rgba(14, 165, 233, 0.10) 0%, transparent 52%),
+    radial-gradient(circle at 22% 88%, rgba(20, 184, 166, 0.08) 0%, transparent 52%);
+  background-attachment: fixed;
   color: var(--text-primary);
   min-height: 100vh;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   position: relative;
   overflow-x: hidden;
+}
+
+/* Taktilt feedback på knappar — Fish2-stil */
+button:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+button {
+  transition: transform 0.08s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Fokusringar — synligt med tangentbord */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* Animerad julig bakgrund */
@@ -1783,9 +1809,11 @@ body:hover #root::before ~ .header {
 
 .log-item {
   background: var(--bg-card);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   padding: 1rem;
   box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
   position: relative;
   z-index: 10;
   contain: layout style paint;
@@ -3557,7 +3585,7 @@ body:hover #root::before ~ .header {
 
 .meeting-wrapper {
   background: var(--bg-card);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   padding: 0;
   margin-bottom: 1.5rem;
   box-shadow: var(--shadow-sm);
@@ -3895,7 +3923,7 @@ body:hover #root::before ~ .header {
 
 .point-item-card {
   background: var(--bg-card);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   padding: 1rem;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
@@ -4306,9 +4334,16 @@ body:hover #root::before ~ .header {
 .suggestion-item {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   padding: 1.25rem;
-  transition: box-shadow 0.2s;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.suggestion-item:hover,
+.log-item:hover,
+.point-item-card:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .suggestion-item:hover {
