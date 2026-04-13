@@ -2,6 +2,32 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.2.0] - 2026-04-13
+
+### Tillagt
+- Förslagslåda: Rösta emot förslag (tumme ner) vid sidan av tumme upp
+- Förslagslåda: Inline-namnprompt vid röstning — klick på röstknapp öppnar liten input direkt vid knappen. Namnet hålls i minnet för sessionen så man kan rösta på flera förslag i rad, men rensas vid sidomladdning
+- Förslagslåda: "Byt användare"-länk för att rensa aktivt röstnamn
+
+### Ändrat
+- Förslagslåda: Förslag sorteras på netto-score (för minus emot) istället för totalt antal röster
+- Förslagslåda: Fast namnfält i headern borttaget till fördel för inline-prompt per röst
+
+## [1.1.1] - 2026-04-13
+
+### Fixat
+- Admin: Flikbadgesen (Inlägg, Bilder, Möten, Förslag) visade (0) tills man klickade på respektive flik — nu laddas alla räknare direkt vid start
+
+## [1.1.0] - 2026-04-13
+
+### Tillagt
+- Mötespunkter: Admins kan flytta punkter mellan möten. Originalet står kvar överstruket med notis om vilket möte punkten flyttats till; en kopia skapas i målmötet
+
+## [1.0.1] - 2026-04-13
+
+### Fixat
+- Bildmodal centreras vertikalt på skärmen istället för att lägga sig högst upp (syntes tidigare långt över scroll-läget om man bläddrat ner i loggen)
+
 ## [1.0.0] - 2026-03-23
 
 ### Tillagt
