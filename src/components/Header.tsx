@@ -1,23 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 
-export type SuggestionFilter = 'all' | 'bugg' | 'funktion' | 'archive'
+export type SuggestionFilter = 'förslag' | 'förslag-arkiv' | 'bugg' | 'funktion'
+export type MainView = 'logg' | 'förslagslåda' | 'mötespunkter' | 'utveckling'
 
 interface HeaderProps {
   version: string
   onVersionClick: () => void
   onArchiveClick: () => void
   archiveCount: number
-  activeView: 'logg' | 'förslagslåda' | 'mötespunkter'
-  onViewChange: (view: 'logg' | 'förslagslåda' | 'mötespunkter') => void
+  activeView: MainView
+  onViewChange: (view: MainView) => void
   onArchivedMeetingsClick?: () => void
   showArchivedMeetings?: boolean
   suggestionFilter?: SuggestionFilter
   onSuggestionFilterChange?: (filter: SuggestionFilter) => void
 }
 
-type MenuKey = 'logg' | 'mötespunkter' | 'förslagslåda' | null
+type MenuKey = 'logg' | 'mötespunkter' | 'förslagslåda' | 'utveckling' | null
 
-export default function Header({ version, onVersionClick, onArchiveClick, archiveCount, activeView, onViewChange, onArchivedMeetingsClick, showArchivedMeetings, suggestionFilter = 'all', onSuggestionFilterChange }: HeaderProps) {
+export default function Header({ version, onVersionClick, onArchiveClick, archiveCount, activeView, onViewChange, onArchivedMeetingsClick, showArchivedMeetings, suggestionFilter = 'förslag', onSuggestionFilterChange }: HeaderProps) {
   const [openMenu, setOpenMenu] = useState<MenuKey>(null)
   const navRef = useRef<HTMLElement>(null)
 
@@ -39,7 +40,7 @@ export default function Header({ version, onVersionClick, onArchiveClick, archiv
     }
   }, [openMenu])
 
-  const handleGoTo = (view: 'logg' | 'förslagslåda' | 'mötespunkter') => {
+  const handleGoTo = (view: MainView) => {
     onViewChange(view)
     setOpenMenu(null)
     if (view === 'mötespunkter' && showArchivedMeetings && onArchivedMeetingsClick) {
@@ -107,18 +108,46 @@ export default function Header({ version, onVersionClick, onArchiveClick, archiv
             {openMenu === 'förslagslåda' && (
               <div className="nav-dropdown" role="menu">
                 <button
-                  className={`nav-dropdown-item ${activeView === 'förslagslåda' && suggestionFilter === 'all' ? 'nav-dropdown-item--current' : ''}`}
-                  onClick={() => { onViewChange('förslagslåda'); onSuggestionFilterChange?.('all'); setOpenMenu(null) }}
+                  className={`nav-dropdown-item ${activeView === 'förslagslåda' && suggestionFilter === 'förslag' ? 'nav-dropdown-item--current' : ''}`}
+                  onClick={() => { onViewChange('förslagslåda'); onSuggestionFilterChange?.('förslag'); setOpenMenu(null) }}
                   role="menuitem"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" />
                   </svg>
-                  <span>Alla förslag</span>
+                  <span>Aktiva förslag</span>
                 </button>
                 <button
-                  className={`nav-dropdown-item ${activeView === 'förslagslåda' && suggestionFilter === 'bugg' ? 'nav-dropdown-item--current' : ''}`}
-                  onClick={() => { onViewChange('förslagslåda'); onSuggestionFilterChange?.('bugg'); setOpenMenu(null) }}
+                  className={`nav-dropdown-item ${activeView === 'förslagslåda' && suggestionFilter === 'förslag-arkiv' ? 'nav-dropdown-item--current' : ''}`}
+                  onClick={() => { onViewChange('förslagslåda'); onSuggestionFilterChange?.('förslag-arkiv'); setOpenMenu(null) }}
+                  role="menuitem"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />
+                  </svg>
+                  <span>Arkiv</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className={`nav-item-wrapper ${openMenu === 'utveckling' ? 'nav-item-wrapper--open' : ''}`}>
+            <button
+              className={`nav-item ${activeView === 'utveckling' ? 'active' : ''}`}
+              onClick={() => setOpenMenu(openMenu === 'utveckling' ? null : 'utveckling')}
+              aria-expanded={openMenu === 'utveckling'}
+              aria-haspopup="true"
+            >
+              Utveckling
+              <svg className={`nav-arrow ${openMenu === 'utveckling' ? 'nav-arrow--open' : ''}`} width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            {openMenu === 'utveckling' && (
+              <div className="nav-dropdown" role="menu">
+                <button
+                  className={`nav-dropdown-item ${activeView === 'utveckling' && suggestionFilter === 'bugg' ? 'nav-dropdown-item--current' : ''}`}
+                  onClick={() => { onViewChange('utveckling'); onSuggestionFilterChange?.('bugg'); setOpenMenu(null) }}
                   role="menuitem"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -127,24 +156,14 @@ export default function Header({ version, onVersionClick, onArchiveClick, archiv
                   <span>Buggrapporter</span>
                 </button>
                 <button
-                  className={`nav-dropdown-item ${activeView === 'förslagslåda' && suggestionFilter === 'funktion' ? 'nav-dropdown-item--current' : ''}`}
-                  onClick={() => { onViewChange('förslagslåda'); onSuggestionFilterChange?.('funktion'); setOpenMenu(null) }}
+                  className={`nav-dropdown-item ${activeView === 'utveckling' && suggestionFilter === 'funktion' ? 'nav-dropdown-item--current' : ''}`}
+                  onClick={() => { onViewChange('utveckling'); onSuggestionFilterChange?.('funktion'); setOpenMenu(null) }}
                   role="menuitem"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
                   </svg>
                   <span>Funktionsönskemål</span>
-                </button>
-                <button
-                  className={`nav-dropdown-item ${activeView === 'förslagslåda' && suggestionFilter === 'archive' ? 'nav-dropdown-item--current' : ''}`}
-                  onClick={() => { onViewChange('förslagslåda'); onSuggestionFilterChange?.('archive'); setOpenMenu(null) }}
-                  role="menuitem"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />
-                  </svg>
-                  <span>Arkiv</span>
                 </button>
               </div>
             )}

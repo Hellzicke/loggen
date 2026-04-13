@@ -77,9 +77,9 @@ export default function App() {
   const [unpinPrompt, setUnpinPrompt] = useState<LogMessage | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
   const [greetingPositions, setGreetingPositions] = useState<Array<{top: number, left: number}>>([])
-  const [activeView, setActiveView] = useState<'logg' | 'förslagslåda' | 'mötespunkter'>('logg')
+  const [activeView, setActiveView] = useState<'logg' | 'förslagslåda' | 'mötespunkter' | 'utveckling'>('logg')
   const [showArchivedMeetings, setShowArchivedMeetings] = useState(false)
-  const [suggestionFilter, setSuggestionFilter] = useState<'all' | 'bugg' | 'funktion' | 'archive'>('all')
+  const [suggestionFilter, setSuggestionFilter] = useState<'förslag' | 'förslag-arkiv' | 'bugg' | 'funktion'>('förslag')
 
   // Check if it's Christmas (24-26 December)
   const isChristmas = () => {
@@ -493,7 +493,7 @@ export default function App() {
             />
           </>
         )}
-        {activeView === 'förslagslåda' && (
+        {(activeView === 'förslagslåda' || activeView === 'utveckling') && (
           <SuggestionBox authenticatedFetch={authenticatedFetch} filter={suggestionFilter} />
         )}
         {activeView === 'mötespunkter' && (

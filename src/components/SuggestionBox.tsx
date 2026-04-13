@@ -42,7 +42,7 @@ export interface Suggestion {
 
 interface SuggestionBoxProps {
   authenticatedFetch: (url: string, options?: RequestInit) => Promise<Response>
-  filter?: 'all' | 'bugg' | 'funktion' | 'archive'
+  filter?: 'förslag' | 'förslag-arkiv' | 'bugg' | 'funktion'
 }
 
 const SYSTEMS = ['Loggen', 'Schema', 'Fish', 'Poolportalen']
@@ -136,7 +136,7 @@ function getCategoryLabel(value: string): string {
   return CATEGORIES.find(c => c.value === value)?.label || value
 }
 
-export default function SuggestionBox({ authenticatedFetch, filter = 'all' }: SuggestionBoxProps) {
+export default function SuggestionBox({ authenticatedFetch, filter = 'förslag' }: SuggestionBoxProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [archivedSuggestions, setArchivedSuggestions] = useState<Suggestion[]>([])
   const [loading, setLoading] = useState(true)
@@ -285,11 +285,13 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'all' }: Su
     }
   }
 
-  const showArchivedView = filter === 'archive'
+  const showArchivedView = filter === 'förslag-arkiv'
 
   useEffect(() => {
     if (showArchivedView) fetchArchivedSuggestions()
   }, [showArchivedView, fetchArchivedSuggestions])
+
+  const archivedFiltered = archivedSuggestions.filter(s => s.type === 'förslag' || !s.type)
 
   const sortedSuggestions = [...suggestions]
     .filter(s => {
@@ -316,9 +318,11 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'all' }: Su
     <div className="suggestion-box">
       <div className="suggestion-header-bar">
         <div className="suggestion-actions-left">
-          <button className="suggestion-create-btn" onClick={() => setShowForm(true)}>
-            {filter === 'bugg' ? '+ Rapportera bugg' : filter === 'funktion' ? '+ Önska funktion' : '+ Nytt förslag'}
-          </button>
+          {filter !== 'förslag-arkiv' && (
+            <button className="suggestion-create-btn" onClick={() => setShowForm(true)}>
+              {filter === 'bugg' ? '+ Rapportera bugg' : filter === 'funktion' ? '+ Önska funktion' : '+ Nytt förslag'}
+            </button>
+          )}
           <select
             className="suggestion-filter"
             value={filterCategory}
@@ -351,6 +355,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'all' }: Su
           onSubmit={handleCreate}
           onCancel={() => setShowForm(false)}
           initialType={filter === 'bugg' ? 'bugg' : filter === 'funktion' ? 'funktion' : 'förslag'}
+          lockedType={filter === 'bugg' || filter === 'funktion'}
         />
       )}
 
@@ -360,7 +365,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'all' }: Su
         </div>
       )}
 
-      {(showArchivedView ? archivedSuggestions : sortedSuggestions).map(suggestion => {
+      {(showArchivedView ? archivedFiltered : sortedSuggestions).map(suggestion => {
         const commentCount = countComments(suggestion.comments)
         const isExpanded = expandedComments.has(suggestion.id)
         const isLocked = !!suggestion.lockedAt
@@ -585,10 +590,11 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'all' }: Su
 
 // --- Sub-components ---
 
-function CreateSuggestionForm({ onSubmit, onCancel, initialType = 'förslag' }: {
+function CreateSuggestionForm({ onSubmit, onCancel, initialType = 'förslag', lockedType = false }: {
   onSubmit: (title: string, description: string, author: string, category: string, type: string, system: string | null) => void
   onCancel: () => void
   initialType?: string
+  lockedType?: boolean
 }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -635,15 +641,17 @@ function CreateSuggestionForm({ onSubmit, onCancel, initialType = 'förslag' }: 
           className="suggestion-form-input"
           autoFocus
         />
-        <select
-          value={type}
-          onChange={e => setType(e.target.value)}
-          className="suggestion-form-select"
-        >
-          {TYPES.map(t => (
-            <option key={t.value} value={t.value}>{t.label}</option>
-          ))}
-        </select>
+        {!lockedType && (
+          <select
+            value={type}
+            onChange={e => setType(e.target.value)}
+            className="suggestion-form-select"
+          >
+            {TYPES.map(t => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+        )}
         {type === 'förslag' && (
           <select
             value={category}

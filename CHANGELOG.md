@@ -2,6 +2,14 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.3.1] - 2026-04-13
+
+### Ändrat
+- Delat upp menyn: "Förslagslåda" och "Utveckling" är nu separata menyval
+- Förslagslåda-dropdown: "Aktiva förslag" + "Arkiv" — endast vanliga förslag
+- Utveckling-dropdown: "Buggrapporter" + "Funktionsönskemål" — för våra system (Loggen, Schema, Fish, Poolportalen)
+- Typväljaren i formuläret låses när man öppnar det från Utveckling-menyn, så man inte råkar byta till "förslag"
+
 ## [1.3.0] - 2026-04-13
 
 ### Tillagt
