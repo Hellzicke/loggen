@@ -451,7 +451,7 @@ body.christmas-theme::after {
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(0, 0, 0, 0.06);
-  min-width: 180px;
+  min-width: 200px;
   opacity: 0;
   visibility: hidden;
   transform: translateY(-8px) scale(0.95);
@@ -536,11 +536,14 @@ body.christmas-theme::after {
 .nav-dropdown-item:hover {
   background: var(--bg-primary);
   color: var(--text-primary);
-  padding-left: 1.25rem;
 }
 
 .nav-dropdown-item:hover::before {
   height: 60%;
+}
+
+.nav-dropdown-item span {
+  white-space: nowrap;
 }
 
 .nav-dropdown-item.active {
