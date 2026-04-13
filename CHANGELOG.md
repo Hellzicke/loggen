@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.1] - 2026-04-13
+
+### Borttaget
+- Jul-temat: alla jul-relaterade färger, animationer (snöflingor, stjärnor, julbär, ljusslinga), hälsningar och CSS-regler är borttagna (~410 rader CSS + tillhörande JS/JSX). Inga spår av nyårs-kod fanns.
+
 ## [1.4.0] - 2026-04-13
 
 ### Ändrat
