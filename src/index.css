@@ -4037,6 +4037,67 @@ body:hover #root::before ~ .header {
   color: var(--text-secondary);
 }
 
+.point-move-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.point-move-btn:hover {
+  background: var(--bg-primary);
+  color: #1877f2;
+}
+
+.point-title--moved {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.point-description--moved {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.point-moved-notice {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #fff8e1;
+  border-left: 3px solid #f5a623;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #6b4a00;
+}
+
+.point-move-picker {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.point-move-picker label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.point-move-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .point-edit-form {
   padding: 0;
 }

@@ -384,6 +384,11 @@ app.get('/api/meetings/upcoming', authenticateSharedPassword, async (_req, res) 
         points: {
           orderBy: {
             createdAt: 'asc'
+          },
+          include: {
+            movedToMeeting: {
+              select: { id: true, title: true, scheduledAt: true, archived: true }
+            }
           }
         }
       }
@@ -409,6 +414,11 @@ app.get('/api/meetings/archived', authenticateSharedPassword, async (_req, res) 
         points: {
           orderBy: {
             createdAt: 'asc'
+          },
+          include: {
+            movedToMeeting: {
+              select: { id: true, title: true, scheduledAt: true, archived: true }
+            }
           }
         }
       }
@@ -440,6 +450,11 @@ app.post('/api/meetings/:id/archive', authenticateSharedPassword, async (req, re
         points: {
           orderBy: {
             createdAt: 'asc'
+          },
+          include: {
+            movedToMeeting: {
+              select: { id: true, title: true, scheduledAt: true, archived: true }
+            }
           }
         }
       }
@@ -461,6 +476,11 @@ app.get('/api/meetings/:id', authenticateSharedPassword, async (req, res) => {
         points: {
           orderBy: {
             createdAt: 'asc'
+          },
+          include: {
+            movedToMeeting: {
+              select: { id: true, title: true, scheduledAt: true, archived: true }
+            }
           }
         }
       }
@@ -485,6 +505,11 @@ app.get('/api/meetings/next', authenticateSharedPassword, async (_req, res) => {
       points: {
         orderBy: {
           createdAt: 'asc' as const
+        },
+        include: {
+          movedToMeeting: {
+            select: { id: true, title: true, scheduledAt: true, archived: true }
+          }
         }
       }
     }
@@ -523,6 +548,11 @@ app.get('/api/admin/meetings', authenticateToken, async (_req, res) => {
         points: {
           orderBy: {
             createdAt: 'asc'
+          },
+          include: {
+            movedToMeeting: {
+              select: { id: true, title: true, scheduledAt: true, archived: true }
+            }
           }
         }
       }
@@ -577,6 +607,11 @@ app.put('/api/admin/meetings/:id', authenticateToken, async (req, res) => {
         points: {
           orderBy: {
             createdAt: 'asc'
+          },
+          include: {
+            movedToMeeting: {
+              select: { id: true, title: true, scheduledAt: true, archived: true }
+            }
           }
         }
       }
@@ -600,6 +635,61 @@ app.delete('/api/admin/meetings/:id', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error deleting meeting:', error)
     res.status(500).json({ error: 'Failed to delete meeting' })
+  }
+})
+
+// Move meeting point to another meeting (admin only)
+app.post('/api/admin/meetings/:id/points/:pointId/move', authenticateToken, async (req, res) => {
+  const meetingId = parseInt(req.params.id)
+  const pointId = parseInt(req.params.pointId)
+  const { targetMeetingId } = req.body
+
+  if (!targetMeetingId || typeof targetMeetingId !== 'number') {
+    return res.status(400).json({ error: 'targetMeetingId is required' })
+  }
+  if (targetMeetingId === meetingId) {
+    return res.status(400).json({ error: 'Cannot move point to the same meeting' })
+  }
+
+  try {
+    const [point, targetMeeting] = await Promise.all([
+      prisma.meetingPoint.findUnique({ where: { id: pointId } }),
+      prisma.meeting.findUnique({ where: { id: targetMeetingId } })
+    ])
+
+    if (!point || point.meetingId !== meetingId) {
+      return res.status(404).json({ error: 'Meeting point not found' })
+    }
+    if (!targetMeeting || targetMeeting.archived) {
+      return res.status(400).json({ error: 'Target meeting not found or archived' })
+    }
+    if (point.movedToMeetingId) {
+      return res.status(400).json({ error: 'Point has already been moved' })
+    }
+
+    await prisma.$transaction([
+      prisma.meetingPoint.create({
+        data: {
+          title: point.title,
+          description: point.description || '',
+          author: point.author,
+          notes: point.notes || '',
+          meetingId: targetMeetingId
+        }
+      }),
+      prisma.meetingPoint.update({
+        where: { id: pointId },
+        data: {
+          movedToMeetingId: targetMeetingId,
+          movedAt: new Date()
+        }
+      })
+    ])
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error moving meeting point:', error)
+    res.status(500).json({ error: 'Failed to move meeting point' })
   }
 })
 

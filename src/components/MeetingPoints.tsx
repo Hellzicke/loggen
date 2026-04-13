@@ -10,6 +10,14 @@ interface MeetingPoint {
   completedAt: string | null
   notes: string | null
   createdAt: string
+  movedToMeetingId: number | null
+  movedAt: string | null
+  movedToMeeting: {
+    id: number
+    title: string
+    scheduledAt: string
+    archived: boolean
+  } | null
 }
 
 interface Meeting {
@@ -25,6 +33,7 @@ interface Meeting {
 
 interface MeetingPointsProps {
   authenticatedFetch: (url: string, options?: RequestInit) => Promise<Response>
+  showArchived?: boolean
 }
 
 // Generate consistent color for each meeting based on ID
@@ -79,6 +88,45 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
   const [showNotesEditor, setShowNotesEditor] = useState<number | null>(null)
   const [notesText, setNotesText] = useState('')
   const [archiving, setArchiving] = useState(false)
+  const [movingPointId, setMovingPointId] = useState<number | null>(null)
+  const [moveTargetId, setMoveTargetId] = useState<number | ''>('')
+  const [isAdmin] = useState<boolean>(() => !!localStorage.getItem('adminToken'))
+
+  const handleStartMove = (pointId: number) => {
+    setMovingPointId(movingPointId === pointId ? null : pointId)
+    setMoveTargetId('')
+  }
+
+  const handleMovePoint = async (pointId: number) => {
+    if (!meeting || !moveTargetId || typeof moveTargetId !== 'number') return
+    const adminToken = localStorage.getItem('adminToken')
+    if (!adminToken) {
+      alert('Du måste vara inloggad som admin')
+      return
+    }
+    try {
+      const res = await fetch(`/api/admin/meetings/${meeting.id}/points/${pointId}/move`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ targetMeetingId: moveTargetId })
+      })
+      if (res.ok) {
+        setMovingPointId(null)
+        setMoveTargetId('')
+        loadMeetings()
+        if (selectedMeetingId) loadMeeting(selectedMeetingId)
+      } else {
+        const err = await res.json().catch(() => null)
+        alert(err?.error || 'Kunde inte flytta punkten')
+      }
+    } catch (error) {
+      console.error('Error moving point:', error)
+      alert('Ett fel uppstod vid flytt av punkt')
+    }
+  }
 
   const loadMeetings = useCallback(async () => {
     try {
@@ -810,16 +858,27 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
                           type="checkbox"
                           checked={point.completed}
                           onChange={() => handleToggleComplete(point.id, point.completed)}
-                          disabled={meeting.archived || (isPast && !meeting.archived)}
+                          disabled={!!point.movedToMeetingId || meeting.archived || (isPast && !meeting.archived)}
                           className="point-checkbox"
                         />
-                        <h4 className={`point-title ${point.completed ? 'point-title--completed' : ''}`}>
+                        <h4 className={`point-title ${point.completed ? 'point-title--completed' : ''} ${point.movedToMeetingId ? 'point-title--moved' : ''}`}>
                           {point.title}
                         </h4>
                       </label>
                     </div>
+                    {point.movedToMeetingId && point.movedToMeeting && (
+                      <div className="point-moved-notice">
+                        Punkten är flyttad till:{' '}
+                        <strong>{point.movedToMeeting.title}</strong>
+                        {' '}({new Date(point.movedToMeeting.scheduledAt).toLocaleDateString('sv-SE', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })})
+                      </div>
+                    )}
                     {point.description && (
-                      <p className="point-description">{point.description}</p>
+                      <p className={`point-description ${point.movedToMeetingId ? 'point-description--moved' : ''}`}>{point.description}</p>
                     )}
                     {point.notes && (
                       <div className="point-notes">
@@ -882,7 +941,7 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
                       </div>
                     )}
                   </div>
-                  {!meeting.archived && (
+                  {!meeting.archived && !point.movedToMeetingId && (
                     <div className="point-actions">
                       {showNotesEditor !== point.id && (
                         <button
@@ -911,8 +970,59 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
                           </svg>
                         </button>
                       )}
+                      {isAdmin && !isPast && !point.completed && (
+                        <button
+                          className="point-move-btn"
+                          onClick={() => handleStartMove(point.id)}
+                          title="Flytta till annat möte"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M5 12h14M13 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   )}
+                </div>
+              )}
+              {movingPointId === point.id && (
+                <div className="point-move-picker">
+                  <label>Flytta till möte:</label>
+                  <select
+                    value={moveTargetId}
+                    onChange={e => setMoveTargetId(e.target.value ? Number(e.target.value) : '')}
+                    className="meeting-input"
+                  >
+                    <option value="">Välj möte...</option>
+                    {meetings
+                      .filter(m => m.id !== meeting.id && new Date(m.scheduledAt) >= new Date())
+                      .map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.title} — {new Date(m.scheduledAt).toLocaleDateString('sv-SE', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </option>
+                      ))}
+                  </select>
+                  <div className="point-move-actions">
+                    <button
+                      type="button"
+                      className="meeting-submit-btn"
+                      onClick={() => handleMovePoint(point.id)}
+                      disabled={!moveTargetId}
+                    >
+                      Flytta
+                    </button>
+                    <button
+                      type="button"
+                      className="point-cancel-btn"
+                      onClick={() => setMovingPointId(null)}
+                    >
+                      Avbryt
+                    </button>
+                  </div>
                 </div>
               )}
               {showDeleteConfirm === point.id && (

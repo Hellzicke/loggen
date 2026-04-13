@@ -78,27 +78,31 @@ model Admin {
 }
 
 model Meeting {
-  id          Int            @id @default(autoincrement())
-  title       String
-  scheduledAt DateTime
-  archived    Boolean        @default(false)
-  archivedAt  DateTime?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  points      MeetingPoint[]
+  id           Int            @id @default(autoincrement())
+  title        String
+  scheduledAt  DateTime
+  archived     Boolean        @default(false)
+  archivedAt   DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  points       MeetingPoint[]
+  movedInPoints MeetingPoint[] @relation("MovedPoints")
 }
 
 model MeetingPoint {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String?  @default("")
-  author      String
-  completed   Boolean  @default(false)
-  completedAt DateTime?
-  notes       String?  @default("")
-  meetingId   Int
-  meeting     Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
+  id               Int       @id @default(autoincrement())
+  title            String
+  description      String?   @default("")
+  author           String
+  completed        Boolean   @default(false)
+  completedAt      DateTime?
+  notes            String?   @default("")
+  meetingId        Int
+  meeting          Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  movedToMeetingId Int?
+  movedToMeeting   Meeting?  @relation("MovedPoints", fields: [movedToMeetingId], references: [id], onDelete: SetNull)
+  movedAt          DateTime?
+  createdAt        DateTime  @default(now())
 }
 
 model Suggestion {
