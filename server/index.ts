@@ -1442,10 +1442,17 @@ app.get('/api/suggestions/archived', authenticateSharedPassword, async (_req, re
 
 // Create suggestion
 app.post('/api/suggestions', authenticateSharedPassword, async (req, res) => {
-  const { title, description, author, category } = req.body
+  const { title, description, author, category, type, system } = req.body
   if (!title || !description || !author) {
     return res.status(400).json({ error: 'Title, description and author are required' })
   }
+
+  const validTypes = ['förslag', 'bugg', 'funktion']
+  const validSystems = ['Loggen', 'Schema', 'Fish', 'Poolportalen']
+  const suggestionType = validTypes.includes(type) ? type : 'förslag'
+  const suggestionSystem = (suggestionType === 'bugg' || suggestionType === 'funktion') && validSystems.includes(system)
+    ? system
+    : null
 
   try {
     const suggestion = await prisma.suggestion.create({
@@ -1453,7 +1460,9 @@ app.post('/api/suggestions', authenticateSharedPassword, async (req, res) => {
         title: title.trim(),
         description: description.trim(),
         author: author.trim(),
-        category: category || 'övrigt'
+        category: category || 'övrigt',
+        type: suggestionType,
+        system: suggestionSystem
       },
       include: SUGGESTION_INCLUDE
     })
@@ -1566,7 +1575,7 @@ app.delete('/api/suggestions/comments/:id', authenticateSharedPassword, async (r
 // Admin: Update suggestion status / decision / lock
 app.put('/api/admin/suggestions/:id', authenticateToken, async (req, res) => {
   const suggestionId = parseInt(req.params.id)
-  const { status, decision, decidedBy } = req.body
+  const { status, decision, decidedBy, fixedInVersion } = req.body
 
   try {
     const current = await prisma.suggestion.findUnique({ where: { id: suggestionId } })
@@ -1578,6 +1587,7 @@ app.put('/api/admin/suggestions/:id', authenticateToken, async (req, res) => {
     if (status) updateData.status = status
     if (decision !== undefined) updateData.decision = decision
     if (decidedBy) updateData.decidedBy = decidedBy
+    if (fixedInVersion !== undefined) updateData.fixedInVersion = fixedInVersion || null
     if (status === 'decided' || status === 'locked') {
       if (!current.decidedAt && (status === 'decided' || decision)) {
         updateData.decidedAt = new Date()

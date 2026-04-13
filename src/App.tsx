@@ -79,6 +79,7 @@ export default function App() {
   const [greetingPositions, setGreetingPositions] = useState<Array<{top: number, left: number}>>([])
   const [activeView, setActiveView] = useState<'logg' | 'förslagslåda' | 'mötespunkter'>('logg')
   const [showArchivedMeetings, setShowArchivedMeetings] = useState(false)
+  const [suggestionFilter, setSuggestionFilter] = useState<'all' | 'bugg' | 'funktion' | 'archive'>('all')
 
   // Check if it's Christmas (24-26 December)
   const isChristmas = () => {
@@ -463,6 +464,8 @@ export default function App() {
           setShowArchivedMeetings(prev => !prev)
         }}
         showArchivedMeetings={showArchivedMeetings}
+        suggestionFilter={suggestionFilter}
+        onSuggestionFilterChange={setSuggestionFilter}
       />
       <main className="main">
         {activeView === 'logg' && (
@@ -491,7 +494,7 @@ export default function App() {
           </>
         )}
         {activeView === 'förslagslåda' && (
-          <SuggestionBox authenticatedFetch={authenticatedFetch} />
+          <SuggestionBox authenticatedFetch={authenticatedFetch} filter={suggestionFilter} />
         )}
         {activeView === 'mötespunkter' && (
           <MeetingPoints authenticatedFetch={authenticatedFetch} showArchived={showArchivedMeetings} />

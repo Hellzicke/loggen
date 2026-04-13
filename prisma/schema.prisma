@@ -106,21 +106,24 @@ model MeetingPoint {
 }
 
 model Suggestion {
-  id          Int                 @id @default(autoincrement())
-  title       String
-  description String
-  author      String
-  category    String              @default("övrigt")
-  status      String              @default("open")
-  decision    String?
-  decidedBy   String?
-  decidedAt   DateTime?
-  lockedAt    DateTime?
-  archived    Boolean             @default(false)
-  archivedAt  DateTime?
-  createdAt   DateTime            @default(now())
-  votes       SuggestionVote[]
-  comments    SuggestionComment[]
+  id             Int                 @id @default(autoincrement())
+  title          String
+  description    String
+  author         String
+  category       String              @default("övrigt")
+  type           String              @default("förslag")
+  system         String?
+  fixedInVersion String?
+  status         String              @default("open")
+  decision       String?
+  decidedBy      String?
+  decidedAt      DateTime?
+  lockedAt       DateTime?
+  archived       Boolean             @default(false)
+  archivedAt     DateTime?
+  createdAt      DateTime            @default(now())
+  votes          SuggestionVote[]
+  comments       SuggestionComment[]
 }
 
 model SuggestionVote {

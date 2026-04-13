@@ -829,6 +829,7 @@ function AdminSuggestionsTab({ suggestions, setSuggestions, getAuthToken }: {
   const [newStatus, setNewStatus] = useState('')
   const [decision, setDecision] = useState('')
   const [decidedBy, setDecidedBy] = useState('')
+  const [fixedInVersion, setFixedInVersion] = useState('')
 
   const handleUpdateStatus = async (suggestionId: number) => {
     const token = getAuthToken()
@@ -839,6 +840,7 @@ function AdminSuggestionsTab({ suggestions, setSuggestions, getAuthToken }: {
       if (newStatus) body.status = newStatus
       if (decision) body.decision = decision
       if (decidedBy) body.decidedBy = decidedBy
+      body.fixedInVersion = fixedInVersion
 
       const res = await fetch(`/api/admin/suggestions/${suggestionId}`, {
         method: 'PUT',
@@ -855,6 +857,7 @@ function AdminSuggestionsTab({ suggestions, setSuggestions, getAuthToken }: {
         setNewStatus('')
         setDecision('')
         setDecidedBy('')
+        setFixedInVersion('')
       }
     } catch (error) {
       console.error('Error updating suggestion:', error)
@@ -907,6 +910,7 @@ function AdminSuggestionsTab({ suggestions, setSuggestions, getAuthToken }: {
                       setNewStatus(s.status)
                       setDecision(s.decision || '')
                       setDecidedBy(s.decidedBy || '')
+                      setFixedInVersion((s as any).fixedInVersion || '')
                     }}
                   >
                     Hantera
@@ -955,6 +959,19 @@ function AdminSuggestionsTab({ suggestions, setSuggestions, getAuthToken }: {
                       style={{ marginBottom: 0 }}
                     />
                   </div>
+                  {((s as any).type === 'bugg' || (s as any).type === 'funktion') && (
+                    <div className="input-group">
+                      <label>Fixad i version (visas som grön badge)</label>
+                      <input
+                        type="text"
+                        value={fixedInVersion}
+                        onChange={e => setFixedInVersion(e.target.value)}
+                        placeholder="T.ex. 1.2.3"
+                        className="suggestion-form-input"
+                        style={{ marginBottom: 0 }}
+                      />
+                    </div>
+                  )}
                   <div className="admin-meeting-form-actions" style={{ marginTop: '0.5rem' }}>
                     <button
                       className="admin-meeting-cancel-btn"

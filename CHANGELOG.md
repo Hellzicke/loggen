@@ -2,6 +2,18 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.3.0] - 2026-04-13
+
+### Tillagt
+- Buggrapporter: Användare kan rapportera buggar kopplade till något av systemen Loggen, Schema, Fish eller Poolportalen
+- Funktionsönskemål: Användare kan önska nya funktioner i samma system
+- Admin: När en bugg/funktionsönskemål är åtgärdad kan admin skriva vilken version den fixats i — visas som grön "✓ Fixad i vX.Y.Z"-badge på inlägget
+- Förslagslåda får nu dropdown-meny med "Alla förslag", "Buggrapporter", "Funktionsönskemål" och "Arkiv"
+- Formuläret är gemensamt: välj typ (förslag / bugg / funktion) och vid bugg/funktion också system
+
+### Ändrat
+- Röstning visas endast på förslag, inte på buggar/funktionsönskemål (där finns bara kommentarer)
+
 ## [1.2.1] - 2026-04-13
 
 ### Ändrat

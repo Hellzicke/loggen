@@ -25,6 +25,9 @@ export interface Suggestion {
   description: string
   author: string
   category: string
+  type: string
+  system: string | null
+  fixedInVersion: string | null
   status: string
   decision: string | null
   decidedBy: string | null
@@ -39,6 +42,26 @@ export interface Suggestion {
 
 interface SuggestionBoxProps {
   authenticatedFetch: (url: string, options?: RequestInit) => Promise<Response>
+  filter?: 'all' | 'bugg' | 'funktion' | 'archive'
+}
+
+const SYSTEMS = ['Loggen', 'Schema', 'Fish', 'Poolportalen']
+const TYPES = [
+  { value: 'förslag', label: 'Förslag' },
+  { value: 'bugg', label: 'Buggrapport' },
+  { value: 'funktion', label: 'Funktionsönskemål' },
+]
+
+const TYPE_LABELS: Record<string, string> = {
+  förslag: 'Förslag',
+  bugg: 'Bugg',
+  funktion: 'Funktion',
+}
+
+const TYPE_COLORS: Record<string, string> = {
+  förslag: '#667eea',
+  bugg: '#e5484d',
+  funktion: '#42b883',
 }
 
 const CATEGORIES = [
@@ -113,12 +136,11 @@ function getCategoryLabel(value: string): string {
   return CATEGORIES.find(c => c.value === value)?.label || value
 }
 
-export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps) {
+export default function SuggestionBox({ authenticatedFetch, filter = 'all' }: SuggestionBoxProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [archivedSuggestions, setArchivedSuggestions] = useState<Suggestion[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [showArchived, setShowArchived] = useState(false)
   const [filterCategory, setFilterCategory] = useState<string>('all')
   const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set())
   const [commentingId, setCommentingId] = useState<number | null>(null)
@@ -154,10 +176,6 @@ export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps
   useEffect(() => {
     fetchSuggestions()
   }, [fetchSuggestions])
-
-  useEffect(() => {
-    if (showArchived) fetchArchivedSuggestions()
-  }, [showArchived, fetchArchivedSuggestions])
 
   const submitVote = async (suggestionId: number, value: 1 | -1, name: string) => {
     const trimmed = name.trim()
@@ -251,11 +269,11 @@ export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps
     }
   }
 
-  const handleCreate = async (title: string, description: string, author: string, category: string) => {
+  const handleCreate = async (title: string, description: string, author: string, category: string, type: string, system: string | null) => {
     try {
       const res = await authenticatedFetch('/api/suggestions', {
         method: 'POST',
-        body: JSON.stringify({ title, description, author, category })
+        body: JSON.stringify({ title, description, author, category, type, system })
       })
       if (res.ok) {
         const suggestion = await res.json()
@@ -267,7 +285,18 @@ export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps
     }
   }
 
+  const showArchivedView = filter === 'archive'
+
+  useEffect(() => {
+    if (showArchivedView) fetchArchivedSuggestions()
+  }, [showArchivedView, fetchArchivedSuggestions])
+
   const sortedSuggestions = [...suggestions]
+    .filter(s => {
+      if (filter === 'bugg') return s.type === 'bugg'
+      if (filter === 'funktion') return s.type === 'funktion'
+      return s.type === 'förslag' || !s.type
+    })
     .filter(s => filterCategory === 'all' || s.category === filterCategory)
     .sort((a, b) => {
       const statusOrder: Record<string, number> = { open: 0, in_review: 1, decided: 2, locked: 3 }
@@ -288,7 +317,7 @@ export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps
       <div className="suggestion-header-bar">
         <div className="suggestion-actions-left">
           <button className="suggestion-create-btn" onClick={() => setShowForm(true)}>
-            + Nytt förslag
+            {filter === 'bugg' ? '+ Rapportera bugg' : filter === 'funktion' ? '+ Önska funktion' : '+ Nytt förslag'}
           </button>
           <select
             className="suggestion-filter"
@@ -314,12 +343,6 @@ export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps
               </button>
             </div>
           )}
-          <button
-            className={`suggestion-archive-toggle ${showArchived ? 'active' : ''}`}
-            onClick={() => setShowArchived(!showArchived)}
-          >
-            {showArchived ? 'Visa aktiva' : 'Visa arkiv'}
-          </button>
         </div>
       </div>
 
@@ -327,16 +350,17 @@ export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps
         <CreateSuggestionForm
           onSubmit={handleCreate}
           onCancel={() => setShowForm(false)}
+          initialType={filter === 'bugg' ? 'bugg' : filter === 'funktion' ? 'funktion' : 'förslag'}
         />
       )}
 
-      {sortedSuggestions.length === 0 && !showArchived && (
+      {sortedSuggestions.length === 0 && !showArchivedView && (
         <div className="empty-state">
-          <p>Inga förslag ännu. Var först med att lämna ett!</p>
+          <p>{filter === 'bugg' ? 'Inga buggrapporter ännu.' : filter === 'funktion' ? 'Inga funktionsönskemål ännu.' : 'Inga förslag ännu. Var först med att lämna ett!'}</p>
         </div>
       )}
 
-      {(showArchived ? archivedSuggestions : sortedSuggestions).map(suggestion => {
+      {(showArchivedView ? archivedSuggestions : sortedSuggestions).map(suggestion => {
         const commentCount = countComments(suggestion.comments)
         const isExpanded = expandedComments.has(suggestion.id)
         const isLocked = !!suggestion.lockedAt
@@ -362,13 +386,31 @@ export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps
               </div>
               <span
                 className="suggestion-status-badge"
+                style={{ background: TYPE_COLORS[suggestion.type] || '#667eea' }}
+              >
+                {TYPE_LABELS[suggestion.type] || 'Förslag'}
+              </span>
+              {suggestion.system && (
+                <span className="suggestion-system-badge">
+                  {suggestion.system}
+                </span>
+              )}
+              <span
+                className="suggestion-status-badge"
                 style={{ background: STATUS_COLORS[suggestion.status] || '#8a8d91' }}
               >
                 {STATUS_LABELS[suggestion.status] || suggestion.status}
               </span>
-              <span className="suggestion-category-badge">
-                {getCategoryLabel(suggestion.category)}
-              </span>
+              {suggestion.type === 'förslag' && (
+                <span className="suggestion-category-badge">
+                  {getCategoryLabel(suggestion.category)}
+                </span>
+              )}
+              {suggestion.fixedInVersion && (
+                <span className="suggestion-fixed-badge" title={`Fixad i version ${suggestion.fixedInVersion}`}>
+                  ✓ Fixad i v{suggestion.fixedInVersion}
+                </span>
+              )}
             </div>
 
             <div className="suggestion-item-content">
@@ -388,7 +430,9 @@ export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps
               </div>
             )}
 
-            {/* Voting */}
+            {/* Voting (endast för förslag, inte bugg/funktion) */}
+            {suggestion.type === 'förslag' && (
+            <>
             <div className="suggestion-vote-section">
               <button
                 className={`suggestion-vote-btn ${myVote === 1 ? 'voted voted--up' : ''}`}
@@ -451,6 +495,8 @@ export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps
                   Avbryt
                 </button>
               </div>
+            )}
+            </>
             )}
 
             {/* Comments */}
@@ -539,26 +585,47 @@ export default function SuggestionBox({ authenticatedFetch }: SuggestionBoxProps
 
 // --- Sub-components ---
 
-function CreateSuggestionForm({ onSubmit, onCancel }: {
-  onSubmit: (title: string, description: string, author: string, category: string) => void
+function CreateSuggestionForm({ onSubmit, onCancel, initialType = 'förslag' }: {
+  onSubmit: (title: string, description: string, author: string, category: string, type: string, system: string | null) => void
   onCancel: () => void
+  initialType?: string
 }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [author, setAuthor] = useState('')
   const [category, setCategory] = useState('övrigt')
+  const [type, setType] = useState(initialType)
+  const [system, setSystem] = useState<string>('Loggen')
   const [submitting, setSubmitting] = useState(false)
+
+  const needsSystem = type === 'bugg' || type === 'funktion'
 
   const handleSubmit = async () => {
     if (!title.trim() || !description.trim() || !author.trim()) return
+    if (needsSystem && !system) return
     setSubmitting(true)
-    await onSubmit(title.trim(), description.trim(), author.trim(), category)
+    await onSubmit(
+      title.trim(),
+      description.trim(),
+      author.trim(),
+      category,
+      type,
+      needsSystem ? system : null
+    )
     setSubmitting(false)
   }
 
+  const formTitle = type === 'bugg' ? 'Rapportera en bugg' : type === 'funktion' ? 'Önska en funktion' : 'Lämna ett förslag'
+  const titlePlaceholder = type === 'bugg' ? 'Kort beskrivning av buggen' : type === 'funktion' ? 'Önskad funktion' : 'Rubrik på förslaget'
+  const descPlaceholder = type === 'bugg'
+    ? 'Beskriv buggen: vad hände, vad förväntades, hur kan den återskapas?'
+    : type === 'funktion'
+    ? 'Beskriv önskad funktion och hur den skulle användas...'
+    : 'Beskriv ditt förslag i detalj...'
+
   return (
     <div className="suggestion-form">
-      <h3>Lämna ett förslag</h3>
+      <h3>{formTitle}</h3>
       <div className="suggestion-form-row">
         <input
           type="text"
@@ -569,26 +636,48 @@ function CreateSuggestionForm({ onSubmit, onCancel }: {
           autoFocus
         />
         <select
-          value={category}
-          onChange={e => setCategory(e.target.value)}
+          value={type}
+          onChange={e => setType(e.target.value)}
           className="suggestion-form-select"
         >
-          {CATEGORIES.map(c => (
-            <option key={c.value} value={c.value}>{c.label}</option>
+          {TYPES.map(t => (
+            <option key={t.value} value={t.value}>{t.label}</option>
           ))}
         </select>
+        {type === 'förslag' && (
+          <select
+            value={category}
+            onChange={e => setCategory(e.target.value)}
+            className="suggestion-form-select"
+          >
+            {CATEGORIES.map(c => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
+        )}
+        {needsSystem && (
+          <select
+            value={system}
+            onChange={e => setSystem(e.target.value)}
+            className="suggestion-form-select"
+          >
+            {SYSTEMS.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        )}
       </div>
       <input
         type="text"
         value={title}
         onChange={e => setTitle(e.target.value)}
-        placeholder="Rubrik på förslaget"
+        placeholder={titlePlaceholder}
         className="suggestion-form-input"
       />
       <textarea
         value={description}
         onChange={e => setDescription(e.target.value)}
-        placeholder="Beskriv ditt förslag i detalj..."
+        placeholder={descPlaceholder}
         className="suggestion-form-textarea"
         rows={4}
       />
@@ -598,7 +687,7 @@ function CreateSuggestionForm({ onSubmit, onCancel }: {
           onClick={handleSubmit}
           disabled={submitting || !title.trim() || !description.trim() || !author.trim()}
         >
-          {submitting ? 'Skickar...' : 'Skicka förslag'}
+          {submitting ? 'Skickar...' : type === 'bugg' ? 'Skicka buggrapport' : type === 'funktion' ? 'Skicka önskemål' : 'Skicka förslag'}
         </button>
         <button className="edit-cancel" onClick={onCancel}>Avbryt</button>
       </div>
