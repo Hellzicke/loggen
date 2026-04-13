@@ -178,26 +178,36 @@ export default function AdminPanel() {
     fetchData()
   }, [activeTab])
 
-  // Load images count on mount
+  // Load counts for all tabs on mount so badges are correct
   useEffect(() => {
-    const loadImagesCount = async () => {
+    const loadAllCounts = async () => {
       const token = getAuthToken()
       if (!token) return
+      const headers = { 'Authorization': `Bearer ${token}` }
 
-      try {
-        const res = await fetch('/api/admin/images', {
-          headers: { 'Authorization': `Bearer ${token}` }
+      const endpoints: Array<[string, (data: any) => void]> = [
+        ['/api/admin/logs', setLogs],
+        ['/api/admin/images', setImages],
+        ['/api/admin/meetings', setMeetings],
+        ['/api/admin/suggestions', setSuggestions],
+      ]
+
+      await Promise.all(
+        endpoints.map(async ([url, setter]) => {
+          try {
+            const res = await fetch(url, { headers })
+            if (res.ok) {
+              const data = await res.json()
+              setter(data)
+            }
+          } catch (error) {
+            console.error(`Error loading ${url}:`, error)
+          }
         })
-        if (res.ok) {
-          const data = await res.json()
-          setImages(data)
-        }
-      } catch (error) {
-        console.error('Error loading images:', error)
-      }
+      )
     }
 
-    loadImagesCount()
+    loadAllCounts()
   }, [])
 
   const handleDeleteLog = async (logId: number) => {
