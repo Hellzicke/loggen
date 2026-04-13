@@ -2,6 +2,12 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.2.1] - 2026-04-13
+
+### Ändrat
+- Huvudmeny: Klick på "Logg" och "Mötespunkter" öppnar nu dropdown istället för att byta vy direkt. Dropdownen innehåller både huvudsektionen ("Aktuella inlägg" / "Aktiva möten") och undersektionerna ("Arkiv" / "Arkiverade möten") med ikoner — tydligare och mer proffsigt
+- Dropdown stänger vid klick utanför eller Escape; pilen roterar när den är öppen
+
 ## [1.2.0] - 2026-04-13
 
 ### Tillagt
