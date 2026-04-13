@@ -962,21 +962,30 @@ app.post('/api/attachments/upload', authenticateSharedPassword, attachmentUpload
   })
 })
 
-// Proxy: hämta alla anställda från schema-tjänsten (med API-nyckel server-side)
+// Proxy: hämta alla anställda + dagens schemalagda från schema-tjänsten.
+// Returnerar { onDuty: [...], others: [...] } sorterade.
 app.get('/api/employees', authenticateSharedPassword, async (_req, res) => {
   if (!SCHEMA_API_URL || !SCHEMA_API_KEY) {
     return res.status(503).json({ error: 'Schema-integration ej konfigurerad' })
   }
+  const base = SCHEMA_API_URL.replace(/\/$/, '')
+  const today = new Date().toISOString().slice(0, 10)
+  const headers = { 'X-API-Key': SCHEMA_API_KEY }
   try {
-    const response = await fetch(
-      `${SCHEMA_API_URL.replace(/\/$/, '')}/api/employees`,
-      { headers: { 'X-API-Key': SCHEMA_API_KEY } }
-    )
-    if (!response.ok) {
-      return res.status(response.status).json({ error: 'Kunde inte hämta personallista' })
+    const [allRes, onDutyRes] = await Promise.all([
+      fetch(`${base}/api/employees`, { headers }),
+      fetch(`${base}/api/shifts/on-duty?date=${today}`, { headers }),
+    ])
+    if (!allRes.ok) {
+      return res.status(allRes.status).json({ error: 'Kunde inte hämta personallista' })
     }
-    const data = await response.json()
-    res.json(data)
+    const all: Array<{ employeeId: string; name: string }> = await allRes.json()
+    const onDutyList: Array<{ employeeId: string; name: string }> =
+      onDutyRes.ok ? await onDutyRes.json() : []
+    const onDutyIds = new Set(onDutyList.map(e => e.employeeId))
+    const onDuty = all.filter(e => onDutyIds.has(e.employeeId))
+    const others = all.filter(e => !onDutyIds.has(e.employeeId))
+    res.json({ onDuty, others })
   } catch (err) {
     console.error('employees proxy error:', err)
     res.status(502).json({ error: 'Schema-tjänsten ej nåbar' })
