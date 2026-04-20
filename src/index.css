@@ -4298,6 +4298,16 @@ select.suggestion-form-input {
   box-shadow: 0 0 0 2px var(--accent-light);
 }
 
+.suggestion-form-invalid {
+  border-color: #e5484d !important;
+}
+
+.suggestion-form-hint {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.85rem;
+  color: #c72a2f;
+}
+
 .suggestion-form-actions {
   display: flex;
   gap: 0.5rem;

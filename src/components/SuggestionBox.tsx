@@ -622,12 +622,19 @@ function CreateSuggestionForm({ onSubmit, onCancel, initialType = 'förslag', lo
   }
 
   const formTitle = type === 'bugg' ? 'Rapportera en bugg' : type === 'funktion' ? 'Önska en funktion' : 'Lämna ett förslag'
-  const titlePlaceholder = type === 'bugg' ? 'Kort beskrivning av buggen' : type === 'funktion' ? 'Önskad funktion' : 'Rubrik på förslaget'
+  const titlePlaceholder = type === 'bugg' ? 'Kort beskrivning av buggen *' : type === 'funktion' ? 'Önskad funktion *' : 'Rubrik på förslaget *'
   const descPlaceholder = type === 'bugg'
-    ? 'Beskriv buggen: vad hände, vad förväntades, hur kan den återskapas?'
+    ? 'Beskriv buggen: vad hände, vad förväntades, hur kan den återskapas? *'
     : type === 'funktion'
-    ? 'Beskriv önskad funktion och hur den skulle användas...'
-    : 'Beskriv ditt förslag i detalj...'
+    ? 'Beskriv önskad funktion och hur den skulle användas... *'
+    : 'Beskriv ditt förslag i detalj... *'
+
+  const missing: string[] = []
+  if (!author.trim()) missing.push('namn')
+  if (!title.trim()) missing.push('rubrik')
+  if (!description.trim()) missing.push('beskrivning')
+  const titleInvalid = !title.trim()
+  const descInvalid = !description.trim()
 
   return (
     <div className="suggestion-form">
@@ -679,15 +686,18 @@ function CreateSuggestionForm({ onSubmit, onCancel, initialType = 'förslag', lo
         value={title}
         onChange={e => setTitle(e.target.value)}
         placeholder={titlePlaceholder}
-        className="suggestion-form-input"
+        className={`suggestion-form-input${titleInvalid ? ' suggestion-form-invalid' : ''}`}
       />
       <textarea
         value={description}
         onChange={e => setDescription(e.target.value)}
         placeholder={descPlaceholder}
-        className="suggestion-form-textarea"
+        className={`suggestion-form-textarea${descInvalid ? ' suggestion-form-invalid' : ''}`}
         rows={4}
       />
+      {missing.length > 0 && (
+        <p className="suggestion-form-hint">Saknas: {missing.join(', ')}</p>
+      )}
       <div className="suggestion-form-actions">
         <button
           className="submit-btn"
