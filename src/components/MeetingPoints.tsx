@@ -457,18 +457,13 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
                       <div
                         className="meeting-wrapper"
                         style={{
-                          borderColor: meetingColor.primary,
-                          borderLeftColor: meetingColor.primary,
-                          borderLeftWidth: '4px',
-                          background: `linear-gradient(to right, ${meetingColor.light}15 0%, transparent 4px)`
+                          borderColor: meetingColor.primary
                         }}
                       >
                         <div
                           className="meeting-header-card"
                           style={{
-                            borderColor: meetingColor.primary,
-                            borderLeftColor: meetingColor.primary,
-                            borderLeftWidth: '4px'
+                            borderColor: meetingColor.primary
                           }}
                         >
                           <h2 className="meeting-title">{m.title}</h2>
@@ -509,7 +504,6 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
                                 <div
                                   key={p.id}
                                   className="point-item-card point-item-card--linked"
-                                  style={{ borderLeftColor: meetingColor.primary }}
                                 >
                                   <div
                                     className="point-meeting-indicator"
@@ -615,8 +609,6 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
                   className={`meeting-selector-btn ${selectedMeetingId === m.id ? 'meeting-selector-btn--active' : ''}`}
                   onClick={() => handleMeetingSelect(m.id)}
                   style={{
-                    borderLeftColor: mColor.primary,
-                    borderLeftWidth: '4px',
                     ...(selectedMeetingId === m.id ? {
                       background: mColor.light,
                       borderColor: mColor.primary
@@ -643,10 +635,7 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
       <div 
         className="meeting-wrapper"
         style={{
-          borderColor: meetingColor.primary,
-          borderLeftColor: meetingColor.primary,
-          borderLeftWidth: '4px',
-          background: `linear-gradient(to right, ${meetingColor.light}15 0%, transparent 4px)`
+          borderColor: meetingColor.primary
         }}
       >
         <div className="meeting-header-card">
@@ -699,13 +688,8 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
         </div>
 
       {showForm && !isPast && (
-        <div 
+        <div
           className="point-form-card"
-          style={{
-            borderLeftColor: meetingColor.primary,
-            borderLeftWidth: '3px',
-            background: `linear-gradient(to right, ${meetingColor.light}10 0%, transparent 3px)`
-          }}
         >
           <div 
             className="point-form-badge"
@@ -769,9 +753,6 @@ export default function MeetingPoints({ authenticatedFetch, showArchived = false
             <div 
               key={point.id} 
               className="point-item-card point-item-card--linked"
-              style={{
-                borderLeftColor: meetingColor.primary
-              }}
             >
               <div 
                 className="point-meeting-indicator"

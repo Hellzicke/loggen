@@ -1470,8 +1470,7 @@ body:hover #root::before ~ .header {
 }
 
 .log-item--pinned {
-  border-left: 3px solid var(--accent);
-  background: linear-gradient(90deg, var(--accent-light) 0%, var(--bg-card) 100%);
+  background: var(--accent-light);
   position: relative;
 }
 
@@ -3582,7 +3581,6 @@ select.comment-input {
 }
 
 .point-item-card--linked {
-  border-left: 3px solid;
   padding-left: 1.25rem;
 }
 
@@ -3666,7 +3664,6 @@ select.comment-input {
   padding: 0.75rem;
   background: var(--bg-primary);
   border-radius: 6px;
-  border-left: 3px solid var(--accent);
 }
 
 .point-notes strong {
@@ -3793,7 +3790,6 @@ select.comment-input {
   margin-top: 0.5rem;
   padding: 0.5rem 0.75rem;
   background: #fff8e1;
-  border-left: 3px solid #f5a623;
   border-radius: 4px;
   font-size: 0.9rem;
   color: #6b4a00;
