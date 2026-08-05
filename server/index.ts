@@ -1426,13 +1426,18 @@ const SUGGESTION_INCLUDE = {
   }
 }
 
-// Auto-archive locked suggestions older than 30 days
-async function autoArchiveLockedSuggestions() {
+// Auto-arkivera HANTERADE förslag (Beslutat eller Låst) som varit synliga i
+// minst ARCHIVE_DAYS dagar sedan de hanterades. Beslutade räknas från decidedAt,
+// låsta från lockedAt. Tidigare arkiverades bara låsta — beslutade blev kvar för evigt.
+async function autoArchiveHandledSuggestions() {
   const cutoffDate = new Date(Date.now() - ARCHIVE_DAYS * MS_PER_DAY)
   await prisma.suggestion.updateMany({
     where: {
       archived: false,
-      lockedAt: { not: null, lt: cutoffDate }
+      OR: [
+        { lockedAt: { not: null, lt: cutoffDate } },
+        { status: 'decided', decidedAt: { not: null, lt: cutoffDate } }
+      ]
     },
     data: {
       archived: true,
@@ -1444,7 +1449,7 @@ async function autoArchiveLockedSuggestions() {
 // Get active suggestions
 app.get('/api/suggestions', authenticateSharedPassword, async (_req, res) => {
   try {
-    await autoArchiveLockedSuggestions()
+    await autoArchiveHandledSuggestions()
     const suggestions = await prisma.suggestion.findMany({
       where: { archived: false },
       orderBy: { createdAt: 'desc' },

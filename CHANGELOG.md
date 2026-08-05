@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.3] - 2026-08-05
+
+### Ändrat
+- Auto-arkivering av förslag: nu arkiveras alla *hanterade* förslag (Beslutat eller Låst) automatiskt 30 dagar efter att de hanterades. Tidigare arkiverades bara låsta — beslutade förslag blev kvar för alltid.
+
 ## [1.4.2] - 2026-08-05
 
 ### Tillagt
