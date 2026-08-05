@@ -14,11 +14,15 @@ interface HeaderProps {
   showArchivedMeetings?: boolean
   suggestionFilter?: SuggestionFilter
   onSuggestionFilterChange?: (filter: SuggestionFilter) => void
+  isAdmin?: boolean
+  adminUsername?: string | null
+  onAdminLoginClick?: () => void
+  onAdminLogout?: () => void
 }
 
 type MenuKey = 'logg' | 'mötespunkter' | 'förslagslåda' | 'utveckling' | null
 
-export default function Header({ version, onVersionClick, onArchiveClick, archiveCount, activeView, onViewChange, onArchivedMeetingsClick, showArchivedMeetings, suggestionFilter = 'förslag', onSuggestionFilterChange }: HeaderProps) {
+export default function Header({ version, onVersionClick, onArchiveClick, archiveCount, activeView, onViewChange, onArchivedMeetingsClick, showArchivedMeetings, suggestionFilter = 'förslag', onSuggestionFilterChange, isAdmin, adminUsername, onAdminLoginClick, onAdminLogout }: HeaderProps) {
   const [openMenu, setOpenMenu] = useState<MenuKey>(null)
   const navRef = useRef<HTMLElement>(null)
 
@@ -223,13 +227,42 @@ export default function Header({ version, onVersionClick, onArchiveClick, archiv
                 <span>Funktionsönskemål</span>
               </button>
               <div className="nav-dropdown-divider" />
-              <a href="/admin" className="nav-dropdown-item" role="menuitem">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-                <span>Admin</span>
-              </a>
+              {isAdmin ? (
+                <>
+                  <div className="nav-dropdown-admin-status">
+                    Inloggad som admin{adminUsername ? `: ${adminUsername}` : ''}
+                  </div>
+                  <a href="/admin" className="nav-dropdown-item" role="menuitem">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    <span>Admin-panel (inlägg, bilder, möten)</span>
+                  </a>
+                  <button
+                    className="nav-dropdown-item"
+                    onClick={() => { onAdminLogout?.(); setOpenMenu(null) }}
+                    role="menuitem"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+                    </svg>
+                    <span>Logga ut (admin)</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="nav-dropdown-item"
+                  onClick={() => { onAdminLoginClick?.(); setOpenMenu(null) }}
+                  role="menuitem"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                  <span>Logga in som admin</span>
+                </button>
+              )}
             </div>
           )}
         </div>

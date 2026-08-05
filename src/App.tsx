@@ -9,6 +9,7 @@ import ConfirmModal from './components/ConfirmModal'
 import Login from './components/Login'
 import MeetingPoints from './components/MeetingPoints'
 import SuggestionBox from './components/SuggestionBox'
+import AdminLoginModal from './components/AdminLoginModal'
 
 export interface ReadSignature {
   id: number
@@ -79,6 +80,11 @@ export default function App() {
   const [activeView, setActiveView] = useState<'logg' | 'förslagslåda' | 'mötespunkter' | 'utveckling'>('logg')
   const [showArchivedMeetings, setShowArchivedMeetings] = useState(false)
   const [suggestionFilter, setSuggestionFilter] = useState<'förslag' | 'förslag-arkiv' | 'bugg' | 'funktion'>('förslag')
+  // Admin-läge (via centrala Auth) — separat token, ger inline-adminkontroller
+  const [adminToken, setAdminToken] = useState<string | null>(() => localStorage.getItem('adminToken'))
+  const [adminUsername, setAdminUsername] = useState<string | null>(() => localStorage.getItem('adminUsername'))
+  const [showAdminLogin, setShowAdminLogin] = useState(false)
+  const isAdmin = !!adminToken
 
   // Check authentication on mount
   useEffect(() => {
@@ -117,6 +123,35 @@ export default function App() {
 
     return response
   }, [authToken])
+
+  const clearAdmin = useCallback(() => {
+    localStorage.removeItem('adminToken')
+    localStorage.removeItem('adminUsername')
+    setAdminToken(null)
+    setAdminUsername(null)
+  }, [])
+
+  // Fetch med admin-token (centrala Auth). Vid utgången token töms admin-läget.
+  const adminFetch = useCallback(async (url: string, options: RequestInit = {}) => {
+    const token = adminToken || localStorage.getItem('adminToken')
+    const headers: Record<string, string> = { ...(options.headers as Record<string, string>) }
+    if (!(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json'
+    }
+    headers['Authorization'] = `Bearer ${token}`
+    const response = await fetch(url, { ...options, headers })
+    if (response.status === 401 || response.status === 403) {
+      clearAdmin()
+      throw new Error('Admin authentication required')
+    }
+    return response
+  }, [adminToken, clearAdmin])
+
+  const handleAdminLoginSuccess = (token: string, username: string) => {
+    setAdminToken(token)
+    setAdminUsername(username)
+    setShowAdminLogin(false)
+  }
 
   const fetchLogs = useCallback(async () => {
     if (!isAuthenticated) return
@@ -387,6 +422,10 @@ export default function App() {
         showArchivedMeetings={showArchivedMeetings}
         suggestionFilter={suggestionFilter}
         onSuggestionFilterChange={setSuggestionFilter}
+        isAdmin={isAdmin}
+        adminUsername={adminUsername}
+        onAdminLoginClick={() => setShowAdminLogin(true)}
+        onAdminLogout={clearAdmin}
       />
       <main className="main">
         {activeView === 'logg' && (
@@ -415,7 +454,12 @@ export default function App() {
           </>
         )}
         {(activeView === 'förslagslåda' || activeView === 'utveckling') && (
-          <SuggestionBox authenticatedFetch={authenticatedFetch} filter={suggestionFilter} />
+          <SuggestionBox
+            authenticatedFetch={authenticatedFetch}
+            filter={suggestionFilter}
+            isAdmin={isAdmin}
+            adminFetch={adminFetch}
+          />
         )}
         {activeView === 'mötespunkter' && (
           <MeetingPoints authenticatedFetch={authenticatedFetch} showArchived={showArchivedMeetings} />
@@ -453,6 +497,12 @@ export default function App() {
           cancelText="Avbryt"
           onConfirm={confirmDelete}
           onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
+      {showAdminLogin && (
+        <AdminLoginModal
+          onSuccess={handleAdminLoginSuccess}
+          onClose={() => setShowAdminLogin(false)}
         />
       )}
       </div>

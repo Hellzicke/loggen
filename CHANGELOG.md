@@ -2,6 +2,15 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.2] - 2026-08-05
+
+### Tillagt
+- Admin-läge direkt i huvudappen: logga in som admin via centrala Auth (samma som Fish/Schema/öppettider) från kugghjulsmenyn, istället för den separata /admin-sidan.
+- Inline-adminkontroller på förslags-/bugg-/funktionskort när man är inloggad som admin: hantera status, beslut/beslutsfattare, lås/lås upp, ta bort, samt "fixad i version" för buggar/funktioner.
+
+### Ändrat
+- Byte från status "Låst" till annan status låser nu upp inlägget (rensar lockedAt).
+
 ## [1.4.1] - 2026-04-13
 
 ### Borttaget

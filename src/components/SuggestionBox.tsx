@@ -44,6 +44,8 @@ export interface Suggestion {
 interface SuggestionBoxProps {
   authenticatedFetch: (url: string, options?: RequestInit) => Promise<Response>
   filter?: 'förslag' | 'förslag-arkiv' | 'bugg' | 'funktion'
+  isAdmin?: boolean
+  adminFetch?: (url: string, options?: RequestInit) => Promise<Response>
 }
 
 const SYSTEMS = ['Loggen', 'Schema', 'Fish', 'Poolportalen']
@@ -86,6 +88,13 @@ const STATUS_COLORS: Record<string, string> = {
   decided: '#1877f2',
   locked: '#8a8d91',
 }
+
+const STATUS_OPTIONS = [
+  { value: 'open', label: 'Öppet' },
+  { value: 'in_review', label: 'Under behandling' },
+  { value: 'decided', label: 'Beslutat' },
+  { value: 'locked', label: 'Låst' },
+]
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString)
@@ -137,7 +146,7 @@ function getCategoryLabel(value: string): string {
   return CATEGORIES.find(c => c.value === value)?.label || value
 }
 
-export default function SuggestionBox({ authenticatedFetch, filter = 'förslag' }: SuggestionBoxProps) {
+export default function SuggestionBox({ authenticatedFetch, filter = 'förslag', isAdmin = false, adminFetch }: SuggestionBoxProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [archivedSuggestions, setArchivedSuggestions] = useState<Suggestion[]>([])
   const [loading, setLoading] = useState(true)
@@ -151,6 +160,13 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag' 
   const [currentVoter, setCurrentVoter] = useState<string>('')
   const [votePromptFor, setVotePromptFor] = useState<{ suggestionId: number; value: 1 | -1 } | null>(null)
   const [promptName, setPromptName] = useState('')
+  // Inline-adminhantering (visas bara när isAdmin)
+  const [managingId, setManagingId] = useState<number | null>(null)
+  const [mStatus, setMStatus] = useState('')
+  const [mDecidedBy, setMDecidedBy] = useState('')
+  const [mDecision, setMDecision] = useState('')
+  const [mFixedInVersion, setMFixedInVersion] = useState('')
+  const [savingAdmin, setSavingAdmin] = useState(false)
 
   const fetchSuggestions = useCallback(async () => {
     try {
@@ -284,6 +300,57 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag' 
     } catch (error) {
       console.error('Failed to create suggestion:', error)
     }
+  }
+
+  const openManage = (s: Suggestion) => {
+    if (managingId === s.id) { setManagingId(null); return }
+    setManagingId(s.id)
+    setMStatus(s.status)
+    setMDecidedBy(s.decidedBy || '')
+    setMDecision(s.decision || '')
+    setMFixedInVersion(s.fixedInVersion || '')
+  }
+
+  const applyUpdated = (updated: Suggestion) => {
+    setSuggestions(prev => prev.map(s => s.id === updated.id ? updated : s))
+    setArchivedSuggestions(prev => prev.map(s => s.id === updated.id ? updated : s))
+  }
+
+  const handleAdminSave = async (suggestionId: number) => {
+    if (!adminFetch) return
+    setSavingAdmin(true)
+    try {
+      const res = await adminFetch(`/api/admin/suggestions/${suggestionId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          status: mStatus,
+          decision: mDecision,
+          decidedBy: mDecidedBy || undefined,
+          fixedInVersion: mFixedInVersion,
+        }),
+      })
+      if (res.ok) {
+        applyUpdated(await res.json())
+        setManagingId(null)
+      }
+    } catch (error) {
+      console.error('Failed to update suggestion:', error)
+    }
+    setSavingAdmin(false)
+  }
+
+  const handleAdminDelete = async (suggestionId: number) => {
+    if (!adminFetch) return
+    try {
+      const res = await adminFetch(`/api/admin/suggestions/${suggestionId}`, { method: 'DELETE' })
+      if (res.ok) {
+        setSuggestions(prev => prev.filter(s => s.id !== suggestionId))
+        setArchivedSuggestions(prev => prev.filter(s => s.id !== suggestionId))
+      }
+    } catch (error) {
+      console.error('Failed to delete suggestion:', error)
+    }
+    setDeleteConfirm(null)
   }
 
   const showArchivedView = filter === 'förslag-arkiv'
@@ -436,6 +503,74 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag' 
               </div>
             )}
 
+            {isAdmin && (
+              <div className="suggestion-admin-bar">
+                <button className="interaction-btn" onClick={() => openManage(suggestion)}>
+                  {managingId === suggestion.id ? 'Stäng hantering' : 'Hantera'}
+                </button>
+                <button
+                  className="interaction-btn interaction-btn--danger"
+                  onClick={() => setDeleteConfirm(suggestion.id)}
+                >
+                  Ta bort
+                </button>
+              </div>
+            )}
+
+            {isAdmin && managingId === suggestion.id && (
+              <div className="admin-suggestion-action-panel">
+                <div className="suggestion-form-row">
+                  <div className="input-group" style={{ flex: 1 }}>
+                    <label>Status</label>
+                    <select value={mStatus} onChange={e => setMStatus(e.target.value)} className="suggestion-form-select">
+                      {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="input-group" style={{ flex: 1 }}>
+                    <label>Beslutsfattare</label>
+                    <input
+                      type="text"
+                      value={mDecidedBy}
+                      onChange={e => setMDecidedBy(e.target.value)}
+                      placeholder="Namn"
+                      className="suggestion-form-input"
+                      style={{ marginBottom: 0 }}
+                    />
+                  </div>
+                </div>
+                <div className="input-group">
+                  <label>{suggestion.type === 'förslag' ? 'Beslut / Kommentar' : 'Svar / Kommentar'}</label>
+                  <textarea
+                    value={mDecision}
+                    onChange={e => setMDecision(e.target.value)}
+                    placeholder={suggestion.type === 'förslag' ? "T.ex. 'Det beslutades att...'" : "T.ex. 'Åtgärdat' eller status"}
+                    className="suggestion-form-textarea"
+                    rows={2}
+                    style={{ marginBottom: 0 }}
+                  />
+                </div>
+                {(suggestion.type === 'bugg' || suggestion.type === 'funktion') && (
+                  <div className="input-group">
+                    <label>Fixad i version (visas som grön badge)</label>
+                    <input
+                      type="text"
+                      value={mFixedInVersion}
+                      onChange={e => setMFixedInVersion(e.target.value)}
+                      placeholder="T.ex. 1.2.3"
+                      className="suggestion-form-input"
+                      style={{ marginBottom: 0 }}
+                    />
+                  </div>
+                )}
+                <div className="admin-meeting-form-actions" style={{ marginTop: '0.5rem' }}>
+                  <button className="admin-meeting-cancel-btn" onClick={() => setManagingId(null)}>Avbryt</button>
+                  <button className="admin-meeting-save-btn" onClick={() => handleAdminSave(suggestion.id)} disabled={savingAdmin}>
+                    {savingAdmin ? 'Sparar...' : 'Spara'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Voting (endast för förslag, inte bugg/funktion) */}
             {suggestion.type === 'förslag' && (
             <>
@@ -568,19 +703,11 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag' 
 
       {deleteConfirm && (
         <ConfirmModal
-          title="Ta bort förslag"
-          message="Är du säker på att du vill ta bort detta förslag?"
+          title="Ta bort inlägg"
+          message="Är du säker på att du vill ta bort detta? Detta går inte att ångra."
           confirmText="Ta bort"
           cancelText="Avbryt"
-          onConfirm={async () => {
-            try {
-              await authenticatedFetch(`/api/admin/suggestions/${deleteConfirm}`, { method: 'DELETE' })
-              setSuggestions(prev => prev.filter(s => s.id !== deleteConfirm))
-            } catch (error) {
-              console.error('Failed to delete:', error)
-            }
-            setDeleteConfirm(null)
-          }}
+          onConfirm={() => handleAdminDelete(deleteConfirm)}
           onCancel={() => setDeleteConfirm(null)}
         />
       )}

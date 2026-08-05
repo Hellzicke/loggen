@@ -1627,6 +1627,9 @@ app.put('/api/admin/suggestions/:id', authenticateToken, async (req, res) => {
     }
     if (status === 'locked') {
       updateData.lockedAt = new Date()
+    } else if (status) {
+      // Byte till annan status än låst ska låsa upp
+      updateData.lockedAt = null
     }
 
     const updated = await prisma.suggestion.update({

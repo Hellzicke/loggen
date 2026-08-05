@@ -4372,3 +4372,25 @@ select.suggestion-form-input {
     flex-wrap: wrap;
   }
 }
+
+/* Inline-adminkontroller på förslags-/buggkort */
+.suggestion-admin-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border, #e2e5ea);
+}
+
+.interaction-btn.interaction-btn--danger {
+  color: #dc2626;
+}
+
+.nav-dropdown-admin-status {
+  padding: 0.5rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
