@@ -2,7 +2,7 @@ import express from 'express'
 import { PrismaClient } from '@prisma/client'
 import { fileURLToPath } from 'url'
 import { dirname, join, resolve } from 'path'
-import { readFileSync, existsSync, mkdirSync } from 'fs'
+import { readFileSync, existsSync, mkdirSync, unlinkSync } from 'fs'
 import multer from 'multer'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
@@ -48,9 +48,12 @@ const storage = multer.diskStorage({
   }
 })
 
+const MAX_IMAGE_MB = 2
+const MAX_IMAGE_BYTES = MAX_IMAGE_MB * 1024 * 1024
+
 const imageUpload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: MAX_IMAGE_BYTES },
   fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true)
@@ -174,27 +177,55 @@ function shouldAutoArchive(log: { pinned: boolean; archived: boolean; createdAt:
   return daysSince >= ARCHIVE_DAYS
 }
 
+// Helper: Delete an uploaded image file, but only if no post still references it.
+// Bilder kan återanvändas mellan inlägg (bildväljaren), så vi raderar aldrig en
+// fil som fortfarande används av ett annat inlägg.
+async function deleteImageIfUnreferenced(imageUrl: string | null | undefined) {
+  if (!imageUrl || !imageUrl.startsWith('/uploads/')) return
+  const stillUsed = await prisma.logMessage.count({ where: { imageUrl } })
+  if (stillUsed > 0) return
+  const filename = imageUrl.slice('/uploads/'.length)
+  if (!filename || filename.includes('/') || filename.includes('\\') || filename.includes('..')) return
+  const filePath = join(uploadsDir, filename)
+  try {
+    if (existsSync(filePath)) unlinkSync(filePath)
+  } catch (error) {
+    console.error('Failed to delete image file:', error)
+  }
+}
+
 // Helper: Auto-archive old posts
 async function autoArchiveOldPosts() {
   const cutoffDate = new Date(Date.now() - ARCHIVE_DAYS * MS_PER_DAY)
-  
+
   // Archive posts that are:
   // 1. Not pinned, not archived, and created more than 30 days ago (with no unpinnedAt)
   // 2. Not pinned, not archived, and unpinned more than 30 days ago
+  const where = {
+    archived: false,
+    pinned: false,
+    OR: [
+      { unpinnedAt: null, createdAt: { lt: cutoffDate } },
+      { unpinnedAt: { lt: cutoffDate } }
+    ]
+  }
+
+  // Samla bilderna innan arkivering så vi kan frigöra disk för arkiverade inlägg
+  const toArchive = await prisma.logMessage.findMany({ where, select: { imageUrl: true } })
+
   await prisma.logMessage.updateMany({
-    where: {
-      archived: false,
-      pinned: false,
-      OR: [
-        { unpinnedAt: null, createdAt: { lt: cutoffDate } },
-        { unpinnedAt: { lt: cutoffDate } }
-      ]
-    },
+    where,
     data: {
       archived: true,
-      archivedAt: new Date()
+      archivedAt: new Date(),
+      imageUrl: null
     }
   })
+
+  const imageUrls = [...new Set(toArchive.map(l => l.imageUrl).filter((u): u is string => !!u))]
+  for (const url of imageUrls) {
+    await deleteImageIfUnreferenced(url)
+  }
 }
 
 // Shared password login (for main app)
@@ -941,7 +972,20 @@ app.get('/api/logs/archived', authenticateSharedPassword, async (_req, res) => {
 })
 
 // Upload image
-app.post('/api/upload', authenticateSharedPassword, imageUpload.single('image'), (req, res) => {
+// Kör multer och översätt storleks-/typfel till tydliga JSON-svar för klienten
+const uploadImage = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  imageUpload.single('image')(req, res, (err: unknown) => {
+    if (err) {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: `Bilden är för stor (max ${MAX_IMAGE_MB} MB)` })
+      }
+      return res.status(400).json({ error: (err as Error).message || 'Kunde inte ladda upp bilden' })
+    }
+    next()
+  })
+}
+
+app.post('/api/upload', authenticateSharedPassword, uploadImage, (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' })
   }
@@ -1160,12 +1204,17 @@ app.post('/api/logs/:id/archive', authenticateSharedPassword, async (req, res) =
   const logId = parseInt(req.params.id)
 
   try {
+    const existing = await prisma.logMessage.findUnique({
+      where: { id: logId },
+      select: { imageUrl: true }
+    })
     const updated = await prisma.logMessage.update({
       where: { id: logId },
-      data: { 
+      data: {
         archived: true,
         archivedAt: new Date(),
-        pinned: false
+        pinned: false,
+        imageUrl: null
       },
       include: {
         signatures: true,
@@ -1176,6 +1225,8 @@ app.post('/api/logs/:id/archive', authenticateSharedPassword, async (req, res) =
         reactions: true
       }
     })
+    // Frigör bilden när inlägget arkiveras (om ingen annan post använder den)
+    await deleteImageIfUnreferenced(existing?.imageUrl)
     res.json(updated)
   } catch (error) {
     console.error('Error archiving log:', error)

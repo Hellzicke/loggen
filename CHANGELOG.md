@@ -2,6 +2,14 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.4] - 2026-08-11
+
+### Ändrat
+- Maxstorlek för bilduppladdning sänkt till 2 MB. Klienten kontrollerar storleken innan uppladdning och visar ett tydligt felmeddelande, och servern svarar med ett begripligt fel om gränsen överskrids (tidigare 5 MB som misslyckades tyst).
+
+### Tillagt
+- Bilder raderas automatiskt när ett inlägg arkiveras (både manuell och auto-arkivering efter 30 dagar) för att frigöra diskutrymme. En bild som fortfarande används av ett annat inlägg behålls.
+
 ## [1.4.3] - 2026-08-05
 
 ### Ändrat

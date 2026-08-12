@@ -67,6 +67,12 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
     const file = e.target.files?.[0]
     if (!file) return
 
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Bilden är för stor (max 2 MB)')
+      e.target.value = ''
+      return
+    }
+
     setUploading(true)
     const formData = new FormData()
     formData.append('image', file)
@@ -85,11 +91,16 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
         setImageUrl(data.url)
         setShowImagePicker(false)
         loadAvailableImages()
+      } else {
+        const err = await res.json().catch(() => null)
+        alert(err?.error || 'Kunde inte ladda upp bilden')
       }
     } catch (error) {
       console.error('Failed to upload image:', error)
+      alert('Kunde inte ladda upp bilden')
     } finally {
       setUploading(false)
+      e.target.value = ''
     }
   }
 
