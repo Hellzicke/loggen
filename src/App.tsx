@@ -452,20 +452,21 @@ export default function App() {
                 Vad vill du dela?
               </button>
             </div>
-            <LogList 
+            <LogList
               logs={[...logs].sort((a, b) => {
                 if (a.pinned && !b.pinned) return -1
                 if (!a.pinned && b.pinned) return 1
                 return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-              })} 
-              loading={loading} 
-              onSign={handleSign} 
+              })}
+              loading={loading}
+              onSign={handleSign}
               onPin={handlePin}
               onComment={handleComment}
               onEditLog={handleEditLog}
               onDeleteComment={handleDeleteComment}
               onReaction={handleReaction}
               onDeleteLog={handleDeleteLog}
+              adminName={adminUsername}
             />
           </>
         )}
