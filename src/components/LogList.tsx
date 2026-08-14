@@ -13,7 +13,6 @@ interface LogListProps {
   onDeleteComment: (logId: number, commentId: number, parentId?: number) => void
   onReaction: (logId: number, emoji: string) => void
   onDeleteLog: (logId: number) => void
-  adminName?: string | null
 }
 
 const EMOJI_OPTIONS = ['👍', '❤️', '😊', '🎉', '👀', '🙏']
@@ -126,10 +125,9 @@ interface SignFormProps {
   logId: number
   onSign: (logId: number, signature: ReadSignature) => void
   onCancel: () => void
-  adminName?: string | null
 }
 
-function SignForm({ logId, onSign, onCancel, adminName }: SignFormProps) {
+function SignForm({ logId, onSign, onCancel }: SignFormProps) {
   const [name, setName] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -176,7 +174,6 @@ function SignForm({ logId, onSign, onCancel, adminName }: SignFormProps) {
         inputClassName="sign-input-inline"
         autoFocus
         onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-        adminName={adminName}
       />
       <button 
         className="sign-submit-inline" 
@@ -928,11 +925,10 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
               
               <div className="signatures-right">
                 {signingId === log.id ? (
-                  <SignForm
-                    logId={log.id}
+                  <SignForm 
+                    logId={log.id} 
                     onSign={onSign}
                     onCancel={() => setSigningId(null)}
-                    adminName={adminName}
                   />
                 ) : (
                   <button 

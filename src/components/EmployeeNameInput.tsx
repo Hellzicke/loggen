@@ -28,7 +28,6 @@ interface Props {
   inputClassName?: string
   autoFocus?: boolean
   onKeyDown?: (e: React.KeyboardEvent) => void
-  adminName?: string | null // Administratör som kan signera
 }
 
 export default function EmployeeNameInput({
@@ -39,47 +38,67 @@ export default function EmployeeNameInput({
   inputClassName,
   autoFocus,
   onKeyDown,
-  adminName,
 }: Props) {
   const [employees, setEmployees] = useState<EmployeesResponse | null>(null)
+  const [manual, setManual] = useState(false)
 
   useEffect(() => {
     fetchEmployees()
-      .then(data => setEmployees(data))
-      .catch(console.error)
+      .then(data => {
+        setEmployees(data)
+        if (data.onDuty.length === 0 && data.others.length === 0) setManual(true)
+      })
+      .catch(() => setManual(true))
   }, [])
 
   const hasList = employees && (employees.onDuty.length + employees.others.length) > 0
 
-  // Visa alltid dropdown — ingen manuell input. Admins läggs till separat.
+  if (!manual && hasList) {
+    return (
+      <>
+        <select
+          className={selectClassName}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          autoFocus={autoFocus}
+          onKeyDown={onKeyDown}
+        >
+          <option value="" disabled>Välj ditt namn</option>
+          {employees!.onDuty.length > 0 && (
+            <optgroup label="På plats idag">
+              {employees!.onDuty.map(emp => (
+                <option key={emp.employeeId} value={emp.name}>{emp.name}</option>
+              ))}
+            </optgroup>
+          )}
+          {employees!.others.length > 0 && (
+            <optgroup label="Övrig personal">
+              {employees!.others.map(emp => (
+                <option key={emp.employeeId} value={emp.name}>{emp.name}</option>
+              ))}
+            </optgroup>
+          )}
+        </select>
+        <button
+          type="button"
+          className="author-manual-link"
+          onClick={() => { setManual(true); onChange('') }}
+        >
+          Skriv namn manuellt
+        </button>
+      </>
+    )
+  }
+
   return (
-    <select
-      className={selectClassName}
+    <input
+      type="text"
+      className={inputClassName}
       value={value}
       onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
       autoFocus={autoFocus}
       onKeyDown={onKeyDown}
-    >
-      <option value="" disabled>Välj namn</option>
-      {employees?.onDuty.length ? (
-        <optgroup label="På plats idag">
-          {employees.onDuty.map(emp => (
-            <option key={emp.employeeId} value={emp.name}>{emp.name}</option>
-          ))}
-        </optgroup>
-      ) : null}
-      {employees?.others.length ? (
-        <optgroup label="Övrig personal">
-          {employees.others.map(emp => (
-            <option key={emp.employeeId} value={emp.name}>{emp.name}</option>
-          ))}
-        </optgroup>
-      ) : null}
-      {adminName && (
-        <optgroup label="Administratörer">
-          <option value={adminName}>{adminName}</option>
-        </optgroup>
-      )}
-    </select>
+    />
   )
 }
