@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.6] - 2026-08-14
+
+### Tillagt
+- Ansvariga (chefer) finns nu med i namnlistan för inlägg, signering, kommentarer och förslagslådan. De hämtas från Schemas separata ansvarigalista och listas under "Övrig personal"; namn som redan finns i personallistan filtreras bort.
+
 ## [1.4.5] - 2026-08-14
 
 ### Ändrat

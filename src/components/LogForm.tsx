@@ -28,16 +28,23 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
   const attachmentInputRef = useRef<HTMLInputElement>(null)
   const editorRef = useRef<RichTextEditorRef>(null)
   type EmployeeOption = { employeeId: string; name: string }
-  const [employees, setEmployees] = useState<{ onDuty: EmployeeOption[]; others: EmployeeOption[] } | null>(null)
+  type EmployeeGroups = { onDuty: EmployeeOption[]; others: EmployeeOption[]; managers: EmployeeOption[] }
+  const [employees, setEmployees] = useState<EmployeeGroups | null>(null)
   const [manualName, setManualName] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     fetch('/api/employees', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : Promise.reject())
-      .then((data: { onDuty: EmployeeOption[]; others: EmployeeOption[] }) => {
+      .then((raw) => {
+        // Normalisera: en äldre server kan sakna managers-fältet
+        const data: EmployeeGroups = {
+          onDuty: raw.onDuty ?? [],
+          others: raw.others ?? [],
+          managers: raw.managers ?? [],
+        }
         setEmployees(data)
-        if (data.onDuty.length === 0 && data.others.length === 0) setManualName(true)
+        if (data.onDuty.length + data.others.length + data.managers.length === 0) setManualName(true)
       })
       .catch(() => setManualName(true))
   }, [])
@@ -195,7 +202,7 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
           <div className="form-row">
             <div className="input-group">
               <label htmlFor="author">Namn</label>
-              {!manualName && employees && (employees.onDuty.length + employees.others.length) > 0 ? (
+              {!manualName && employees && (employees.onDuty.length + employees.others.length + employees.managers.length) > 0 ? (
                 <>
                   <select
                     id="author"
@@ -213,9 +220,9 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
                         ))}
                       </optgroup>
                     )}
-                    {employees.others.length > 0 && (
+                    {employees.others.length + employees.managers.length > 0 && (
                       <optgroup label="Övrig personal">
-                        {employees.others.map(emp => (
+                        {[...employees.others, ...employees.managers].map(emp => (
                           <option key={emp.employeeId} value={emp.name}>{emp.name}</option>
                         ))}
                       </optgroup>

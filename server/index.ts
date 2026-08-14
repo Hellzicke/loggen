@@ -1016,9 +1016,10 @@ app.get('/api/employees', authenticateSharedPassword, async (_req, res) => {
   const today = new Date().toISOString().slice(0, 10)
   const headers = { 'X-API-Key': SCHEMA_API_KEY }
   try {
-    const [allRes, onDutyRes] = await Promise.all([
+    const [allRes, onDutyRes, managersRes] = await Promise.all([
       fetch(`${base}/api/employees`, { headers }),
       fetch(`${base}/api/shifts/on-duty?date=${today}`, { headers }),
+      fetch(`${base}/api/managers`, { headers }),
     ])
     if (!allRes.ok) {
       return res.status(allRes.status).json({ error: 'Kunde inte hämta personallista' })
@@ -1029,7 +1030,17 @@ app.get('/api/employees', authenticateSharedPassword, async (_req, res) => {
     const onDutyIds = new Set(onDutyList.map(e => e.employeeId))
     const onDuty = all.filter(e => onDutyIds.has(e.employeeId))
     const others = all.filter(e => !onDutyIds.has(e.employeeId))
-    res.json({ onDuty, others })
+
+    // Ansvariga ligger utanför schemat i Schema-modulen (egen JSON-lista med id/name/title).
+    // Namn som redan finns i personallistan filtreras bort så de inte dyker upp två gånger.
+    const managersRaw: unknown = managersRes.ok ? await managersRes.json() : []
+    const employeeNames = new Set(all.map(e => e.name))
+    const managers = (Array.isArray(managersRaw) ? managersRaw : [])
+      .filter((m): m is { id: string; name: string } =>
+        !!m && typeof m.name === 'string' && m.name.trim().length > 0 && !employeeNames.has(m.name))
+      .map(m => ({ employeeId: m.id, name: m.name }))
+
+    res.json({ onDuty, others, managers })
   } catch (err) {
     console.error('employees proxy error:', err)
     res.status(502).json({ error: 'Schema-tjänsten ej nåbar' })

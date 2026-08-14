@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 type Employee = { employeeId: string; name: string }
-type EmployeesResponse = { onDuty: Employee[]; others: Employee[] }
+type EmployeesResponse = { onDuty: Employee[]; others: Employee[]; managers: Employee[] }
 
 let cached: EmployeesResponse | null = null
 let cachedAt = 0
@@ -14,7 +14,13 @@ const fetchEmployees = async (): Promise<EmployeesResponse> => {
     headers: { 'Authorization': `Bearer ${token}` }
   })
   if (!res.ok) throw new Error('fetch failed')
-  const data: EmployeesResponse = await res.json()
+  const raw = await res.json()
+  // Normalisera: en äldre server kan sakna managers-fältet
+  const data: EmployeesResponse = {
+    onDuty: raw.onDuty ?? [],
+    others: raw.others ?? [],
+    managers: raw.managers ?? [],
+  }
   cached = data
   cachedAt = Date.now()
   return data
@@ -46,12 +52,13 @@ export default function EmployeeNameInput({
     fetchEmployees()
       .then(data => {
         setEmployees(data)
-        if (data.onDuty.length === 0 && data.others.length === 0) setManual(true)
+        if (data.onDuty.length + data.others.length + data.managers.length === 0) setManual(true)
       })
       .catch(() => setManual(true))
   }, [])
 
-  const hasList = employees && (employees.onDuty.length + employees.others.length) > 0
+  const hasList =
+    employees && (employees.onDuty.length + employees.others.length + employees.managers.length) > 0
 
   if (!manual && hasList) {
     return (
@@ -71,9 +78,9 @@ export default function EmployeeNameInput({
               ))}
             </optgroup>
           )}
-          {employees!.others.length > 0 && (
+          {employees!.others.length + employees!.managers.length > 0 && (
             <optgroup label="Övrig personal">
-              {employees!.others.map(emp => (
+              {[...employees!.others, ...employees!.managers].map(emp => (
                 <option key={emp.employeeId} value={emp.name}>{emp.name}</option>
               ))}
             </optgroup>
