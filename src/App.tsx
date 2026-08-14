@@ -72,6 +72,8 @@ export default function App() {
   const [archivedLogs, setArchivedLogs] = useState<LogMessage[]>([])
   const [version, setVersion] = useState('')
   const [loading, setLoading] = useState(true)
+  const [employees, setEmployees] = useState<Array<{ employeeId: string; name: string; onDuty?: boolean }>>([])
+  const [onDutyEmployeeIds, setOnDutyEmployeeIds] = useState<Set<string>>(new Set())
   const [showChangelog, setShowChangelog] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [showArchive, setShowArchive] = useState(false)
@@ -154,7 +156,7 @@ export default function App() {
   }
 
   const fetchLogs = useCallback(async () => {
-    if (!isAuthenticated) return
+    if (!isAuthenticated && !adminToken) return
     
     try {
       const res = await authenticatedFetch('/api/logs')
@@ -171,10 +173,10 @@ export default function App() {
     } finally {
       setLoading(false)
     }
-  }, [isAuthenticated, authenticatedFetch])
+  }, [isAuthenticated, adminToken, authenticatedFetch])
 
   const fetchArchivedLogs = useCallback(async () => {
-    if (!isAuthenticated) return
+    if (!isAuthenticated && !adminToken) return
     
     try {
       const res = await authenticatedFetch('/api/logs/archived')
@@ -188,7 +190,7 @@ export default function App() {
   }, [isAuthenticated, authenticatedFetch])
 
   useEffect(() => {
-    if (!isAuthenticated) return
+    if (!isAuthenticated && !adminToken) return
 
     fetch('/api/version')
       .then(res => res.json())
@@ -196,7 +198,21 @@ export default function App() {
       .catch(console.error)
 
     fetchLogs()
-  }, [fetchLogs, isAuthenticated])
+
+    // Hämta personallistan från schema (on-duty + off-duty)
+    fetch('/api/employees', {
+      headers: { 'X-API-Key': process.env.REACT_APP_SCHEMA_API_KEY || '' }
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.onDuty && data?.others) {
+          const onDutyIds = new Set(data.onDuty.map((e: any) => e.employeeId))
+          setOnDutyEmployeeIds(onDutyIds)
+          setEmployees([...data.onDuty, ...data.others])
+        }
+      })
+      .catch(console.error)
+  }, [fetchLogs, isAuthenticated, adminToken])
 
   useEffect(() => {
     if (showArchive) {
