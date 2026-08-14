@@ -466,6 +466,7 @@ export default function App() {
               onDeleteComment={handleDeleteComment}
               onReaction={handleReaction}
               onDeleteLog={handleDeleteLog}
+              adminName={adminUsername}
             />
           </>
         )}
