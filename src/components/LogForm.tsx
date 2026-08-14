@@ -221,13 +221,6 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
                       </optgroup>
                     )}
                   </select>
-                  <button
-                    type="button"
-                    className="author-manual-link"
-                    onClick={() => { setManualName(true); setAuthor('') }}
-                  >
-                    Skriv namn manuellt
-                  </button>
                 </>
               ) : (
                 <input

@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.5] - 2026-08-14
+
+### Ändrat
+- Namn måste väljas ur personallistan. "Skriv namn manuellt"-länken är borttagen från både inlägg, signering, kommentarer och förslagslådan — fritextfältet visas bara som fallback om personallistan från Schema inte går att hämta.
+
 ## [1.4.4] - 2026-08-11
 
 ### Ändrat

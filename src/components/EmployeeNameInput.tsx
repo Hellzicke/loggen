@@ -79,13 +79,6 @@ export default function EmployeeNameInput({
             </optgroup>
           )}
         </select>
-        <button
-          type="button"
-          className="author-manual-link"
-          onClick={() => { setManual(true); onChange('') }}
-        >
-          Skriv namn manuellt
-        </button>
       </>
     )
   }

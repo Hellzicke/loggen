@@ -579,22 +579,6 @@ body:hover #root::before ~ .header {
   font-weight: 400;
 }
 
-.author-manual-link {
-  background: none;
-  border: none;
-  padding: 0.25rem 0 0;
-  color: var(--text-muted);
-  font-size: 0.8125rem;
-  font-family: inherit;
-  cursor: pointer;
-  text-decoration: underline;
-  align-self: flex-start;
-}
-
-.author-manual-link:hover {
-  color: var(--accent);
-}
-
 .input-group textarea {
   resize: none;
   min-height: 200px;
