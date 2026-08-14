@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 
 type Employee = { employeeId: string; name: string }
-type EmployeesResponse = { onDuty: Employee[]; others: Employee[] }
+type Manager = { id: string; name: string }
+type EmployeesResponse = { onDuty: Employee[]; others: Employee[]; managers: Manager[] }
 
 let cached: EmployeesResponse | null = null
 let cachedAt = 0
@@ -28,7 +29,6 @@ interface Props {
   inputClassName?: string
   autoFocus?: boolean
   onKeyDown?: (e: React.KeyboardEvent) => void
-  adminName?: string | null // Administratör som kan signera
 }
 
 export default function EmployeeNameInput({
@@ -36,10 +36,8 @@ export default function EmployeeNameInput({
   onChange,
   placeholder = 'Ditt namn',
   selectClassName,
-  inputClassName,
   autoFocus,
   onKeyDown,
-  adminName,
 }: Props) {
   const [employees, setEmployees] = useState<EmployeesResponse | null>(null)
 
@@ -49,9 +47,6 @@ export default function EmployeeNameInput({
       .catch(console.error)
   }, [])
 
-  const hasList = employees && (employees.onDuty.length + employees.others.length) > 0
-
-  // Visa alltid dropdown — ingen manuell input. Admins läggs till separat.
   return (
     <select
       className={selectClassName}
@@ -75,11 +70,13 @@ export default function EmployeeNameInput({
           ))}
         </optgroup>
       ) : null}
-      {adminName && (
-        <optgroup label="Administratörer">
-          <option value={adminName}>{adminName}</option>
+      {employees?.managers.length ? (
+        <optgroup label="Ansvariga">
+          {employees.managers.map(mgr => (
+            <option key={mgr.id} value={mgr.name}>{mgr.name}</option>
+          ))}
         </optgroup>
-      )}
+      ) : null}
     </select>
   )
 }
