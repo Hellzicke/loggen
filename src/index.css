@@ -1805,6 +1805,43 @@ body:hover #root::before ~ .header {
   white-space: pre-wrap;
 }
 
+.log-message--collapsed {
+  overflow: hidden;
+  position: relative;
+}
+
+.log-message--collapsed::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4rem;
+  background: linear-gradient(to bottom, transparent, var(--bg-card));
+  pointer-events: none;
+}
+
+.log-item--pinned .log-message--collapsed::after {
+  background: linear-gradient(to bottom, transparent, var(--accent-light));
+}
+
+.log-message-toggle {
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 0.5rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.log-message-toggle:hover {
+  opacity: 0.8;
+}
+
 .log-message ul {
   margin-left: 2rem;
   padding-left: 0;

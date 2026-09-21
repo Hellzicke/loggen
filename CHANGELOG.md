@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.7] - 2026-09-21
+
+### Tillagt
+- Långa inlägg fälls ihop automatiskt. Meddelanden högre än ca 320 px klipps med en toning och får en "Visa mer"-knapp; "Visa mindre" fäller ihop igen.
+
 ## [1.4.6] - 2026-08-14
 
 ### Tillagt

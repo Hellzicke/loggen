@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, memo } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, memo } from 'react'
 import type { LogAttachment, LogMessage, ReadSignature, Comment, Reaction } from '../App'
 import ImageModal from './ImageModal'
 import EmployeeNameInput from './EmployeeNameInput'
@@ -661,6 +661,38 @@ const CommentItem = memo(function CommentItem({ comment, logId, onComment, onDel
   )
 })
 
+const COLLAPSE_HEIGHT = 320
+
+function LogMessage({ html }: { html: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [collapsible, setCollapsible] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    setCollapsible(el.scrollHeight > COLLAPSE_HEIGHT + 40)
+  }, [html])
+
+  const collapsed = collapsible && !expanded
+
+  return (
+    <>
+      <div
+        ref={ref}
+        className={`log-message ${collapsed ? 'log-message--collapsed' : ''}`}
+        style={collapsed ? { maxHeight: COLLAPSE_HEIGHT } : undefined}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+      {collapsible && (
+        <button type="button" className="log-message-toggle" onClick={() => setExpanded(e => !e)}>
+          {expanded ? 'Visa mindre' : 'Visa mer'}
+        </button>
+      )}
+    </>
+  )
+}
+
 export default function LogList({ logs, loading, onSign, onPin, onComment, onEditLog, onDeleteComment, onReaction, onDeleteLog }: LogListProps) {
   const [signingId, setSigningId] = useState<number | null>(null)
   const [commentingId, setCommentingId] = useState<number | null>(null)
@@ -772,7 +804,7 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                     {log.pinned && <span className="pinned-badge">Nålad</span>}
                   </div>
                 )}
-                <div className="log-message" dangerouslySetInnerHTML={{ __html: log.message }} />
+                <LogMessage html={log.message} />
                 {log.imageUrl && (
                   <div className="log-image" onClick={() => setFullscreenImage(log.imageUrl!)}>
                     <img src={log.imageUrl} alt="Inläggsbild" />
