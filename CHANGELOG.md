@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.10] - 2026-09-24
+
+### Ändrat
+- Hopfällda inlägg visar ett kort textutdrag under rubriken. Pilen pekar åt höger när inlägget är ihopfällt och nedåt när det är utfällt.
+
 ## [1.4.9] - 2026-09-24
 
 ### Tillagt

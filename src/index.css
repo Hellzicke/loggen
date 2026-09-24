@@ -1835,7 +1835,14 @@ body:hover #root::before ~ .header {
 }
 
 .log-fold-btn--open {
-  transform: rotate(180deg);
+  transform: rotate(90deg);
+}
+
+.log-excerpt {
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  cursor: pointer;
 }
 
 .log-message ul {
