@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.11] - 2026-09-24
+
+### Ändrat
+- Tydligare pil på hopfällbara inlägg: större, tjockare, i accentfärg med ram.
+
 ## [1.4.10] - 2026-09-24
 
 ### Ändrat
