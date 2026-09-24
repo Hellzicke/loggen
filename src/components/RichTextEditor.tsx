@@ -64,6 +64,12 @@ const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
             e.preventDefault()
             execFormat('underline')
             break
+          case 's':
+            if (e.shiftKey) {
+              e.preventDefault()
+              execFormat('strikeThrough')
+            }
+            break
         }
       }
     }, [execFormat])
@@ -94,6 +100,14 @@ const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
             title="Understruken (Ctrl+U)"
           >
             U
+          </button>
+          <button
+            type="button"
+            className="format-btn format-btn--strike"
+            onClick={() => execFormat('strikeThrough')}
+            title="Genomstruken (Ctrl+Shift+S)"
+          >
+            S
           </button>
           <button 
             type="button" 

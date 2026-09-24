@@ -628,6 +628,10 @@ body:hover #root::before ~ .header {
   text-decoration: underline;
 }
 
+.format-btn--strike {
+  text-decoration: line-through;
+}
+
 .input-group textarea.has-toolbar {
   border-radius: 0 0 8px 8px;
 }

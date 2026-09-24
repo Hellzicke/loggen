@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.9] - 2026-09-24
+
+### Tillagt
+- Genomstruken text i texteditorn, via knappen S i verktygsraden eller Ctrl+Shift+S.
+
 ## [1.4.8] - 2026-09-24
 
 ### Ändrat
