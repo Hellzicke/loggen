@@ -368,6 +368,7 @@ function EditForm({ initialTitle, initialMessage, initialImageUrl, initialAttach
           <button type="button" className="format-btn format-btn--bold" onClick={() => execFormat('bold')}>B</button>
           <button type="button" className="format-btn format-btn--italic" onClick={() => execFormat('italic')}>I</button>
           <button type="button" className="format-btn format-btn--underline" onClick={() => execFormat('underline')}>U</button>
+          <button type="button" className="format-btn format-btn--strike" onClick={() => execFormat('strikeThrough')} title="Genomstruken">S</button>
         </div>
         <div
           ref={editorRef}

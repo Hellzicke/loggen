@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.12] - 2026-09-24
+
+### Tillagt
+- Genomstruken text finns nu även i verktygsraden när ett inlägg redigeras.
+
 ## [1.4.11] - 2026-09-24
 
 ### Ändrat
