@@ -663,33 +663,75 @@ const CommentItem = memo(function CommentItem({ comment, logId, onComment, onDel
 
 const COLLAPSE_HEIGHT = 320
 
-function LogMessage({ html }: { html: string }) {
+function LogContent({ log, onImageClick }: { log: LogMessage; onImageClick: (url: string) => void }) {
   const ref = useRef<HTMLDivElement>(null)
   const [collapsible, setCollapsible] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [measured, setMeasured] = useState(false)
 
   useLayoutEffect(() => {
+    setMeasured(false)
+  }, [log.message, log.imageUrl, log.attachments?.length])
+
+  useLayoutEffect(() => {
+    if (measured) return
     const el = ref.current
     if (!el) return
     setCollapsible(el.scrollHeight > COLLAPSE_HEIGHT + 40)
-  }, [html])
+    setMeasured(true)
+  }, [measured])
 
-  const collapsed = collapsible && !expanded
+  const showBody = !measured || !collapsible || expanded
 
   return (
-    <>
-      <div
-        ref={ref}
-        className={`log-message ${collapsed ? 'log-message--collapsed' : ''}`}
-        style={collapsed ? { maxHeight: COLLAPSE_HEIGHT } : undefined}
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-      {collapsible && (
-        <button type="button" className="log-message-toggle" onClick={() => setExpanded(e => !e)}>
-          {expanded ? 'Visa mindre' : 'Visa mer'}
-        </button>
+    <div className="log-content">
+      {(log.title || collapsible) && (
+        <div
+          className={`log-title-row ${collapsible ? 'log-title-row--toggle' : ''}`}
+          onClick={collapsible ? () => setExpanded(e => !e) : undefined}
+        >
+          <h3 className="log-title">{log.title || 'Inlägg'}</h3>
+          {log.pinned && <span className="pinned-badge">Nålad</span>}
+          {collapsible && (
+            <button
+              type="button"
+              className={`log-fold-btn ${expanded ? 'log-fold-btn--open' : ''}`}
+              title={expanded ? 'Fäll ihop' : 'Fäll ut'}
+              aria-expanded={expanded}
+              onClick={(e) => { e.stopPropagation(); setExpanded(v => !v) }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+          )}
+        </div>
       )}
-    </>
+      {showBody && (
+        <div ref={ref}>
+          <div className="log-message" dangerouslySetInnerHTML={{ __html: log.message }} />
+          {log.imageUrl && (
+            <div className="log-image" onClick={() => onImageClick(log.imageUrl!)}>
+              <img src={log.imageUrl} alt="Inläggsbild" />
+            </div>
+          )}
+          {log.attachments && log.attachments.length > 0 && (
+            <div className="log-attachments">
+              <div className="log-attachments-title">Bifogade dokument</div>
+              <ul className="log-attachments-list">
+                {log.attachments.map((a) => (
+                  <li key={a.id} className="log-attachment-item">
+                    <a href={a.url} target="_blank" rel="noreferrer" className="log-attachment-link">
+                      {a.originalName}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -797,34 +839,7 @@ export default function LogList({ logs, loading, onSign, onPin, onComment, onEdi
                 onDelete={onDeleteLog}
               />
             ) : (
-              <div className="log-content">
-                {log.title && (
-                  <div className="log-title-row">
-                    <h3 className="log-title">{log.title}</h3>
-                    {log.pinned && <span className="pinned-badge">Nålad</span>}
-                  </div>
-                )}
-                <LogMessage html={log.message} />
-                {log.imageUrl && (
-                  <div className="log-image" onClick={() => setFullscreenImage(log.imageUrl!)}>
-                    <img src={log.imageUrl} alt="Inläggsbild" />
-                  </div>
-                )}
-                {log.attachments && log.attachments.length > 0 && (
-                  <div className="log-attachments">
-                    <div className="log-attachments-title">Bifogade dokument</div>
-                    <ul className="log-attachments-list">
-                      {log.attachments.map((a) => (
-                        <li key={a.id} className="log-attachment-item">
-                          <a href={a.url} target="_blank" rel="noreferrer" className="log-attachment-link">
-                            {a.originalName}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
+              <LogContent log={log} onImageClick={setFullscreenImage} />
             )}
             
             {/* Reactions */}

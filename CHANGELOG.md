@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.8] - 2026-09-24
+
+### Ändrat
+- Långa inlägg fälls nu ihop helt till rubrikraden. En pil i rubrikraden (eller klick på raden) fäller ut och ihop hela innehållet inklusive bild och bilagor. Toningen och "Visa mer"-knappen är borttagna.
+
 ## [1.4.7] - 2026-09-21
 
 ### Tillagt
