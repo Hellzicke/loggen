@@ -9,7 +9,7 @@ interface UnpinModalProps {
 
 export default function UnpinModal({ log, onArchive, onKeep, onCancel }: UnpinModalProps) {
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-overlay" onMouseDown={e => { if (e.target === e.currentTarget) onCancel() }}>
       <div className="unpin-modal" onClick={e => e.stopPropagation()}>
         <h3>Avnåla gammalt inlägg</h3>
         <p>

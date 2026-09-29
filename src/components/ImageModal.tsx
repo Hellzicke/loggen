@@ -15,7 +15,7 @@ export default function ImageModal({ imageUrl, onClose }: ImageModalProps) {
   }, [onClose])
 
   return (
-    <div className="modal-overlay image-modal-overlay" onClick={onClose}>
+    <div className="modal-overlay image-modal-overlay" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="image-modal" onClick={e => e.stopPropagation()}>
         <button className="image-modal-close" onClick={onClose}>
           &times;

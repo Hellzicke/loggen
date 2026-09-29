@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.13] - 2026-09-29
+
+### Fixat
+- Dialogrutor stängs inte längre när man markerar text och släpper musknappen utanför rutan.
+
 ## [1.4.12] - 2026-09-24
 
 ### Tillagt

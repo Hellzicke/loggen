@@ -16,7 +16,7 @@ export default function ConfirmModal({
   onCancel 
 }: ConfirmModalProps) {
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-overlay" onMouseDown={e => { if (e.target === e.currentTarget) onCancel() }}>
       <div className="confirm-modal" onClick={e => e.stopPropagation()}>
         <h3>{title}</h3>
         <p>{message}</p>

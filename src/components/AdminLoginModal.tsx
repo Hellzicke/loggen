@@ -40,7 +40,7 @@ export default function AdminLoginModal({ onSuccess, onClose }: AdminLoginModalP
   }
 
   return (
-    <div className="meeting-form-overlay" onClick={onClose}>
+    <div className="meeting-form-overlay" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="meeting-form-modal" onClick={e => e.stopPropagation()}>
         <h3>Logga in som admin</h3>
         <form onSubmit={handleSubmit}>
