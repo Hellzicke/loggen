@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.17] - 2026-10-22
+
+### Ändrat
+- Aktuellt från Micke visas nu för alla. Bara admin kan lägga till, ändra och ta bort.
+
 ## [1.4.16] - 2026-10-22
 
 ### Ändrat

@@ -447,10 +447,8 @@ export default function App() {
       <main className="main">
         {activeView === 'logg' && (
           <>
-            {/* Nyhetsbrevet visas bara för admin under utvärderingen */}
-            {isAdmin && (
-              <Newsletter authenticatedFetch={authenticatedFetch} adminFetch={adminFetch} isAdmin={isAdmin} />
-            )}
+            {/* Aktuellt från Micke – alla läser, bara admin redigerar */}
+            <Newsletter authenticatedFetch={authenticatedFetch} adminFetch={adminFetch} isAdmin={isAdmin} />
             <div className="create-trigger">
               <div className="create-avatar">?</div>
               <button className="create-btn" onClick={() => setShowForm(true)}>
