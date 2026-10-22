@@ -2,6 +2,15 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.16] - 2026-10-22
+
+### Ändrat
+- Panelen heter nu "Aktuellt från Micke".
+
+### Tillagt
+- Kommande händelser kan få start- och sluttid (24-timmarsformat).
+- Kommande händelser synkas automatiskt till händelserna i personalschemat och ändras bara i Loggen.
+
 ## [1.4.15] - 2026-10-22
 
 ### Ändrat

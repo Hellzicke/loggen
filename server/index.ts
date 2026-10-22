@@ -1761,7 +1761,7 @@ function parseNewsletterItem(body: any): { data?: any; error?: string } {
   const title = String(body.title || '').trim()
   if (!NEWSLETTER_SECTIONS.includes(section)) return { error: 'Ogiltig sektion' }
   if (!title) return { error: 'Rubrik krävs' }
-  const data: any = { section, title, body: String(body.body || ''), status: null, eventDate: null }
+  const data: any = { section, title, body: String(body.body || ''), status: null, eventDate: null, startTime: null, endTime: null }
   if (section === 'status') {
     if (!NEWSLETTER_STATUSES.includes(body.status)) return { error: 'Välj status' }
     data.status = body.status
@@ -1770,9 +1770,59 @@ function parseNewsletterItem(body: any): { data?: any; error?: string } {
     const date = new Date(body.eventDate)
     if (!body.eventDate || isNaN(date.getTime())) return { error: 'Välj datum' }
     data.eventDate = date
+    const time = (v: any) => (/^\d{2}:\d{2}$/.test(String(v || '')) ? String(v) : null)
+    data.startTime = time(body.startTime)
+    data.endTime = time(body.endTime)
+    if (data.startTime && data.endTime && data.endTime <= data.startTime) return { error: 'Sluttid måste vara efter starttid' }
   }
   return { data }
 }
+
+// Synk av kommande händelser till schemamodulen (personalschemat).
+// Använder samma SCHEMA_API_URL/SCHEMA_API_KEY som hämtningen av anställda; saknas de hoppas synken över.
+const schemaEventId = (id: number) => `loggen-${id}`
+
+function localDateKey(date: Date) {
+  return date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })
+}
+
+async function syncEventToSchema(item: { id: number; section: string; title: string; body: string; eventDate: Date | null; startTime: string | null; endTime: string | null } | null, deletedId?: number) {
+  if (!SCHEMA_API_URL || !SCHEMA_API_KEY) return
+  const base = SCHEMA_API_URL.replace(/\/$/, '')
+  const headers = { 'Content-Type': 'application/json', 'X-API-Key': SCHEMA_API_KEY }
+  try {
+    if (!item || item.section !== 'event' || !item.eventDate) {
+      const id = item?.id ?? deletedId
+      if (id) await fetch(`${base}/api/events/${schemaEventId(id)}`, { method: 'DELETE', headers })
+      return
+    }
+    const res = await fetch(`${base}/api/events/${schemaEventId(item.id)}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({
+        date: localDateKey(item.eventDate),
+        title: item.title,
+        description: item.body || null,
+        startTime: item.startTime,
+        endTime: item.endTime,
+      }),
+    })
+    if (!res.ok) console.error('Schema sync failed:', res.status, await res.text())
+  } catch (err) {
+    console.error('Schema sync error:', err)
+  }
+}
+
+// Vid uppstart: se till att alla kommande händelser finns i schemat
+async function syncAllEventsToSchema() {
+  if (!SCHEMA_API_URL || !SCHEMA_API_KEY) return
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const events = await prisma.newsletterItem.findMany({ where: { section: 'event', eventDate: { gte: today } } })
+  for (const event of events) await syncEventToSchema(event)
+  if (events.length) console.log(`Synkade ${events.length} händelser till schemat`)
+}
+syncAllEventsToSchema().catch(err => console.error('Initial schema sync error:', err))
 
 app.get('/api/newsletter', authenticateSharedPassword, async (_req, res) => {
   try {
@@ -1789,6 +1839,7 @@ app.post('/api/admin/newsletter', authenticateToken, async (req, res) => {
   if (error) return res.status(400).json({ error })
   try {
     const item = await prisma.newsletterItem.create({ data })
+    syncEventToSchema(item)
     res.status(201).json(item)
   } catch (err) {
     console.error('Error creating newsletter item:', err)
@@ -1801,6 +1852,7 @@ app.put('/api/admin/newsletter/:id', authenticateToken, async (req, res) => {
   if (error) return res.status(400).json({ error })
   try {
     const item = await prisma.newsletterItem.update({ where: { id: parseInt(req.params.id) }, data })
+    syncEventToSchema(item)
     res.json(item)
   } catch (err) {
     console.error('Error updating newsletter item:', err)
@@ -1810,7 +1862,9 @@ app.put('/api/admin/newsletter/:id', authenticateToken, async (req, res) => {
 
 app.delete('/api/admin/newsletter/:id', authenticateToken, async (req, res) => {
   try {
-    await prisma.newsletterItem.delete({ where: { id: parseInt(req.params.id) } })
+    const id = parseInt(req.params.id)
+    await prisma.newsletterItem.delete({ where: { id } })
+    syncEventToSchema(null, id)
     res.json({ success: true })
   } catch (err) {
     console.error('Error deleting newsletter item:', err)

@@ -4498,3 +4498,7 @@ select.suggestion-form-input {
 .nb-textarea { resize: vertical; line-height: 1.5; }
 .nb-error { font-size: 0.8125rem; color: #b91c1c; background: #fef2f2; border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; }
 .nb-form-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem; }
+.nb-time { display: flex; align-items: center; gap: 0.25rem; }
+.nb-time .nb-input { width: auto; flex: 1; }
+.nb-time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.nbp-time { display: block; font-size: 0.6875rem; font-weight: 500; color: var(--text-muted); }

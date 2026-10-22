@@ -13,6 +13,8 @@ export interface NewsletterItem {
   body: string
   status: Status | null
   eventDate: string | null
+  startTime: string | null
+  endTime: string | null
   sortOrder: number
   createdAt: string
   updatedAt: string
@@ -42,6 +44,30 @@ function startOfToday() {
   return d.getTime()
 }
 
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
+const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'))
+
+// Tidsval i 24-timmarsformat oberoende av webbläsarens språk
+function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [h = '', m = ''] = value ? value.split(':') : []
+  return (
+    <div className="nb-time">
+      <select className="nb-input" value={h} onChange={e => onChange(e.target.value ? `${e.target.value}:${m || '00'}` : '')}>
+        <option value="">--</option>
+        {HOURS.map(x => <option key={x} value={x}>{x}</option>)}
+      </select>
+      <span>:</span>
+      <select className="nb-input" value={m} disabled={!h} onChange={e => onChange(`${h}:${e.target.value}`)}>
+        {!h && <option value="">--</option>}
+        {MINUTES.map(x => <option key={x} value={x}>{x}</option>)}
+      </select>
+    </div>
+  )
+}
+
+const timeRange = (item: { startTime: string | null; endTime: string | null }) =>
+  item.startTime ? (item.endTime ? `${item.startTime}–${item.endTime}` : item.startTime) : ''
+
 function readSeen(): Record<number, number> {
   try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '{}') } catch { return {} }
 }
@@ -53,6 +79,8 @@ interface EditState {
   body: string
   status: Status
   eventDate: string
+  startTime: string
+  endTime: string
 }
 
 export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: NewsletterProps) {
@@ -106,7 +134,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
 
   const openNew = (section: Section) => {
     setError(null)
-    setEdit({ id: null, section, title: '', body: '', status: 'pågår', eventDate: '' })
+    setEdit({ id: null, section, title: '', body: '', status: 'pågår', eventDate: '', startTime: '', endTime: '' })
   }
 
   const openEdit = (item: NewsletterItem) => {
@@ -119,6 +147,8 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
       body: item.body,
       status: (item.status as Status) || 'pågår',
       eventDate: item.eventDate ? item.eventDate.slice(0, 10) : '',
+      startTime: item.startTime || '',
+      endTime: item.endTime || '',
     })
   }
 
@@ -136,6 +166,8 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
           body,
           status: edit.status,
           eventDate: edit.eventDate ? `${edit.eventDate}T12:00:00` : null,
+          startTime: edit.startTime || null,
+          endTime: edit.endTime || null,
         }),
       })
       const data = await res.json()
@@ -183,14 +215,14 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
   return (
     <aside className={`nbp ${open ? 'nbp--open' : ''}`}>
       <button className="nbp-head" onClick={() => setOpen(!open)}>
-        <span className="nbp-title">Nyhetsbrev</span>
+        <span className="nbp-title">Aktuellt från Micke</span>
         {unreadCount > 0 && <span className="nbp-count">{unreadCount} nya</span>}
         {lastUpdated > 0 && <span className="nbp-updated">uppd. {fmtShort(new Date(lastUpdated).toISOString())}</span>}
         <svg className="nbp-chevron" width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
 
       <div className="nbp-body">
-        {items.length === 0 && !isAdmin && <div className="nbp-empty">Inget i nyhetsbrevet ännu</div>}
+        {items.length === 0 && !isAdmin && <div className="nbp-empty">Inget aktuellt just nu</div>}
         {group('status', statusItems, item => (
           <>
             <span className={`nbp-dot nbp-dot--${item.status}`} title={STATUS_LABELS[item.status as Status]} />
@@ -199,7 +231,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
         ))}
         {group('event', eventItems, item => (
           <>
-            <span className="nbp-date">{fmtShort(item.eventDate!)}</span>
+            <span className="nbp-date">{fmtShort(item.eventDate!)}{item.startTime && <span className="nbp-time">{item.startTime}</span>}</span>
             <span className="nbp-row-title">{item.title}</span>
           </>
         ))}
@@ -218,7 +250,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
               <div className="nb-view-meta">
                 <span className="nb-view-section">{SECTION_TITLES[viewing.section]}</span>
                 {viewing.status && <span className={`nb-status nb-status--${viewing.status}`}>{STATUS_LABELS[viewing.status]}</span>}
-                {viewing.eventDate && <span className="nb-view-date">{fmtLong(viewing.eventDate)}</span>}
+                {viewing.eventDate && <span className="nb-view-date">{fmtLong(viewing.eventDate)}{viewing.startTime ? ` kl. ${timeRange(viewing)}` : ''}</span>}
               </div>
               {viewing.body && (viewing.section === 'info'
                 ? <div className="log-message" dangerouslySetInnerHTML={{ __html: viewing.body }} />
@@ -264,6 +296,16 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
                 <>
                   <label className="nb-label">Datum</label>
                   <input className="nb-input" type="date" value={edit.eventDate} onChange={e => setEdit({ ...edit, eventDate: e.target.value })} />
+                  <div className="nb-time-row">
+                    <div>
+                      <label className="nb-label">Starttid (frivillig)</label>
+                      <TimeSelect value={edit.startTime} onChange={v => setEdit({ ...edit, startTime: v })} />
+                    </div>
+                    <div>
+                      <label className="nb-label">Sluttid (frivillig)</label>
+                      <TimeSelect value={edit.endTime} onChange={v => setEdit({ ...edit, endTime: v })} />
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -284,7 +326,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
       {deleteItem && (
         <ConfirmModal
           title="Ta bort"
-          message={`Ta bort "${deleteItem.title}" från nyhetsbrevet?`}
+          message={`Ta bort "${deleteItem.title}" från Aktuellt?`}
           confirmText="Ta bort"
           cancelText="Avbryt"
           onConfirm={confirmDelete}
