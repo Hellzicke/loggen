@@ -2,6 +2,16 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.20] - 2026-10-22
+
+### Ändrat
+- Panelen heter "Aktuellt i verksamheten". Datum och tid står på en rad och status visas som text.
+- Ny design på rutan som öppnas när man klickar på en punkt.
+
+### Tillagt
+- Kommande händelser kan sträcka sig över flera dagar (från och med – till och med) och läggs in i schemat som en händelse per dag.
+- Formaterad text (listor, fetstil) för information om händelser.
+
 ## [1.4.19] - 2026-10-22
 
 ### Fixat

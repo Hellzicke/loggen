@@ -13,6 +13,7 @@ export interface NewsletterItem {
   body: string
   status: Status | null
   eventDate: string | null
+  eventEndDate: string | null
   startTime: string | null
   endTime: string | null
   sortOrder: number
@@ -37,6 +38,16 @@ const SECTION_TITLES: Record<Section, string> = { status: 'Status', event: 'Komm
 
 const fmtShort = (value: string) => new Date(value).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')
 const fmtLong = (value: string) => new Date(value).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
+
+// Datumintervall i kort form: "26–30 okt", "30 okt–2 nov", "25 nov"
+function fmtRange(start: string, end: string | null) {
+  if (!end || end.slice(0, 10) === start.slice(0, 10)) return fmtShort(start)
+  const s = new Date(start), e = new Date(end)
+  if (s.getMonth() === e.getMonth()) return `${s.getDate()}–${fmtShort(end)}`
+  return `${fmtShort(start)}–${fmtShort(end)}`
+}
+
+const looksLikeHtml = (text: string) => /<[a-z][sS]*>/i.test(text)
 
 function startOfToday() {
   const d = new Date()
@@ -79,6 +90,7 @@ interface EditState {
   body: string
   status: Status
   eventDate: string
+  eventEndDate: string
   startTime: string
   endTime: string
 }
@@ -123,7 +135,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     .sort((a, b) => STATUS_ORDER.indexOf(a.status as Status) - STATUS_ORDER.indexOf(b.status as Status)
       || new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
   const eventItems = items
-    .filter(i => i.section === 'event' && i.eventDate && new Date(i.eventDate).getTime() >= startOfToday())
+    .filter(i => i.section === 'event' && i.eventDate && new Date(i.eventEndDate || i.eventDate).getTime() >= startOfToday())
     .sort((a, b) => new Date(a.eventDate!).getTime() - new Date(b.eventDate!).getTime())
   const infoItems = items
     .filter(i => i.section === 'info')
@@ -134,7 +146,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
 
   const openNew = (section: Section) => {
     setError(null)
-    setEdit({ id: null, section, title: '', body: '', status: 'pågår', eventDate: '', startTime: '', endTime: '' })
+    setEdit({ id: null, section, title: '', body: '', status: 'pågår', eventDate: '', eventEndDate: '', startTime: '', endTime: '' })
   }
 
   const openEdit = (item: NewsletterItem) => {
@@ -147,6 +159,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
       body: item.body,
       status: (item.status as Status) || 'pågår',
       eventDate: item.eventDate ? item.eventDate.slice(0, 10) : '',
+      eventEndDate: item.eventEndDate ? item.eventEndDate.slice(0, 10) : '',
       startTime: item.startTime || '',
       endTime: item.endTime || '',
     })
@@ -154,7 +167,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
 
   const save = async () => {
     if (!edit) return
-    const body = edit.section === 'info' ? (editorRef.current?.getValue() || '') : edit.body
+    const body = edit.section !== 'status' ? (editorRef.current?.getValue() || '') : edit.body
     setSaving(true)
     setError(null)
     try {
@@ -166,6 +179,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
           body,
           status: edit.status,
           eventDate: edit.eventDate ? `${edit.eventDate}T12:00:00` : null,
+          eventEndDate: edit.eventEndDate ? `${edit.eventEndDate}T12:00:00` : null,
           startTime: edit.startTime || null,
           endTime: edit.endTime || null,
         }),
@@ -216,7 +230,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     <aside className={`nbp ${open ? 'nbp--open' : ''}`}>
       <button className="nbp-head" onClick={() => setOpen(!open)}>
         <span className="nbp-head-text">
-          <span className="nbp-title">Aktuellt från Micke</span>
+          <span className="nbp-title">Aktuellt i verksamheten</span>
           {(lastUpdated > 0 || unreadCount > 0) && (
             <span className="nbp-meta">
               {lastUpdated > 0 && <>Uppdaterad {fmtShort(new Date(lastUpdated).toISOString())}</>}
@@ -232,13 +246,13 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
         {items.length === 0 && !isAdmin && <div className="nbp-empty">Inget aktuellt just nu</div>}
         {group('status', statusItems, item => (
           <>
-            <span className={`nbp-dot nbp-dot--${item.status}`} title={STATUS_LABELS[item.status as Status]} />
             <span className="nbp-row-title">{item.title}</span>
+            <span className={`nbp-status nbp-status--${item.status}`}>{STATUS_LABELS[item.status as Status]}</span>
           </>
         ))}
         {group('event', eventItems, item => (
           <>
-            <span className="nbp-date">{fmtShort(item.eventDate!)}{item.startTime && <span className="nbp-time">{item.startTime}</span>}</span>
+            <span className="nbp-date">{fmtRange(item.eventDate!, item.eventEndDate)}{item.startTime && <span className="nbp-time"> {item.startTime}</span>}</span>
             <span className="nbp-row-title">{item.title}</span>
           </>
         ))}
@@ -247,26 +261,43 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
 
       {createPortal(<>
       {viewing && (
-        <div className="modal-overlay" onMouseDown={e => { if (e.target === e.currentTarget) setViewing(null) }}>
-          <div className="modal nb-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{viewing.title}</h2>
-              <button className="modal-close" onClick={() => setViewing(null)}>×</button>
-            </div>
-            <div className="nb-view">
-              <div className="nb-view-meta">
-                <span className="nb-view-section">{SECTION_TITLES[viewing.section]}</span>
-                {viewing.status && <span className={`nb-status nb-status--${viewing.status}`}>{STATUS_LABELS[viewing.status]}</span>}
-                {viewing.eventDate && <span className="nb-view-date">{fmtLong(viewing.eventDate)}{viewing.startTime ? ` kl. ${timeRange(viewing)}` : ''}</span>}
+        <div className="nbm-overlay" onMouseDown={e => { if (e.target === e.currentTarget) setViewing(null) }}>
+          <div className={`nbm nbm--${viewing.section}${viewing.status ? ` nbm--${viewing.status}` : ''}`} onClick={e => e.stopPropagation()}>
+            <div className="nbm-hero">
+              <button className="nbm-close" onClick={() => setViewing(null)} aria-label="Stäng">×</button>
+              <div className="nbm-kicker">{SECTION_TITLES[viewing.section]}</div>
+              <h2 className="nbm-title">{viewing.title}</h2>
+              <div className="nbm-chips">
+                {viewing.status && <span className={`nbm-chip nbm-chip--status nbm-chip--${viewing.status}`}>{STATUS_LABELS[viewing.status]}</span>}
+                {viewing.eventDate && (
+                  <span className="nbm-chip">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                    {viewing.eventEndDate && viewing.eventEndDate.slice(0, 10) !== viewing.eventDate.slice(0, 10)
+                      ? `${fmtLong(viewing.eventDate)} – ${fmtLong(viewing.eventEndDate)}`
+                      : fmtLong(viewing.eventDate)}
+                  </span>
+                )}
+                {viewing.startTime && (
+                  <span className="nbm-chip">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                    {timeRange(viewing)}
+                  </span>
+                )}
               </div>
-              {viewing.body && (viewing.section === 'info'
-                ? <div className="log-message" dangerouslySetInnerHTML={{ __html: viewing.body }} />
-                : <div className="nb-view-text">{viewing.body}</div>)}
-              <div className="nb-view-updated">Uppdaterad {fmtLong(viewing.updatedAt)}</div>
+            </div>
+            {viewing.body && (
+              <div className="nbm-body">
+                {looksLikeHtml(viewing.body)
+                  ? <div className="log-message" dangerouslySetInnerHTML={{ __html: viewing.body }} />
+                  : <div className="nbm-text">{viewing.body}</div>}
+              </div>
+            )}
+            <div className="nbm-footer">
+              <span>Uppdaterad {fmtLong(viewing.updatedAt)}</span>
               {isAdmin && (
-                <div className="nb-form-actions">
-                  <button className="confirm-btn confirm-btn--secondary" onClick={() => setDeleteItem(viewing)}>Ta bort</button>
-                  <button className="confirm-btn confirm-btn--primary" onClick={() => openEdit(viewing)}>Redigera</button>
+                <div className="nbm-actions">
+                  <button className="nbm-btn nbm-btn--ghost" onClick={() => setDeleteItem(viewing)}>Ta bort</button>
+                  <button className="nbm-btn nbm-btn--primary" onClick={() => openEdit(viewing)}>Redigera</button>
                 </div>
               )}
             </div>
@@ -301,23 +332,31 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
 
               {edit.section === 'event' && (
                 <>
-                  <label className="nb-label">Datum</label>
-                  <input className="nb-input" type="date" value={edit.eventDate} onChange={e => setEdit({ ...edit, eventDate: e.target.value })} />
                   <div className="nb-time-row">
                     <div>
-                      <label className="nb-label">Starttid (frivillig)</label>
+                      <label className="nb-label">Från och med</label>
+                      <input className="nb-input" type="date" value={edit.eventDate} onChange={e => setEdit({ ...edit, eventDate: e.target.value, eventEndDate: edit.eventEndDate && edit.eventEndDate < e.target.value ? e.target.value : edit.eventEndDate })} />
+                    </div>
+                    <div>
+                      <label className="nb-label">Till och med</label>
+                      <input className="nb-input" type="date" value={edit.eventEndDate} min={edit.eventDate || undefined} onChange={e => setEdit({ ...edit, eventEndDate: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="nb-time-row">
+                    <div>
+                      <label className="nb-label">Starttid</label>
                       <TimeSelect value={edit.startTime} onChange={v => setEdit({ ...edit, startTime: v })} />
                     </div>
                     <div>
-                      <label className="nb-label">Sluttid (frivillig)</label>
+                      <label className="nb-label">Sluttid</label>
                       <TimeSelect value={edit.endTime} onChange={v => setEdit({ ...edit, endTime: v })} />
                     </div>
                   </div>
                 </>
               )}
 
-              <label className="nb-label">{edit.section === 'info' ? 'Text' : 'Kommentar'}</label>
-              {edit.section === 'info'
+              <label className="nb-label">{edit.section === 'status' ? 'Kommentar' : edit.section === 'event' ? 'Information' : 'Text'}</label>
+              {edit.section !== 'status'
                 ? <RichTextEditor ref={editorRef} initialValue={edit.body} />
                 : <textarea className="nb-input nb-textarea" rows={4} value={edit.body} onChange={e => setEdit({ ...edit, body: e.target.value })} />}
 
@@ -333,7 +372,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
       {deleteItem && (
         <ConfirmModal
           title="Ta bort"
-          message={`Ta bort "${deleteItem.title}" från Aktuellt?`}
+          message={`Ta bort "${deleteItem.title}" från Aktuellt i verksamheten?`}
           confirmText="Ta bort"
           cancelText="Avbryt"
           onConfirm={confirmDelete}

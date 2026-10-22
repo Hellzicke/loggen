@@ -1761,7 +1761,7 @@ function parseNewsletterItem(body: any): { data?: any; error?: string } {
   const title = String(body.title || '').trim()
   if (!NEWSLETTER_SECTIONS.includes(section)) return { error: 'Ogiltig sektion' }
   if (!title) return { error: 'Rubrik krävs' }
-  const data: any = { section, title, body: String(body.body || ''), status: null, eventDate: null, startTime: null, endTime: null }
+  const data: any = { section, title, body: String(body.body || ''), status: null, eventDate: null, eventEndDate: null, startTime: null, endTime: null }
   if (section === 'status') {
     if (!NEWSLETTER_STATUSES.includes(body.status)) return { error: 'Välj status' }
     data.status = body.status
@@ -1770,6 +1770,11 @@ function parseNewsletterItem(body: any): { data?: any; error?: string } {
     const date = new Date(body.eventDate)
     if (!body.eventDate || isNaN(date.getTime())) return { error: 'Välj datum' }
     data.eventDate = date
+    if (body.eventEndDate) {
+      const end = new Date(body.eventEndDate)
+      if (isNaN(end.getTime()) || end < date) return { error: 'Slutdatum måste vara samma dag eller efter startdatum' }
+      if (localDateKey(end) !== localDateKey(date)) data.eventEndDate = end
+    }
     const time = (v: any) => (/^\d{2}:\d{2}$/.test(String(v || '')) ? String(v) : null)
     data.startTime = time(body.startTime)
     data.endTime = time(body.endTime)
@@ -1780,34 +1785,81 @@ function parseNewsletterItem(body: any): { data?: any; error?: string } {
 
 // Synk av kommande händelser till schemamodulen (personalschemat).
 // Använder samma SCHEMA_API_URL/SCHEMA_API_KEY som hämtningen av anställda; saknas de hoppas synken över.
-const schemaEventId = (id: number) => `loggen-${id}`
+// En endagshändelse får id "loggen-<id>", en flerdagshändelse en händelse per dag: "loggen-<id>-<YYYY-MM-DD>".
+type EventItem = { id: number; section: string; title: string; body: string; eventDate: Date | null; eventEndDate: Date | null; startTime: string | null; endTime: string | null }
 
 function localDateKey(date: Date) {
   return date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })
 }
 
-async function syncEventToSchema(item: { id: number; section: string; title: string; body: string; eventDate: Date | null; startTime: string | null; endTime: string | null } | null, deletedId?: number) {
+function eventDays(item: EventItem): string[] {
+  if (item.section !== 'event' || !item.eventDate) return []
+  const first = localDateKey(item.eventDate)
+  const last = item.eventEndDate ? localDateKey(item.eventEndDate) : first
+  const days: string[] = []
+  const d = new Date(`${first}T12:00:00Z`)
+  while (days.length < 62) {
+    const key = d.toISOString().slice(0, 10)
+    if (key > last) break
+    days.push(key)
+    d.setUTCDate(d.getUTCDate() + 1)
+  }
+  return days
+}
+
+function schemaEventsFor(item: EventItem): Array<{ id: string; date: string }> {
+  const days = eventDays(item)
+  if (days.length === 1) return [{ id: `loggen-${item.id}`, date: days[0] }]
+  return days.map(date => ({ id: `loggen-${item.id}-${date}`, date }))
+}
+
+const belongsTo = (schemaId: string, itemId: number) => schemaId === `loggen-${itemId}` || schemaId.startsWith(`loggen-${itemId}-`)
+
+// Schemat visar ren text – gör om formaterad text till rader
+function htmlToText(html: string) {
+  return html
+    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<br\s*\/?>|<\/(p|div|li|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+async function fetchSchemaEventIds(base: string): Promise<string[] | null> {
+  const res = await fetch(`${base}/api/events`)
+  if (!res.ok) return null
+  const events = await res.json() as Array<{ id: string }>
+  return events.map(e => e.id)
+}
+
+async function syncEventToSchema(item: EventItem | null, deletedId?: number, existingIds?: string[] | null) {
   if (!SCHEMA_API_URL || !SCHEMA_API_KEY) return
   const base = SCHEMA_API_URL.replace(/\/$/, '')
   const headers = { 'Content-Type': 'application/json', 'X-API-Key': SCHEMA_API_KEY }
+  const itemId = item?.id ?? deletedId
+  if (!itemId) return
   try {
-    if (!item || item.section !== 'event' || !item.eventDate) {
-      const id = item?.id ?? deletedId
-      if (id) await fetch(`${base}/api/events/${schemaEventId(id)}`, { method: 'DELETE', headers })
-      return
+    const wanted = item ? schemaEventsFor(item) : []
+    const wantedIds = new Set(wanted.map(w => w.id))
+    const current = existingIds ?? await fetchSchemaEventIds(base) ?? []
+    for (const id of current.filter(id => belongsTo(id, itemId) && !wantedIds.has(id))) {
+      await fetch(`${base}/api/events/${id}`, { method: 'DELETE', headers })
     }
-    const res = await fetch(`${base}/api/events/${schemaEventId(item.id)}`, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify({
-        date: localDateKey(item.eventDate),
-        title: item.title,
-        description: item.body || null,
-        startTime: item.startTime,
-        endTime: item.endTime,
-      }),
-    })
-    if (!res.ok) console.error('Schema sync failed:', res.status, await res.text())
+    for (const w of wanted) {
+      const res = await fetch(`${base}/api/events/${w.id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          date: w.date,
+          title: item!.title,
+          description: htmlToText(item!.body) || null,
+          startTime: item!.startTime,
+          endTime: item!.endTime,
+        }),
+      })
+      if (!res.ok) console.error('Schema sync failed:', res.status, await res.text())
+    }
   } catch (err) {
     console.error('Schema sync error:', err)
   }
@@ -1820,21 +1872,22 @@ async function syncAllEventsToSchema() {
   const base = SCHEMA_API_URL.replace(/\/$/, '')
 
   const allEvents = await prisma.newsletterItem.findMany({ where: { section: 'event' } })
-  const validIds = new Set(allEvents.map(e => schemaEventId(e.id)))
-  const res = await fetch(`${base}/api/events`)
-  if (res.ok) {
-    const schemaEvents = await res.json() as Array<{ id: string }>
-    const orphans = schemaEvents.filter(e => e.id.startsWith('loggen-') && !validIds.has(e.id))
-    for (const orphan of orphans) {
-      await fetch(`${base}/api/events/${orphan.id}`, { method: 'DELETE', headers: { 'X-API-Key': SCHEMA_API_KEY } })
+  const validIds = new Set(allEvents.flatMap(e => schemaEventsFor(e).map(w => w.id)))
+  const existing = await fetchSchemaEventIds(base)
+  if (existing) {
+    const orphans = existing.filter(id => id.startsWith('loggen-') && !validIds.has(id))
+    for (const id of orphans) {
+      await fetch(`${base}/api/events/${id}`, { method: 'DELETE', headers: { 'X-API-Key': SCHEMA_API_KEY } })
     }
     if (orphans.length) console.log(`Tog bort ${orphans.length} kvarlämnade händelser i schemat`)
   }
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const upcoming = allEvents.filter(e => e.eventDate && e.eventDate >= today)
-  for (const event of upcoming) await syncEventToSchema(event)
+  const today = localDateKey(new Date())
+  const upcoming = allEvents.filter(e => {
+    const days = eventDays(e)
+    return days.length > 0 && days[days.length - 1] >= today
+  })
+  for (const event of upcoming) await syncEventToSchema(event, undefined, existing)
 }
 syncAllEventsToSchema().catch(err => console.error('Initial schema sync error:', err))
 setInterval(() => syncAllEventsToSchema().catch(err => console.error('Schema sync error:', err)), 60 * 60 * 1000)
