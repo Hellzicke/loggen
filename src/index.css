@@ -4438,20 +4438,33 @@ select.suggestion-form-input {
 .nbp-body { display: none; padding: 0 0.5rem 0.75rem; }
 .nbp--open .nbp-body { display: block; }
 
-.nbp-group + .nbp-group { margin-top: 0.5rem; }
+.nbp-group { border-radius: 12px; padding: 0.375rem 0.25rem 0.375rem; background: #f8fafc; }
+.nbp-group + .nbp-group { margin-top: 0.625rem; }
+.nbp-group--status { background: #f0f9ff; }
+.nbp-group--event { background: #f5f3ff; }
+.nbp-group--info { background: #f0fdfa; }
 .nbp-group-head {
-  display: flex; align-items: center; justify-content: space-between; padding: 0.375rem 0.5rem 0.25rem;
-  font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.5rem 0.375rem;
+  font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary);
 }
+.nbp-group-icon {
+  width: 24px; height: 24px; border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  background: #fff; box-shadow: var(--shadow-sm);
+}
+.nbp-group--status .nbp-group-icon { color: #0284c7; }
+.nbp-group--event .nbp-group-icon { color: #7c3aed; }
+.nbp-group--info .nbp-group-icon { color: #0d9488; }
+.nbp-group-title { flex: 1; min-width: 0; }
+.nbp-group-count { font-size: 0.6875rem; font-weight: 700; color: var(--text-muted); background: #fff; border-radius: 999px; padding: 0 0.4375rem; }
 .nbp-add {
-  width: 22px; height: 22px; border-radius: 6px; border: none; background: var(--accent-light); color: var(--accent-hover);
+  width: 22px; height: 22px; border-radius: 6px; border: none; background: #fff; color: var(--accent-hover); box-shadow: var(--shadow-sm);
   font-size: 1rem; line-height: 1; cursor: pointer; font-family: inherit;
 }
 .nbp-row {
   width: 100%; display: flex; align-items: center; gap: 0.5rem; padding: 0.4375rem 0.5rem; border: none; background: none;
   border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; text-align: left;
 }
-.nbp-row:hover { background: var(--bg-primary); }
+.nbp-row:hover { background: #fff; }
 .nbp-row-title { flex: 1; min-width: 0; font-size: 0.875rem; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nbp-date { font-size: 0.75rem; font-weight: 700; color: var(--accent-hover); white-space: nowrap; flex-shrink: 0; min-width: 52px; }
 .nbp-status { font-size: 0.6875rem; font-weight: 700; border-radius: 999px; padding: 0.0625rem 0.5rem; white-space: nowrap; flex-shrink: 0; }
@@ -4460,7 +4473,7 @@ select.suggestion-form-input {
 .nbp-status--pausad { background: #fef3c7; color: #b45309; }
 .nbp-status--klar { background: #dcfce7; color: #15803d; }
 .nbp-unread { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
-.nbp-empty { font-size: 0.8125rem; color: var(--text-muted); padding: 0.25rem 0.5rem; }
+.nbp-empty { font-size: 0.8125rem; color: var(--text-muted); padding: 0.125rem 0.5rem 0.375rem; }
 
 /* Bred skärm: fast panel till höger om flödet, alltid utfälld */
 @media (min-width: 1320px) {
@@ -4552,3 +4565,16 @@ select.suggestion-form-input {
 .nbm-btn--ghost:hover { color: #dc2626; }
 .nbm-btn--primary { background: var(--accent); color: #fff; }
 .nbm-btn--primary:hover { background: var(--accent-hover); }
+
+/* Läst-signaturer i Aktuellt */
+.nbp-read { font-size: 0.6875rem; font-weight: 600; color: var(--text-muted); flex-shrink: 0; }
+.nbm-read { margin: 0.75rem 1.75rem 0; padding: 0.875rem 1rem; border-radius: 12px; background: var(--bg-primary); display: flex; flex-direction: column; gap: 0.625rem; }
+.nbm-read-list { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; }
+.nbm-read-label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-right: 0.25rem; }
+.nbm-read-name { font-size: 0.8125rem; font-weight: 600; color: var(--text-primary); background: #fff; border-radius: 999px; padding: 0.125rem 0.625rem; box-shadow: var(--shadow-sm); }
+.nbm-read-none { font-size: 0.8125rem; color: var(--text-muted); }
+.nbm-sign-btn { align-self: flex-start; font-family: inherit; font-size: 0.8125rem; font-weight: 700; color: var(--accent-hover); background: none; border: none; padding: 0; cursor: pointer; }
+.nbm-sign-btn:hover { text-decoration: underline; }
+.nbm-sign-form { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.nbm-sign-form .nb-input { flex: 1; min-width: 160px; width: auto; }
+.nbm-btn:disabled { opacity: 0.5; cursor: default; }

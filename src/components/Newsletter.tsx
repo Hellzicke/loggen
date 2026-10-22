@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import RichTextEditor, { type RichTextEditorRef } from './RichTextEditor'
 import ConfirmModal from './ConfirmModal'
+import EmployeeNameInput from './EmployeeNameInput'
 
 type Section = 'status' | 'event' | 'info'
 type Status = 'planerad' | 'pågår' | 'klar' | 'pausad'
@@ -19,6 +20,7 @@ export interface NewsletterItem {
   sortOrder: number
   createdAt: string
   updatedAt: string
+  signatures: Array<{ id: number; name: string; createdAt: string }>
 }
 
 type Fetcher = (url: string, options?: RequestInit) => Promise<Response>
@@ -36,7 +38,13 @@ const STATUS_LABELS: Record<Status, string> = { pågår: 'Pågår', planerad: 'P
 const STATUS_ORDER: Status[] = ['pågår', 'planerad', 'pausad', 'klar']
 const SECTION_TITLES: Record<Section, string> = { status: 'Status', event: 'Kommande händelser', info: 'Planering & information' }
 
-const fmtShort = (value: string) => new Date(value).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')
+const SECTION_ICONS: Record<Section, JSX.Element> = {
+  status: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>,
+  event: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>,
+  info: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M8 13h8M8 17h5" /></svg>,
+}
+
+const fmtShort =(value: string) => new Date(value).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')
 const fmtLong = (value: string) => new Date(value).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
 
 // Datumintervall i kort form: "26–30 okt", "30 okt–2 nov", "25 nov"
@@ -100,6 +108,9 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
   const [seen, setSeen] = useState<Record<number, number>>(readSeen)
   const [open, setOpen] = useState(false) // hopfällt läge på smala skärmar
   const [viewing, setViewing] = useState<NewsletterItem | null>(null)
+  const [signing, setSigning] = useState(false)
+  const [signName, setSignName] = useState('')
+  const [signError, setSignError] = useState('')
   const [edit, setEdit] = useState<EditState | null>(null)
   const [deleteItem, setDeleteItem] = useState<NewsletterItem | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -125,6 +136,8 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
 
   const openItem = (item: NewsletterItem) => {
     setViewing(item)
+    setSigning(false)
+    setSignError('')
     const next = { ...seen, [item.id]: Date.now() }
     setSeen(next)
     try { localStorage.setItem(SEEN_KEY, JSON.stringify(next)) } catch {}
@@ -196,6 +209,24 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     }
   }
 
+  const signItem = async () => {
+    if (!viewing || !signName.trim()) return
+    setSignError('')
+    try {
+      const res = await authenticatedFetch(`/api/newsletter/${viewing.id}/sign`, { method: 'POST', body: JSON.stringify({ name: signName.trim() }) })
+      if (res.status === 409) { setSignError('Du har redan signerat'); return }
+      if (!res.ok) { setSignError('Kunde inte signera'); return }
+      const signature = await res.json()
+      const updated = { ...viewing, signatures: [...(viewing.signatures || []), signature] }
+      setViewing(updated)
+      setItems(prev => prev && prev.map(i => i.id === updated.id ? updated : i))
+      setSigning(false)
+      setSignName('')
+    } catch {
+      setSignError('Något gick fel')
+    }
+  }
+
   const confirmDelete = async () => {
     if (!deleteItem) return
     try {
@@ -210,9 +241,11 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
 
   const group = (section: Section, list: NewsletterItem[], render: (item: NewsletterItem) => JSX.Element) => (
     (list.length > 0 || isAdmin) && (
-      <div className="nbp-group">
+      <div className={`nbp-group nbp-group--${section}`}>
         <div className="nbp-group-head">
-          <span>{SECTION_TITLES[section]}</span>
+          <span className="nbp-group-icon">{SECTION_ICONS[section]}</span>
+          <span className="nbp-group-title">{SECTION_TITLES[section]}</span>
+          {list.length > 0 && <span className="nbp-group-count">{list.length}</span>}
           {isAdmin && <button className="nbp-add" onClick={() => openNew(section)} title="Lägg till">+</button>}
         </div>
         {list.length === 0
@@ -220,6 +253,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
           : list.map(item => (
             <button key={item.id} className="nbp-row" onClick={() => openItem(item)}>
               {render(item)}
+              {(item.signatures?.length || 0) > 0 && <span className="nbp-read" title={`Läst av ${item.signatures.length}`}>✓{item.signatures.length}</span>}
               {isUnread(item) && <span className="nbp-unread" aria-label="Nytt" />}
             </button>
           ))}
@@ -293,6 +327,31 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
                   : <div className="nbm-text">{viewing.body}</div>}
               </div>
             )}
+            <div className="nbm-read">
+              <div className="nbm-read-list">
+                <span className="nbm-read-label">Läst av</span>
+                {(viewing.signatures || []).length === 0
+                  ? <span className="nbm-read-none">ingen ännu</span>
+                  : viewing.signatures.map(sig => <span key={sig.id} className="nbm-read-name">{sig.name}</span>)}
+              </div>
+              {signing ? (
+                <div className="nbm-sign-form">
+                  <EmployeeNameInput
+                    value={signName}
+                    onChange={setSignName}
+                    selectClassName="nb-input"
+                    inputClassName="nb-input"
+                    autoFocus
+                    onKeyDown={e => e.key === 'Enter' && signItem()}
+                  />
+                  <button className="nbm-btn nbm-btn--primary" onClick={signItem} disabled={!signName.trim()}>Signera</button>
+                  <button className="nbm-btn nbm-btn--ghost" onClick={() => { setSigning(false); setSignError('') }}>Avbryt</button>
+                </div>
+              ) : (
+                <button className="nbm-sign-btn" onClick={() => setSigning(true)}>Signera som läst</button>
+              )}
+              {signError && <div className="nb-error">{signError}</div>}
+            </div>
             <div className="nbm-footer">
               <span>Uppdaterad {fmtLong(viewing.updatedAt)}</span>
               {isAdmin && (

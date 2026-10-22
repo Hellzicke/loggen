@@ -1894,11 +1894,30 @@ setInterval(() => syncAllEventsToSchema().catch(err => console.error('Schema syn
 
 app.get('/api/newsletter', authenticateSharedPassword, async (_req, res) => {
   try {
-    const items = await prisma.newsletterItem.findMany({ orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] })
+    const items = await prisma.newsletterItem.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+      include: { signatures: { orderBy: { createdAt: 'asc' } } },
+    })
     res.json(items)
   } catch (error) {
     console.error('Error fetching newsletter:', error)
     res.status(500).json({ error: 'Failed to fetch newsletter' })
+  }
+})
+
+// Läst-signatur på en punkt i Aktuellt (samma modell som för loggens inlägg)
+app.post('/api/newsletter/:id/sign', authenticateSharedPassword, async (req, res) => {
+  const name = String(req.body?.name || '').trim()
+  if (!name) return res.status(400).json({ error: 'Name is required' })
+  try {
+    const signature = await prisma.newsletterSignature.create({ data: { name, itemId: parseInt(req.params.id) } })
+    res.status(201).json(signature)
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      return res.status(409).json({ error: 'Already signed' })
+    }
+    console.error('Error signing newsletter item:', error)
+    res.status(500).json({ error: 'Failed to sign' })
   }
 })
 

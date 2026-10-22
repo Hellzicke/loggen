@@ -2,6 +2,15 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.22] - 2026-10-22
+
+### Tillagt
+- Läst-signatur på punkterna i Aktuellt i verksamheten.
+- Snabbmenyn för att växla mellan modulerna.
+
+### Ändrat
+- Tydligare sektioner i Aktuellt i verksamheten med egen bakgrund, ikon och antal.
+
 ## [1.4.21] - 2026-10-22
 
 ### Ändrat

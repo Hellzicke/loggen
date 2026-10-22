@@ -167,5 +167,18 @@ model NewsletterItem {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  signatures NewsletterSignature[]
+
   @@index([section])
+}
+
+model NewsletterSignature {
+  id        Int            @id @default(autoincrement())
+  itemId    Int
+  item      NewsletterItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime       @default(now())
+
+  @@unique([itemId, name])
+  @@index([itemId])
 }

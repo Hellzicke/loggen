@@ -11,6 +11,7 @@ import MeetingPoints from './components/MeetingPoints'
 import SuggestionBox from './components/SuggestionBox'
 import AdminLoginModal from './components/AdminLoginModal'
 import Newsletter from './components/Newsletter'
+import PlatformSwitcher from './components/PlatformSwitcher'
 
 export interface ReadSignature {
   id: number
@@ -518,6 +519,7 @@ export default function App() {
           onCancel={() => setDeleteConfirm(null)}
         />
       )}
+      <PlatformSwitcher />
       {showAdminLogin && (
         <AdminLoginModal
           onSuccess={handleAdminLoginSuccess}
