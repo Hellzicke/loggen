@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 export type SuggestionFilter = 'förslag' | 'förslag-arkiv' | 'bugg' | 'funktion'
-export type MainView = 'logg' | 'nyhetsbrev' | 'förslagslåda' | 'mötespunkter' | 'utveckling'
+export type MainView = 'logg' | 'förslagslåda' | 'mötespunkter' | 'utveckling'
 
 interface HeaderProps {
   version: string
@@ -18,12 +18,11 @@ interface HeaderProps {
   adminUsername?: string | null
   onAdminLoginClick?: () => void
   onAdminLogout?: () => void
-  hasNewsletterUpdates?: boolean
 }
 
 type MenuKey = 'logg' | 'mötespunkter' | 'förslagslåda' | 'utveckling' | null
 
-export default function Header({ version, onVersionClick, onArchiveClick, archiveCount, activeView, onViewChange, onArchivedMeetingsClick, showArchivedMeetings, suggestionFilter = 'förslag', onSuggestionFilterChange, isAdmin, adminUsername, onAdminLoginClick, onAdminLogout, hasNewsletterUpdates }: HeaderProps) {
+export default function Header({ version, onVersionClick, onArchiveClick, archiveCount, activeView, onViewChange, onArchivedMeetingsClick, showArchivedMeetings, suggestionFilter = 'förslag', onSuggestionFilterChange, isAdmin, adminUsername, onAdminLoginClick, onAdminLogout }: HeaderProps) {
   const [openMenu, setOpenMenu] = useState<MenuKey>(null)
   const navRef = useRef<HTMLElement>(null)
 
@@ -99,17 +98,6 @@ export default function Header({ version, onVersionClick, onArchiveClick, archiv
               </div>
             )}
           </div>
-
-          {/* Nyhetsbrevet visas bara för admin under utvärderingen */}
-          {isAdmin && <div className="nav-item-wrapper">
-            <button
-              className={`nav-item ${activeView === 'nyhetsbrev' ? 'active' : ''}`}
-              onClick={() => handleGoTo('nyhetsbrev')}
-            >
-              Nyhetsbrev
-              {hasNewsletterUpdates && activeView !== 'nyhetsbrev' && <span className="nb-nav-dot" aria-label="Nytt i nyhetsbrevet" />}
-            </button>
-          </div>}
 
           <div className={`nav-item-wrapper ${openMenu === 'förslagslåda' ? 'nav-item-wrapper--open' : ''}`}>
             <button

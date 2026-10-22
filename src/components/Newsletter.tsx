@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import RichTextEditor, { type RichTextEditorRef } from './RichTextEditor'
 import ConfirmModal from './ConfirmModal'
 
@@ -23,26 +24,26 @@ interface NewsletterProps {
   authenticatedFetch: Fetcher
   adminFetch: Fetcher
   isAdmin: boolean
-  onSeen?: () => void
 }
 
-export const NEWSLETTER_SEEN_KEY = 'newsletterSeenAt'
+// Per punkt: när den senast öppnades (ms). Punkter som ändrats efter det markeras som nya.
+const SEEN_KEY = 'newsletterSeen'
 
 const STATUS_LABELS: Record<Status, string> = { pågår: 'Pågår', planerad: 'Planerad', pausad: 'Pausad', klar: 'Klar' }
 const STATUS_ORDER: Status[] = ['pågår', 'planerad', 'pausad', 'klar']
+const SECTION_TITLES: Record<Section, string> = { status: 'Status', event: 'Kommande händelser', info: 'Planering & information' }
 
-const SECTION_TITLES: Record<Section, string> = {
-  status: 'Status',
-  event: 'Kommande händelser',
-  info: 'Planering & information',
-}
-
-const fmtDate = (value: string) => new Date(value).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
+const fmtShort = (value: string) => new Date(value).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }).replace('.', '')
+const fmtLong = (value: string) => new Date(value).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
 
 function startOfToday() {
   const d = new Date()
   d.setHours(0, 0, 0, 0)
   return d.getTime()
+}
+
+function readSeen(): Record<number, number> {
+  try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '{}') } catch { return {} }
 }
 
 interface EditState {
@@ -54,18 +55,16 @@ interface EditState {
   eventDate: string
 }
 
-export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin, onSeen }: NewsletterProps) {
+export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: NewsletterProps) {
   const [items, setItems] = useState<NewsletterItem[] | null>(null)
+  const [seen, setSeen] = useState<Record<number, number>>(readSeen)
+  const [open, setOpen] = useState(false) // hopfällt läge på smala skärmar
+  const [viewing, setViewing] = useState<NewsletterItem | null>(null)
   const [edit, setEdit] = useState<EditState | null>(null)
   const [deleteItem, setDeleteItem] = useState<NewsletterItem | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const editorRef = useRef<RichTextEditorRef>(null)
-
-  // Tidpunkten för förra besöket styr markeringarna "Nytt"/"Uppdaterat" under hela besöket
-  const [lastSeen] = useState<number>(() => {
-    try { return Number(localStorage.getItem(NEWSLETTER_SEEN_KEY)) || 0 } catch { return 0 }
-  })
 
   const load = useCallback(async () => {
     try {
@@ -80,19 +79,15 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin, on
 
   useEffect(() => { load() }, [load])
 
-  useEffect(() => {
-    if (!items) return
-    try { localStorage.setItem(NEWSLETTER_SEEN_KEY, String(Date.now())) } catch {}
-    onSeen?.()
-  }, [items, onSeen])
+  if (!items) return null
 
-  if (!items) return <div className="loading">Laddar nyhetsbrev...</div>
+  const isUnread = (item: NewsletterItem) => (seen[item.id] || 0) < new Date(item.updatedAt).getTime()
 
-  const badge = (item: NewsletterItem) => {
-    if (!lastSeen) return null
-    if (new Date(item.createdAt).getTime() > lastSeen) return <span className="nb-tag nb-tag--new">Nytt</span>
-    if (new Date(item.updatedAt).getTime() > lastSeen) return <span className="nb-tag nb-tag--updated">Uppdaterat</span>
-    return null
+  const openItem = (item: NewsletterItem) => {
+    setViewing(item)
+    const next = { ...seen, [item.id]: Date.now() }
+    setSeen(next)
+    try { localStorage.setItem(SEEN_KEY, JSON.stringify(next)) } catch {}
   }
 
   const statusItems = items
@@ -106,6 +101,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin, on
     .filter(i => i.section === 'info')
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
 
+  const unreadCount = [...statusItems, ...eventItems, ...infoItems].filter(isUnread).length
   const lastUpdated = items.reduce((max, i) => Math.max(max, new Date(i.updatedAt).getTime()), 0)
 
   const openNew = (section: Section) => {
@@ -114,6 +110,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin, on
   }
 
   const openEdit = (item: NewsletterItem) => {
+    setViewing(null)
     setError(null)
     setEdit({
       id: item.id,
@@ -161,90 +158,82 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin, on
       console.error('Failed to delete newsletter item:', err)
     }
     setDeleteItem(null)
+    setViewing(null)
   }
 
-  const adminActions = (item: NewsletterItem) => isAdmin && (
-    <div className="nb-item-actions">
-      <button className="nb-link-btn" onClick={() => openEdit(item)}>Redigera</button>
-      <button className="nb-link-btn nb-link-btn--danger" onClick={() => setDeleteItem(item)}>Ta bort</button>
-    </div>
-  )
-
-  const sectionHeader = (section: Section) => (
-    <div className="nb-section-header">
-      <h2>{SECTION_TITLES[section]}</h2>
-      {isAdmin && <button className="nb-add-btn" onClick={() => openNew(section)}>+ Lägg till</button>}
-    </div>
+  const group = (section: Section, list: NewsletterItem[], render: (item: NewsletterItem) => JSX.Element) => (
+    (list.length > 0 || isAdmin) && (
+      <div className="nbp-group">
+        <div className="nbp-group-head">
+          <span>{SECTION_TITLES[section]}</span>
+          {isAdmin && <button className="nbp-add" onClick={() => openNew(section)} title="Lägg till">+</button>}
+        </div>
+        {list.length === 0
+          ? <div className="nbp-empty">Inget just nu</div>
+          : list.map(item => (
+            <button key={item.id} className="nbp-row" onClick={() => openItem(item)}>
+              {render(item)}
+              {isUnread(item) && <span className="nbp-unread" aria-label="Nytt" />}
+            </button>
+          ))}
+      </div>
+    )
   )
 
   return (
-    <div className="nb">
-      <div className="nb-top">
-        <h1>Nyhetsbrev</h1>
-        {lastUpdated > 0 && <span className="nb-updated">Senast uppdaterad {fmtDate(new Date(lastUpdated).toISOString())}</span>}
+    <aside className={`nbp ${open ? 'nbp--open' : ''}`}>
+      <button className="nbp-head" onClick={() => setOpen(!open)}>
+        <span className="nbp-title">Nyhetsbrev</span>
+        {unreadCount > 0 && <span className="nbp-count">{unreadCount} nya</span>}
+        {lastUpdated > 0 && <span className="nbp-updated">uppd. {fmtShort(new Date(lastUpdated).toISOString())}</span>}
+        <svg className="nbp-chevron" width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
+
+      <div className="nbp-body">
+        {items.length === 0 && !isAdmin && <div className="nbp-empty">Inget i nyhetsbrevet ännu</div>}
+        {group('status', statusItems, item => (
+          <>
+            <span className={`nbp-dot nbp-dot--${item.status}`} title={STATUS_LABELS[item.status as Status]} />
+            <span className="nbp-row-title">{item.title}</span>
+          </>
+        ))}
+        {group('event', eventItems, item => (
+          <>
+            <span className="nbp-date">{fmtShort(item.eventDate!)}</span>
+            <span className="nbp-row-title">{item.title}</span>
+          </>
+        ))}
+        {group('info', infoItems, item => <span className="nbp-row-title">{item.title}</span>)}
       </div>
 
-      <section className="nb-section">
-        {sectionHeader('status')}
-        {statusItems.length === 0 ? <div className="nb-empty">Inget att visa</div> : (
-          <div className="nb-status-list">
-            {statusItems.map(item => (
-              <div key={item.id} className="nb-card nb-status-row">
-                <span className={`nb-status nb-status--${item.status}`}>{STATUS_LABELS[item.status as Status]}</span>
-                <div className="nb-status-main">
-                  <div className="nb-item-title">{item.title} {badge(item)}</div>
-                  {item.body && <div className="nb-item-text">{item.body}</div>}
-                  <div className="nb-item-meta">Uppdaterad {fmtDate(item.updatedAt)}</div>
-                </div>
-                {adminActions(item)}
+      {createPortal(<>
+      {viewing && (
+        <div className="modal-overlay" onMouseDown={e => { if (e.target === e.currentTarget) setViewing(null) }}>
+          <div className="modal nb-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{viewing.title}</h2>
+              <button className="modal-close" onClick={() => setViewing(null)}>×</button>
+            </div>
+            <div className="nb-view">
+              <div className="nb-view-meta">
+                <span className="nb-view-section">{SECTION_TITLES[viewing.section]}</span>
+                {viewing.status && <span className={`nb-status nb-status--${viewing.status}`}>{STATUS_LABELS[viewing.status]}</span>}
+                {viewing.eventDate && <span className="nb-view-date">{fmtLong(viewing.eventDate)}</span>}
               </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="nb-section">
-        {sectionHeader('event')}
-        {eventItems.length === 0 ? <div className="nb-empty">Inga kommande händelser</div> : (
-          <div className="nb-event-list">
-            {eventItems.map(item => {
-              const d = new Date(item.eventDate!)
-              return (
-                <div key={item.id} className="nb-card nb-event-row">
-                  <div className="nb-event-date">
-                    <span className="nb-event-day">{d.getDate()}</span>
-                    <span className="nb-event-month">{d.toLocaleDateString('sv-SE', { month: 'short' }).replace('.', '')}</span>
-                    <span className="nb-event-weekday">{d.toLocaleDateString('sv-SE', { weekday: 'short' })}</span>
-                  </div>
-                  <div className="nb-status-main">
-                    <div className="nb-item-title">{item.title} {badge(item)}</div>
-                    {item.body && <div className="nb-item-text">{item.body}</div>}
-                  </div>
-                  {adminActions(item)}
+              {viewing.body && (viewing.section === 'info'
+                ? <div className="log-message" dangerouslySetInnerHTML={{ __html: viewing.body }} />
+                : <div className="nb-view-text">{viewing.body}</div>)}
+              <div className="nb-view-updated">Uppdaterad {fmtLong(viewing.updatedAt)}</div>
+              {isAdmin && (
+                <div className="nb-form-actions">
+                  <button className="confirm-btn confirm-btn--secondary" onClick={() => setDeleteItem(viewing)}>Ta bort</button>
+                  <button className="confirm-btn confirm-btn--primary" onClick={() => openEdit(viewing)}>Redigera</button>
                 </div>
-              )
-            })}
+              )}
+            </div>
           </div>
-        )}
-      </section>
-
-      <section className="nb-section">
-        {sectionHeader('info')}
-        {infoItems.length === 0 ? <div className="nb-empty">Inget att visa</div> : (
-          <div className="nb-info-list">
-            {infoItems.map(item => (
-              <article key={item.id} className="nb-card nb-info">
-                <div className="nb-info-head">
-                  <h3>{item.title} {badge(item)}</h3>
-                  {adminActions(item)}
-                </div>
-                <div className="nb-info-body log-message" dangerouslySetInnerHTML={{ __html: item.body }} />
-                <div className="nb-item-meta">Uppdaterad {fmtDate(item.updatedAt)}</div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+        </div>
+      )}
 
       {edit && (
         <div className="modal-overlay" onMouseDown={e => { if (e.target === e.currentTarget) setEdit(null) }}>
@@ -302,6 +291,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin, on
           onCancel={() => setDeleteItem(null)}
         />
       )}
-    </div>
+      </>, document.body)}
+    </aside>
   )
 }

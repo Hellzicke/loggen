@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.15] - 2026-10-22
+
+### Ändrat
+- Nyhetsbrevet ligger nu som en sidopanel med rubriker bredvid loggen i stället för en egen flik. Klick öppnar punkten i en ruta. På smala skärmar visas panelen som ett hopfällbart kort överst. Fortfarande bara för admin.
+
 ## [1.4.14] - 2026-10-22
 
 ### Tillagt

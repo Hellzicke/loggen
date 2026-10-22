@@ -10,7 +10,7 @@ import Login from './components/Login'
 import MeetingPoints from './components/MeetingPoints'
 import SuggestionBox from './components/SuggestionBox'
 import AdminLoginModal from './components/AdminLoginModal'
-import Newsletter, { NEWSLETTER_SEEN_KEY, type NewsletterItem } from './components/Newsletter'
+import Newsletter from './components/Newsletter'
 
 export interface ReadSignature {
   id: number
@@ -80,8 +80,7 @@ export default function App() {
   const [showArchive, setShowArchive] = useState(false)
   const [unpinPrompt, setUnpinPrompt] = useState<LogMessage | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
-  const [activeView, setActiveView] = useState<'logg' | 'nyhetsbrev' | 'förslagslåda' | 'mötespunkter' | 'utveckling'>('logg')
-  const [hasNewsletterUpdates, setHasNewsletterUpdates] = useState(false)
+  const [activeView, setActiveView] = useState<'logg' | 'förslagslåda' | 'mötespunkter' | 'utveckling'>('logg')
   const [showArchivedMeetings, setShowArchivedMeetings] = useState(false)
   const [suggestionFilter, setSuggestionFilter] = useState<'förslag' | 'förslag-arkiv' | 'bugg' | 'funktion'>('förslag')
   // Admin-läge (via centrala Auth) — separat token, ger inline-adminkontroller
@@ -150,27 +149,6 @@ export default function App() {
     }
     return response
   }, [adminToken, clearAdmin])
-
-  // Nyhetsbrevet är admin-only under utvärderingen – lämna vyn vid utloggning
-  useEffect(() => {
-    if (!isAdmin && activeView === 'nyhetsbrev') setActiveView('logg')
-  }, [isAdmin, activeView])
-
-  // Markering i menyn när nyhetsbrevet ändrats sedan förra besöket
-  const clearNewsletterUpdates = useCallback(() => setHasNewsletterUpdates(false), [])
-
-  useEffect(() => {
-    if (!isAuthenticated) return
-    authenticatedFetch('/api/newsletter')
-      .then(res => res.json())
-      .then((items: NewsletterItem[]) => {
-        if (!Array.isArray(items) || items.length === 0) return
-        let seen = 0
-        try { seen = Number(localStorage.getItem(NEWSLETTER_SEEN_KEY)) || 0 } catch {}
-        setHasNewsletterUpdates(items.some(i => new Date(i.updatedAt).getTime() > seen))
-      })
-      .catch(() => {})
-  }, [isAuthenticated, authenticatedFetch])
 
   const handleAdminLoginSuccess = (token: string, username: string) => {
     setAdminToken(token)
@@ -465,11 +443,14 @@ export default function App() {
         adminUsername={adminUsername}
         onAdminLoginClick={() => setShowAdminLogin(true)}
         onAdminLogout={clearAdmin}
-        hasNewsletterUpdates={hasNewsletterUpdates}
       />
       <main className="main">
         {activeView === 'logg' && (
           <>
+            {/* Nyhetsbrevet visas bara för admin under utvärderingen */}
+            {isAdmin && (
+              <Newsletter authenticatedFetch={authenticatedFetch} adminFetch={adminFetch} isAdmin={isAdmin} />
+            )}
             <div className="create-trigger">
               <div className="create-avatar">?</div>
               <button className="create-btn" onClick={() => setShowForm(true)}>
@@ -499,14 +480,6 @@ export default function App() {
             filter={suggestionFilter}
             isAdmin={isAdmin}
             adminFetch={adminFetch}
-          />
-        )}
-        {activeView === 'nyhetsbrev' && isAdmin && (
-          <Newsletter
-            authenticatedFetch={authenticatedFetch}
-            adminFetch={adminFetch}
-            isAdmin={isAdmin}
-            onSeen={clearNewsletterUpdates}
           />
         )}
         {activeView === 'mötespunkter' && (
