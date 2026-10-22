@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.18] - 2026-10-22
+
+### Ändrat
+- Aktuellt från Micke: rubriken står på en rad med uppdateringsdatum och antal nya diskret under.
+
 ## [1.4.17] - 2026-10-22
 
 ### Ändrat

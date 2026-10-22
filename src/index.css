@@ -4429,9 +4429,10 @@ select.suggestion-form-input {
   width: 100%; display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem;
   background: none; border: none; cursor: pointer; font-family: inherit; text-align: left;
 }
-.nbp-title { font-size: 0.9375rem; font-weight: 700; color: var(--text-primary); }
-.nbp-count { font-size: 0.6875rem; font-weight: 700; color: #fff; background: var(--accent); border-radius: 999px; padding: 0.125rem 0.5rem; }
-.nbp-updated { font-size: 0.75rem; color: var(--text-muted); margin-left: auto; }
+.nbp-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
+.nbp-title { font-size: 0.9375rem; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nbp-meta { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }
+.nbp-count { font-weight: 700; color: var(--accent-hover); }
 .nbp-chevron { color: var(--text-secondary); transition: transform 0.2s ease; flex-shrink: 0; }
 .nbp--open .nbp-chevron { transform: rotate(180deg); }
 .nbp-body { display: none; padding: 0 0.5rem 0.75rem; }

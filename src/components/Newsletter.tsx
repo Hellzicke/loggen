@@ -215,9 +215,16 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
   return (
     <aside className={`nbp ${open ? 'nbp--open' : ''}`}>
       <button className="nbp-head" onClick={() => setOpen(!open)}>
-        <span className="nbp-title">Aktuellt från Micke</span>
-        {unreadCount > 0 && <span className="nbp-count">{unreadCount} nya</span>}
-        {lastUpdated > 0 && <span className="nbp-updated">uppd. {fmtShort(new Date(lastUpdated).toISOString())}</span>}
+        <span className="nbp-head-text">
+          <span className="nbp-title">Aktuellt från Micke</span>
+          {(lastUpdated > 0 || unreadCount > 0) && (
+            <span className="nbp-meta">
+              {lastUpdated > 0 && <>Uppdaterad {fmtShort(new Date(lastUpdated).toISOString())}</>}
+              {lastUpdated > 0 && unreadCount > 0 && ' · '}
+              {unreadCount > 0 && <span className="nbp-count">{unreadCount} {unreadCount === 1 ? 'ny' : 'nya'}</span>}
+            </span>
+          )}
+        </span>
         <svg className="nbp-chevron" width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
 
