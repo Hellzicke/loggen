@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.24] - 2026-10-22
+
+### Fixat
+- Formaterad text i Aktuellt i verksamheten visades som kod. Texter som sparats som kod repareras automatiskt.
+
 ## [1.4.23] - 2026-10-22
 
 ### Tillagt

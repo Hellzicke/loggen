@@ -1889,6 +1889,25 @@ async function syncAllEventsToSchema() {
   })
   for (const event of upcoming) await syncEventToSchema(event, undefined, existing)
 }
+// Engångsreparation: punkter vars formatering råkat sparas som synlig kod (&lt;div&gt; osv.)
+// p.g.a. en felaktig HTML-kontroll i klienten (1.4.20–1.4.23) återställs till riktig formatering.
+async function repairEscapedNewsletterBodies() {
+  const escapedTag = /&lt;\/?(div|p|ul|ol|li|b|strong|i|em|u|s|strike|span|a|br|h[1-6])\b/i
+  const items = await prisma.newsletterItem.findMany({ select: { id: true, body: true } })
+  for (const item of items) {
+    let body = item.body
+    for (let round = 0; round < 3 && escapedTag.test(body); round++) {
+      body = body.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+    }
+    if (body !== item.body) {
+      // Direkt SQL så att updatedAt inte ändras (annars markeras punkten som ny för alla)
+      await prisma.$executeRaw`UPDATE "NewsletterItem" SET "body" = ${body} WHERE "id" = ${item.id}`
+      console.log(`Reparerade formatering i Aktuellt-punkt ${item.id}`)
+    }
+  }
+}
+repairEscapedNewsletterBodies().catch(err => console.error('Newsletter repair error:', err))
+
 syncAllEventsToSchema().catch(err => console.error('Initial schema sync error:', err))
 setInterval(() => syncAllEventsToSchema().catch(err => console.error('Schema sync error:', err)), 60 * 60 * 1000)
 

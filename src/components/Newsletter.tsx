@@ -55,7 +55,7 @@ function fmtRange(start: string, end: string | null) {
   return `${fmtShort(start)}–${fmtShort(end)}`
 }
 
-const looksLikeHtml = (text: string) => /<[a-z][sS]*>/i.test(text)
+const looksLikeHtml = (text: string) => /<[a-z][\s\S]*>/i.test(text)
 
 function startOfToday() {
   const d = new Date()
