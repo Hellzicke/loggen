@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.26] - 2026-10-22
+
+### Ändrat
+- Den fadade linjen ligger nu under varje sektionsrubrik i Aktuellt i verksamheten i stället för mellan sektionerna.
+
 ## [1.4.25] - 2026-10-22
 
 ### Ändrat
