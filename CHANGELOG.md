@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.19] - 2026-10-22
+
+### Fixat
+- Händelser från Aktuellt som tagits bort eller ändrats i Loggen städas nu bort ur schemat automatiskt, vid uppstart och varje timme.
+
 ## [1.4.18] - 2026-10-22
 
 ### Ändrat

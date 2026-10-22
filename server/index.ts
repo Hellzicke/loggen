@@ -1813,16 +1813,31 @@ async function syncEventToSchema(item: { id: number; section: string; title: str
   }
 }
 
-// Vid uppstart: se till att alla kommande händelser finns i schemat
+// Vid uppstart och varje timme: se till att kommande händelser finns i schemat och
+// ta bort "loggen-"-händelser i schemat som inte längre finns som händelse i Loggen
 async function syncAllEventsToSchema() {
   if (!SCHEMA_API_URL || !SCHEMA_API_KEY) return
+  const base = SCHEMA_API_URL.replace(/\/$/, '')
+
+  const allEvents = await prisma.newsletterItem.findMany({ where: { section: 'event' } })
+  const validIds = new Set(allEvents.map(e => schemaEventId(e.id)))
+  const res = await fetch(`${base}/api/events`)
+  if (res.ok) {
+    const schemaEvents = await res.json() as Array<{ id: string }>
+    const orphans = schemaEvents.filter(e => e.id.startsWith('loggen-') && !validIds.has(e.id))
+    for (const orphan of orphans) {
+      await fetch(`${base}/api/events/${orphan.id}`, { method: 'DELETE', headers: { 'X-API-Key': SCHEMA_API_KEY } })
+    }
+    if (orphans.length) console.log(`Tog bort ${orphans.length} kvarlämnade händelser i schemat`)
+  }
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const events = await prisma.newsletterItem.findMany({ where: { section: 'event', eventDate: { gte: today } } })
-  for (const event of events) await syncEventToSchema(event)
-  if (events.length) console.log(`Synkade ${events.length} händelser till schemat`)
+  const upcoming = allEvents.filter(e => e.eventDate && e.eventDate >= today)
+  for (const event of upcoming) await syncEventToSchema(event)
 }
 syncAllEventsToSchema().catch(err => console.error('Initial schema sync error:', err))
+setInterval(() => syncAllEventsToSchema().catch(err => console.error('Schema sync error:', err)), 60 * 60 * 1000)
 
 app.get('/api/newsletter', authenticateSharedPassword, async (_req, res) => {
   try {
