@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.25] - 2026-10-22
+
+### Ändrat
+- Fadad avdelare mellan sektionerna i Aktuellt i verksamheten.
+
 ## [1.4.24] - 2026-10-22
 
 ### Fixat

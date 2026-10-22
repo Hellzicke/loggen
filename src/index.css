@@ -4438,8 +4438,13 @@ select.suggestion-form-input {
 .nbp-body { display: none; padding: 0 0.5rem 0.75rem; }
 .nbp--open .nbp-body { display: block; }
 
-.nbp-group { border-radius: 12px; padding: 0.375rem 0.25rem 0.375rem; background: #f8fafc; }
-.nbp-group + .nbp-group { margin-top: 0.625rem; }
+.nbp-group { position: relative; border-radius: 12px; padding: 0.375rem 0.25rem 0.375rem; background: #f8fafc; }
+.nbp-group + .nbp-group { margin-top: 1.25rem; }
+/* Fadad avdelare mellan sektionerna */
+.nbp-group + .nbp-group::before {
+  content: ""; position: absolute; top: -0.625rem; left: 8%; right: 8%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-strong) 50%, transparent);
+}
 .nbp-group--status { background: #f0f9ff; }
 .nbp-group--event { background: #f5f3ff; }
 .nbp-group--info { background: #f0fdfa; }
