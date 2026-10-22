@@ -156,7 +156,8 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
       id: item.id,
       section: item.section,
       title: item.title,
-      body: item.body,
+      // Äldre punkter har ren text – gör om radbrytningar så de behålls i editorn
+      body: looksLikeHtml(item.body) ? item.body : item.body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>'),
       status: (item.status as Status) || 'pågår',
       eventDate: item.eventDate ? item.eventDate.slice(0, 10) : '',
       eventEndDate: item.eventEndDate ? item.eventEndDate.slice(0, 10) : '',
@@ -167,7 +168,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
 
   const save = async () => {
     if (!edit) return
-    const body = edit.section !== 'status' ? (editorRef.current?.getValue() || '') : edit.body
+    const body = editorRef.current?.getValue() || ''
     setSaving(true)
     setError(null)
     try {
@@ -356,9 +357,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
               )}
 
               <label className="nb-label">{edit.section === 'status' ? 'Kommentar' : edit.section === 'event' ? 'Information' : 'Text'}</label>
-              {edit.section !== 'status'
-                ? <RichTextEditor ref={editorRef} initialValue={edit.body} />
-                : <textarea className="nb-input nb-textarea" rows={4} value={edit.body} onChange={e => setEdit({ ...edit, body: e.target.value })} />}
+              <RichTextEditor ref={editorRef} initialValue={edit.body} />
 
               <div className="nb-form-actions">
                 <button className="confirm-btn confirm-btn--secondary" onClick={() => setEdit(null)}>Avbryt</button>

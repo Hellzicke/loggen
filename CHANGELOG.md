@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.21] - 2026-10-22
+
+### Ändrat
+- Kommentarer på statusinlägg i Aktuellt i verksamheten kan formateras (fetstil, listor m.m.) som övrig text.
+
 ## [1.4.20] - 2026-10-22
 
 ### Ändrat

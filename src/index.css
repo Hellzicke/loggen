@@ -4496,7 +4496,6 @@ select.suggestion-form-input {
   border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; width: 100%;
 }
 .nb-input:focus { outline: none; border-color: var(--accent); }
-.nb-textarea { resize: vertical; line-height: 1.5; }
 .nb-error { font-size: 0.8125rem; color: #b91c1c; background: #fef2f2; border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; }
 .nb-form-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem; }
 .nb-time { display: flex; align-items: center; gap: 0.25rem; }
