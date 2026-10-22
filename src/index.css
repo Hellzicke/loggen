@@ -4466,7 +4466,8 @@ select.suggestion-form-input {
 }
 .nbp-row:hover { background: #fff; }
 .nbp-row-title { flex: 1; min-width: 0; font-size: 0.875rem; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nbp-date { font-size: 0.75rem; font-weight: 700; color: var(--accent-hover); white-space: nowrap; flex-shrink: 0; min-width: 52px; }
+/* Kommande händelser: datum, klockslag och rubrik i fasta kolumner */
+.nbp-date { font-size: 0.75rem; font-weight: 700; color: var(--accent-hover); white-space: nowrap; flex-shrink: 0; width: 64px; font-variant-numeric: tabular-nums; }
 .nbp-status { font-size: 0.6875rem; font-weight: 700; border-radius: 999px; padding: 0.0625rem 0.5rem; white-space: nowrap; flex-shrink: 0; }
 .nbp-status--pågår { background: #e0f2fe; color: #0369a1; }
 .nbp-status--planerad { background: #ede9fe; color: #6d28d9; }
@@ -4514,7 +4515,7 @@ select.suggestion-form-input {
 .nb-time { display: flex; align-items: center; gap: 0.25rem; }
 .nb-time .nb-input { width: auto; flex: 1; }
 .nb-time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-.nbp-time { font-weight: 500; color: var(--text-muted); }
+.nbp-time { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; width: 38px; font-variant-numeric: tabular-nums; }
 
 /* Visningsruta för en punkt i Aktuellt i verksamheten */
 .nbm-overlay {

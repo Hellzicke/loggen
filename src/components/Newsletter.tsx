@@ -287,7 +287,8 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
         ))}
         {group('event', eventItems, item => (
           <>
-            <span className="nbp-date">{fmtRange(item.eventDate!, item.eventEndDate)}{item.startTime && <span className="nbp-time"> {item.startTime}</span>}</span>
+            <span className="nbp-date">{fmtRange(item.eventDate!, item.eventEndDate)}</span>
+            <span className="nbp-time">{item.startTime || ''}</span>
             <span className="nbp-row-title">{item.title}</span>
           </>
         ))}

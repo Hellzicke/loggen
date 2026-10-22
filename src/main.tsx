@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import OnScreenKeyboard from './components/OnScreenKeyboard'
 
 // Check if we're on admin route
 const isAdminRoute = window.location.pathname.startsWith('/admin')
@@ -10,6 +11,7 @@ if (isAdminRoute) {
     createRoot(document.getElementById('root')!).render(
       <StrictMode>
         <AdminApp />
+        <OnScreenKeyboard />
       </StrictMode>,
     )
   })
@@ -18,6 +20,7 @@ if (isAdminRoute) {
     createRoot(document.getElementById('root')!).render(
       <StrictMode>
         <App />
+        <OnScreenKeyboard />
       </StrictMode>,
     )
   })

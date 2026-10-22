@@ -2,6 +2,14 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.23] - 2026-10-22
+
+### Tillagt
+- Skärmtangentbord på pekskärmar (kiosken) – visas när man trycker i ett textfält, även i inloggningen och textredigeraren.
+
+### Ändrat
+- Kommande händelser visar datum, klockslag och rubrik i jämna kolumner.
+
 ## [1.4.22] - 2026-10-22
 
 ### Tillagt
