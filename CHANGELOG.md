@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.14] - 2026-10-22
+
+### Tillagt
+- Nyhetsbrev: ny flik med status, kommande händelser och planering/information som admin redigerar. Nya och uppdaterade punkter markeras sedan förra besöket. Visas tills vidare bara för admin under utvärdering.
+
 ## [1.4.13] - 2026-09-29
 
 ### Fixat

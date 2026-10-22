@@ -1752,6 +1752,72 @@ app.delete('/api/comments/:id', authenticateSharedPassword, async (req, res) => 
   }
 })
 
+// ─── Nyhetsbrev ─────────────────────────────────────────────
+const NEWSLETTER_SECTIONS = ['status', 'event', 'info']
+const NEWSLETTER_STATUSES = ['planerad', 'pågår', 'klar', 'pausad']
+
+function parseNewsletterItem(body: any): { data?: any; error?: string } {
+  const section = String(body.section || '')
+  const title = String(body.title || '').trim()
+  if (!NEWSLETTER_SECTIONS.includes(section)) return { error: 'Ogiltig sektion' }
+  if (!title) return { error: 'Rubrik krävs' }
+  const data: any = { section, title, body: String(body.body || ''), status: null, eventDate: null }
+  if (section === 'status') {
+    if (!NEWSLETTER_STATUSES.includes(body.status)) return { error: 'Välj status' }
+    data.status = body.status
+  }
+  if (section === 'event') {
+    const date = new Date(body.eventDate)
+    if (!body.eventDate || isNaN(date.getTime())) return { error: 'Välj datum' }
+    data.eventDate = date
+  }
+  return { data }
+}
+
+app.get('/api/newsletter', authenticateSharedPassword, async (_req, res) => {
+  try {
+    const items = await prisma.newsletterItem.findMany({ orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] })
+    res.json(items)
+  } catch (error) {
+    console.error('Error fetching newsletter:', error)
+    res.status(500).json({ error: 'Failed to fetch newsletter' })
+  }
+})
+
+app.post('/api/admin/newsletter', authenticateToken, async (req, res) => {
+  const { data, error } = parseNewsletterItem(req.body)
+  if (error) return res.status(400).json({ error })
+  try {
+    const item = await prisma.newsletterItem.create({ data })
+    res.status(201).json(item)
+  } catch (err) {
+    console.error('Error creating newsletter item:', err)
+    res.status(500).json({ error: 'Failed to create newsletter item' })
+  }
+})
+
+app.put('/api/admin/newsletter/:id', authenticateToken, async (req, res) => {
+  const { data, error } = parseNewsletterItem(req.body)
+  if (error) return res.status(400).json({ error })
+  try {
+    const item = await prisma.newsletterItem.update({ where: { id: parseInt(req.params.id) }, data })
+    res.json(item)
+  } catch (err) {
+    console.error('Error updating newsletter item:', err)
+    res.status(500).json({ error: 'Failed to update newsletter item' })
+  }
+})
+
+app.delete('/api/admin/newsletter/:id', authenticateToken, async (req, res) => {
+  try {
+    await prisma.newsletterItem.delete({ where: { id: parseInt(req.params.id) } })
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Error deleting newsletter item:', err)
+    res.status(500).json({ error: 'Failed to delete newsletter item' })
+  }
+})
+
 // Serve React app for all other routes
 app.get('*', (_req, res) => {
   const indexPath = join(distDir, 'index.html')
