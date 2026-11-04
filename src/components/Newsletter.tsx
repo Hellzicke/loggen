@@ -14,6 +14,7 @@ export interface NewsletterItem {
   body: string
   status: Status | null
   completedAt: string | null
+  attachments: Attachment[]
   eventDate: string | null
   eventEndDate: string | null
   startTime: string | null
@@ -23,6 +24,10 @@ export interface NewsletterItem {
   updatedAt: string
   signatures: Array<{ id: number; name: string; createdAt: string }>
 }
+
+type Attachment = { url: string; originalName: string; mimeType: string; size: number }
+
+const fmtSize = (bytes: number) => bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} kB`
 
 type Fetcher = (url: string, options?: RequestInit) => Promise<Response>
 
@@ -103,6 +108,7 @@ interface EditState {
   eventDate: string
   eventEndDate: string
   done: boolean
+  attachments: Attachment[]
   startTime: string
   endTime: string
 }
@@ -121,6 +127,35 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const editorRef = useRef<RichTextEditorRef>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+
+  // Bilder går via bilduppladdningen, dokument via bilageuppladdningen (samma som loggens inlägg)
+  const uploadFile = async (file: File) => {
+    const isImage = file.type.startsWith('image/')
+    const form = new FormData()
+    form.append(isImage ? 'image' : 'file', file)
+    const res = await authenticatedFetch(isImage ? '/api/upload' : '/api/attachments/upload', { method: 'POST', body: form })
+    if (!res.ok) throw new Error(`Filen ${file.name} kunde inte laddas upp`)
+    const data = await res.json()
+    return { url: data.url, originalName: data.originalName || file.name, mimeType: data.mimeType || file.type, size: data.size || file.size }
+  }
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || !edit) return
+    setUploading(true)
+    setError(null)
+    try {
+      const uploaded: Attachment[] = []
+      for (const file of Array.from(files)) uploaded.push(await uploadFile(file))
+      setEdit(prev => prev && { ...prev, body: editorRef.current?.getValue() ?? prev.body, attachments: [...prev.attachments, ...uploaded] })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Uppladdningen misslyckades')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -171,7 +206,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
 
   const openNew = (section: Section) => {
     setError(null)
-    setEdit({ id: null, section, title: '', body: '', status: 'pågår', eventDate: '', eventEndDate: '', done: false, startTime: '', endTime: '' })
+    setEdit({ id: null, section, title: '', body: '', status: 'pågår', eventDate: '', eventEndDate: '', done: false, attachments: [], startTime: '', endTime: '' })
   }
 
   const openEdit = (item: NewsletterItem) => {
@@ -188,6 +223,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
       eventEndDate: item.eventEndDate ? item.eventEndDate.slice(0, 10) : '',
       startTime: item.startTime || '',
       done: item.section === 'info' && !!item.completedAt,
+      attachments: item.attachments || [],
       endTime: item.endTime || '',
     })
   }
@@ -209,6 +245,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
           eventEndDate: edit.eventEndDate ? `${edit.eventEndDate}T12:00:00` : null,
           startTime: edit.startTime || null,
           done: edit.done,
+          attachments: edit.attachments,
           endTime: edit.endTime || null,
         }),
       })
@@ -379,6 +416,17 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
                   : <div className="nbm-text">{viewing.body}</div>}
               </div>
             )}
+            {(viewing.attachments || []).length > 0 && (
+              <div className="nbm-files">
+                {viewing.attachments.map((a, idx) => (
+                  <a key={`${a.url}-${idx}`} href={a.url} target="_blank" rel="noreferrer" className="nbm-file">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" /></svg>
+                    <span className="nbm-file-name">{a.originalName}</span>
+                    {a.size > 0 && <span className="nbm-file-size">{fmtSize(a.size)}</span>}
+                  </a>
+                ))}
+              </div>
+            )}
             <div className="nbm-read">
               <div className="nbm-read-list">
                 <span className="nbm-read-label">Läst av</span>
@@ -475,6 +523,31 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
               )}
               <label className="nb-label">{edit.section === 'status' ? 'Kommentar' : edit.section === 'event' ? 'Information' : 'Text'}</label>
               <RichTextEditor ref={editorRef} initialValue={edit.body} />
+
+              {edit.section !== 'event' && (
+                <>
+                  <label className="nb-label">Filer</label>
+                  <input ref={fileInputRef} type="file" multiple style={{ display: 'none' }} onChange={e => handleFiles(e.target.files)} />
+                  <div className="attachment-upload-area">
+                    <button type="button" className="attachment-upload-btn" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                      {uploading ? 'Laddar upp...' : '+ Ladda upp fil'}
+                    </button>
+                    {edit.attachments.length > 0 && (
+                      <div className="attachments-list">
+                        {edit.attachments.map((a, idx) => (
+                          <div key={`${a.url}-${idx}`} className="attachment-item">
+                            <a href={a.url} target="_blank" rel="noreferrer" className="attachment-link">{a.originalName}</a>
+                            <button type="button" className="attachment-remove" title="Ta bort fil"
+                              onClick={() => setEdit(prev => prev && { ...prev, body: editorRef.current?.getValue() ?? prev.body, attachments: prev.attachments.filter((_, i) => i !== idx) })}>
+                              &times;
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
 
               <div className="nb-form-actions">
                 <button className="confirm-btn confirm-btn--secondary" onClick={() => setEdit(null)}>Avbryt</button>

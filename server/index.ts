@@ -1762,6 +1762,11 @@ function parseNewsletterItem(body: any): { data?: any; error?: string } {
   if (!NEWSLETTER_SECTIONS.includes(section)) return { error: 'Ogiltig sektion' }
   if (!title) return { error: 'Rubrik krävs' }
   const data: any = { section, title, body: String(body.body || ''), status: null, eventDate: null, eventEndDate: null, startTime: null, endTime: null }
+  // Bilagor: bara filer som laddats upp till /uploads/
+  data.attachments = (Array.isArray(body.attachments) ? body.attachments : [])
+    .filter((a: any) => typeof a?.url === 'string' && a.url.startsWith('/uploads/'))
+    .slice(0, 20)
+    .map((a: any) => ({ url: a.url, originalName: String(a.originalName || a.url.split('/').pop()).slice(0, 200), mimeType: String(a.mimeType || ''), size: Number(a.size) || 0 }))
   if (section === 'status') {
     if (!NEWSLETTER_STATUSES.includes(body.status)) return { error: 'Välj status' }
     data.status = body.status

@@ -4602,3 +4602,14 @@ select.suggestion-form-input {
 .nba-date { font-size: 0.75rem; font-weight: 600; color: #15803d; white-space: nowrap; }
 .nb-check { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.625rem; font-size: 0.875rem; font-weight: 600; color: var(--text-primary); cursor: pointer; }
 .nb-check input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+/* Bifogade filer i Aktuellt */
+.nbm-files { display: flex; flex-direction: column; gap: 0.375rem; padding: 0 1.75rem; margin-top: 0.75rem; }
+.nbm-file {
+  display: flex; align-items: center; gap: 0.625rem; padding: 0.625rem 0.875rem; border-radius: 10px;
+  background: var(--bg-primary); color: var(--text-primary); text-decoration: none; font-size: 0.875rem; font-weight: 600;
+}
+.nbm-file:hover { background: var(--accent-light); color: var(--accent-hover); }
+.nbm-file svg { color: var(--accent-hover); flex-shrink: 0; }
+.nbm-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nbm-file-size { font-size: 0.75rem; font-weight: 500; color: var(--text-muted); }

@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.28] - 2026-11-04
+
+### Tillagt
+- Filer kan laddas upp till punkter under Status och Planering & information i Aktuellt i verksamheten och öppnas från punkten.
+
 ## [1.4.27] - 2026-11-04
 
 ### Tillagt
