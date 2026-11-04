@@ -1940,10 +1940,15 @@ app.post('/api/newsletter/:id/sign', authenticateSharedPassword, async (req, res
   }
 })
 
+// Klar = status satt till klar, eller informationspunkt markerad som klar. Klara punkter arkiveras efter en vecka.
+const isCompleted = (data: any, body: any) =>
+  (data.section === 'status' && data.status === 'klar') || (data.section === 'info' && body?.done === true)
+
 app.post('/api/admin/newsletter', authenticateToken, async (req, res) => {
   const { data, error } = parseNewsletterItem(req.body)
   if (error) return res.status(400).json({ error })
   try {
+    if (isCompleted(data, req.body)) data.completedAt = new Date()
     const item = await prisma.newsletterItem.create({ data })
     syncEventToSchema(item)
     res.status(201).json(item)
@@ -1957,7 +1962,11 @@ app.put('/api/admin/newsletter/:id', authenticateToken, async (req, res) => {
   const { data, error } = parseNewsletterItem(req.body)
   if (error) return res.status(400).json({ error })
   try {
-    const item = await prisma.newsletterItem.update({ where: { id: parseInt(req.params.id) }, data })
+    const id = parseInt(req.params.id)
+    const existing = await prisma.newsletterItem.findUnique({ where: { id }, select: { completedAt: true } })
+    // Klar-datumet sätts när punkten blir klar och behålls vid senare redigeringar
+    data.completedAt = isCompleted(data, req.body) ? (existing?.completedAt ?? new Date()) : null
+    const item = await prisma.newsletterItem.update({ where: { id }, data })
     syncEventToSchema(item)
     res.json(item)
   } catch (err) {

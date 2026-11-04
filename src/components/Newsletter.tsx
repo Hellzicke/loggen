@@ -13,6 +13,7 @@ export interface NewsletterItem {
   title: string
   body: string
   status: Status | null
+  completedAt: string | null
   eventDate: string | null
   eventEndDate: string | null
   startTime: string | null
@@ -57,6 +58,8 @@ function fmtRange(start: string, end: string | null) {
 
 const looksLikeHtml = (text: string) => /<[a-z][\s\S]*>/i.test(text)
 
+const ARCHIVE_AFTER_MS = 7 * 24 * 60 * 60 * 1000
+
 function startOfToday() {
   const d = new Date()
   d.setHours(0, 0, 0, 0)
@@ -99,6 +102,7 @@ interface EditState {
   status: Status
   eventDate: string
   eventEndDate: string
+  done: boolean
   startTime: string
   endTime: string
 }
@@ -113,6 +117,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
   const [signError, setSignError] = useState('')
   const [edit, setEdit] = useState<EditState | null>(null)
   const [deleteItem, setDeleteItem] = useState<NewsletterItem | null>(null)
+  const [showArchive, setShowArchive] = useState<Section | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const editorRef = useRef<RichTextEditorRef>(null)
@@ -143,15 +148,22 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     try { localStorage.setItem(SEEN_KEY, JSON.stringify(next)) } catch {}
   }
 
+  // Klara statusar och informationspunkter ligger kvar i en vecka och hamnar sedan i arkivet
+  const isArchived = (i: NewsletterItem) =>
+    i.section !== 'event' && !!i.completedAt && Date.now() - new Date(i.completedAt).getTime() > ARCHIVE_AFTER_MS
+  const archivedIn = (section: Section) => items
+    .filter(i => i.section === section && isArchived(i))
+    .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())
+  const archivedItems = showArchive ? archivedIn(showArchive) : []
   const statusItems = items
-    .filter(i => i.section === 'status')
+    .filter(i => i.section === 'status' && !isArchived(i))
     .sort((a, b) => STATUS_ORDER.indexOf(a.status as Status) - STATUS_ORDER.indexOf(b.status as Status)
       || new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
   const eventItems = items
     .filter(i => i.section === 'event' && i.eventDate && new Date(i.eventEndDate || i.eventDate).getTime() >= startOfToday())
     .sort((a, b) => new Date(a.eventDate!).getTime() - new Date(b.eventDate!).getTime())
   const infoItems = items
-    .filter(i => i.section === 'info')
+    .filter(i => i.section === 'info' && !isArchived(i))
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
 
   const unreadCount = [...statusItems, ...eventItems, ...infoItems].filter(isUnread).length
@@ -159,7 +171,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
 
   const openNew = (section: Section) => {
     setError(null)
-    setEdit({ id: null, section, title: '', body: '', status: 'pågår', eventDate: '', eventEndDate: '', startTime: '', endTime: '' })
+    setEdit({ id: null, section, title: '', body: '', status: 'pågår', eventDate: '', eventEndDate: '', done: false, startTime: '', endTime: '' })
   }
 
   const openEdit = (item: NewsletterItem) => {
@@ -175,6 +187,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
       eventDate: item.eventDate ? item.eventDate.slice(0, 10) : '',
       eventEndDate: item.eventEndDate ? item.eventEndDate.slice(0, 10) : '',
       startTime: item.startTime || '',
+      done: item.section === 'info' && !!item.completedAt,
       endTime: item.endTime || '',
     })
   }
@@ -195,6 +208,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
           eventDate: edit.eventDate ? `${edit.eventDate}T12:00:00` : null,
           eventEndDate: edit.eventEndDate ? `${edit.eventEndDate}T12:00:00` : null,
           startTime: edit.startTime || null,
+          done: edit.done,
           endTime: edit.endTime || null,
         }),
       })
@@ -261,6 +275,15 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     )
   )
 
+  const archiveLink = (section: Section) => {
+    const count = archivedIn(section).length
+    return count > 0 && (
+      <button className="nbp-archive-link" onClick={() => setShowArchive(section)}>
+        Arkiv – {SECTION_TITLES[section].toLowerCase()} ({count})
+      </button>
+    )
+  }
+
   return (
     <aside className={`nbp ${open ? 'nbp--open' : ''}`}>
       <button className="nbp-head" onClick={() => setOpen(!open)}>
@@ -285,6 +308,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
             <span className={`nbp-status nbp-status--${item.status}`}>{STATUS_LABELS[item.status as Status]}</span>
           </>
         ))}
+        {archiveLink('status')}
         {group('event', eventItems, item => (
           <>
             <span className="nbp-date">{fmtRange(item.eventDate!, item.eventEndDate)}</span>
@@ -292,10 +316,36 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
             <span className="nbp-row-title">{item.title}</span>
           </>
         ))}
-        {group('info', infoItems, item => <span className="nbp-row-title">{item.title}</span>)}
+        {group('info', infoItems, item => (
+          <>
+            <span className="nbp-row-title">{item.title}</span>
+            {item.completedAt && <span className="nbp-status nbp-status--klar">Klar</span>}
+          </>
+        ))}
+        {archiveLink('info')}
       </div>
 
       {createPortal(<>
+      {showArchive && (
+        <div className="nbm-overlay" onMouseDown={e => { if (e.target === e.currentTarget) setShowArchive(null) }}>
+          <div className="nbm nbm--klar" onClick={e => e.stopPropagation()}>
+            <div className="nbm-hero">
+              <button className="nbm-close" onClick={() => setShowArchive(null)} aria-label="Stäng">×</button>
+              <div className="nbm-kicker">{SECTION_TITLES[showArchive]}</div>
+              <h2 className="nbm-title">Arkiv</h2>
+            </div>
+            <div className="nba-list">
+              {archivedItems.map(item => (
+                <button key={item.id} className="nba-row" onClick={() => openItem(item)}>
+                  <span className="nba-title">{item.title}</span>
+                  <span className="nba-date">Klar {fmtShort(item.completedAt!)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {viewing && (
         <div className="nbm-overlay" onMouseDown={e => { if (e.target === e.currentTarget) setViewing(null) }}>
           <div className={`nbm nbm--${viewing.section}${viewing.status ? ` nbm--${viewing.status}` : ''}`} onClick={e => e.stopPropagation()}>
@@ -304,7 +354,8 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
               <div className="nbm-kicker">{SECTION_TITLES[viewing.section]}</div>
               <h2 className="nbm-title">{viewing.title}</h2>
               <div className="nbm-chips">
-                {viewing.status && <span className={`nbm-chip nbm-chip--status nbm-chip--${viewing.status}`}>{STATUS_LABELS[viewing.status]}</span>}
+                {viewing.status && <span className={`nbm-chip nbm-chip--status nbm-chip--${viewing.status}`}>{STATUS_LABELS[viewing.status]}{viewing.status === 'klar' && viewing.completedAt ? ` ${fmtShort(viewing.completedAt)}` : ''}</span>}
+                {viewing.section === 'info' && viewing.completedAt && <span className="nbm-chip nbm-chip--status nbm-chip--klar">Klar {fmtShort(viewing.completedAt)}</span>}
                 {viewing.eventDate && (
                   <span className="nbm-chip">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
@@ -416,6 +467,12 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
                 </>
               )}
 
+              {edit.section === 'info' && (
+                <label className="nb-check">
+                  <input type="checkbox" checked={edit.done} onChange={e => setEdit({ ...edit, done: e.target.checked })} />
+                  Klar
+                </label>
+              )}
               <label className="nb-label">{edit.section === 'status' ? 'Kommentar' : edit.section === 'event' ? 'Information' : 'Text'}</label>
               <RichTextEditor ref={editorRef} initialValue={edit.body} />
 

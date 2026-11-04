@@ -2,6 +2,12 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.27] - 2026-11-04
+
+### Tillagt
+- Klara statusar och klara punkter under Planering & information ligger kvar i en vecka och arkiveras sedan. Arkivet öppnas från respektive sektion.
+- Kryssruta "Klar" för punkter under Planering & information.
+
 ## [1.4.26] - 2026-10-22
 
 ### Ändrat

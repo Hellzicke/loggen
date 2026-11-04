@@ -159,6 +159,7 @@ model NewsletterItem {
   title        String
   body         String    @default("")
   status       String? // status-sektionen: planerad | pågår | klar | pausad
+  completedAt  DateTime? // när statusen sattes till klar – arkiveras efter en vecka
   eventDate    DateTime? // händelse-sektionen
   eventEndDate DateTime? // händelse: sista dag för flerdagars (frivilligt)
   startTime    String? // händelse: HH:MM (frivilligt)
