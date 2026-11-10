@@ -101,8 +101,6 @@ interface NewsletterProps {
   isAdmin: boolean
 }
 
-// Per punkt: när den senast öppnades (ms). Punkter som ändrats efter det markeras som nya.
-const SEEN_KEY = 'newsletterSeen'
 
 const STATUS_LABELS: Record<Status, string> = { pågår: 'Pågår', planerad: 'Planerad', pausad: 'Pausad', klar: 'Klar' }
 const STATUS_ORDER: Status[] = ['pågår', 'planerad', 'pausad', 'klar']
@@ -159,9 +157,6 @@ function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) 
 const timeRange = (item: { startTime: string | null; endTime: string | null }) =>
   item.startTime ? (item.endTime ? `${item.startTime}–${item.endTime}` : item.startTime) : ''
 
-function readSeen(): Record<number, number> {
-  try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '{}') } catch { return {} }
-}
 
 interface EditState {
   id: number | null
@@ -179,7 +174,6 @@ interface EditState {
 
 export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: NewsletterProps) {
   const [items, setItems] = useState<NewsletterItem[] | null>(null)
-  const [seen, setSeen] = useState<Record<number, number>>(readSeen)
   const [open, setOpen] = useState(false) // hopfällt läge på smala skärmar
   const [viewing, setViewing] = useState<NewsletterItem | null>(null)
   // Uppdatering som admin skriver/redigerar i visningsrutan (id null = ny)
@@ -250,19 +244,12 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
 
   if (!items) return null
 
-  const isUnread = (item: NewsletterItem) => (seen[item.id] || 0) < new Date(item.updatedAt).getTime()
-  // Antal uppdateringar som tillkommit sedan punkten senast öppnades
-  const newUpdates = (item: NewsletterItem) =>
-    (item.updates || []).filter(u => new Date(u.createdAt).getTime() > (seen[item.id] || 0)).length
   const latestUpdate = (item: NewsletterItem) => (item.updates || [])[item.updates.length - 1] || null
 
   const openItem = (item: NewsletterItem) => {
     setViewing(item)
     setUpdEdit(null)
     setUpdError(null)
-    const next = { ...seen, [item.id]: Date.now() }
-    setSeen(next)
-    try { localStorage.setItem(SEEN_KEY, JSON.stringify(next)) } catch {}
   }
 
   // Klara statusar och informationspunkter ligger kvar i en vecka och hamnar sedan i arkivet
@@ -283,7 +270,6 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     .filter(i => i.section === 'info' && !isArchived(i))
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
 
-  const unreadCount = [...statusItems, ...eventItems, ...infoItems].filter(i => isUnread(i) || newUpdates(i) > 0).length
   const lastUpdated = items.reduce((max, i) => Math.max(
     max,
     new Date(i.updatedAt).getTime(),
@@ -418,18 +404,24 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     setViewing(null)
   }
 
+  // Rubrik med antal uppdateringar, t.ex. "Rekrytering (2)" – visas alltid när punkten har uppdateringar
+  const rowTitle = (item: NewsletterItem) => {
+    const count = (item.updates || []).length
+    return (
+      <span className="nbp-row-main">
+        <span className="nbp-row-title">{item.title}</span>
+        {count > 0 && <span className="nbp-update-count" title={`${count} ${count === 1 ? 'uppdatering' : 'uppdateringar'}`}>({count})</span>}
+      </span>
+    )
+  }
+
   // Läst-antal: senaste uppdateringen om sådan finns (nollställs vid ny uppdatering), annars huvudinlägget.
-  // Nya uppdateringar visas som (n) i stället för den blå pricken.
   const rowMarkers = (item: NewsletterItem) => {
     const latest = latestUpdate(item)
     const readCount = (latest ? latest.signatures : item.signatures)?.length || 0
-    const fresh = newUpdates(item)
     return (
       <>
         {readCount > 0 && <span className="nbp-read" title={`Läst av ${readCount}`}>✓{readCount}</span>}
-        {fresh > 0
-          ? <span className="nbp-new-count" title={`${fresh} ${fresh === 1 ? 'ny uppdatering' : 'nya uppdateringar'}`}>({fresh})</span>
-          : isUnread(item) && <span className="nbp-unread" aria-label="Nytt" />}
       </>
     )
   }
@@ -469,13 +461,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
       <button className="nbp-head" onClick={() => setOpen(!open)}>
         <span className="nbp-head-text">
           <span className="nbp-title">Aktuellt i verksamheten</span>
-          {(lastUpdated > 0 || unreadCount > 0) && (
-            <span className="nbp-meta">
-              {lastUpdated > 0 && <>Uppdaterad {fmtShort(new Date(lastUpdated).toISOString())}</>}
-              {lastUpdated > 0 && unreadCount > 0 && ' · '}
-              {unreadCount > 0 && <span className="nbp-count">{unreadCount} {unreadCount === 1 ? 'ny' : 'nya'}</span>}
-            </span>
-          )}
+          {lastUpdated > 0 && <span className="nbp-meta">Uppdaterad {fmtShort(new Date(lastUpdated).toISOString())}</span>}
         </span>
         <svg className="nbp-chevron" width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
@@ -484,7 +470,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
         {items.length === 0 && !isAdmin && <div className="nbp-empty">Inget aktuellt just nu</div>}
         {group('status', statusItems, item => (
           <>
-            <span className="nbp-row-title">{item.title}</span>
+            {rowTitle(item)}
             <span className={`nbp-status nbp-status--${item.status}`}>{STATUS_LABELS[item.status as Status]}</span>
           </>
         ))}
@@ -493,12 +479,12 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
           <>
             <span className="nbp-date">{fmtRange(item.eventDate!, item.eventEndDate)}</span>
             <span className="nbp-time">{item.startTime || ''}</span>
-            <span className="nbp-row-title">{item.title}</span>
+            {rowTitle(item)}
           </>
         ))}
         {group('info', infoItems, item => (
           <>
-            <span className="nbp-row-title">{item.title}</span>
+            {rowTitle(item)}
             {item.completedAt && <span className="nbp-status nbp-status--klar">Klar</span>}
           </>
         ))}

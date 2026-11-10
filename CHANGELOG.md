@@ -2,6 +2,12 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.31] - 2026-11-10
+
+### Ändrat
+- Antalet uppdateringar visas alltid inom parentes efter rubriken i Aktuellt i verksamheten.
+- Den blå pricken och "x nya" är borttagna eftersom flera delar samma enhet.
+
 ## [1.4.30] - 2026-11-10
 
 ### Fixat
