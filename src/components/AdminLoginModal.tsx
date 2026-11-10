@@ -27,6 +27,8 @@ export default function AdminLoginModal({ onSuccess, onClose }: AdminLoginModalP
       const data = await res.json()
       if (res.ok) {
         localStorage.setItem('adminToken', data.token)
+        if (data.refreshToken) localStorage.setItem('adminRefreshToken', data.refreshToken)
+        else localStorage.removeItem('adminRefreshToken')
         localStorage.setItem('adminUsername', data.username)
         onSuccess(data.token, data.username)
       } else {

@@ -282,6 +282,21 @@ app.post('/api/admin/login', async (req, res) => {
   }
 })
 
+// Förnya admin-token via centrala Auth (förnyelsetoken från inloggningen)
+app.post('/api/admin/refresh', async (req, res) => {
+  try {
+    const response = await fetch(`${AUTH_SERVICE_URL}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: req.body?.refreshToken }),
+    })
+    const data = await response.json() as any
+    res.status(response.status).json(data)
+  } catch {
+    res.status(500).json({ error: 'Kunde inte ansluta till auth-tjänsten' })
+  }
+})
+
 // Get database overview
 app.get('/api/admin/overview', authenticateToken, async (_req, res) => {
   try {

@@ -339,8 +339,8 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
       if (!res.ok) { setError(data.error || 'Kunde inte spara'); return }
       setEdit(null)
       await load()
-    } catch {
-      setError('Kunde inte spara')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Kunde inte spara')
     } finally {
       setSaving(false)
     }
@@ -388,8 +388,8 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
       if (!res.ok) { setUpdError(data.error || 'Kunde inte spara'); return }
       setUpdEdit(null)
       await reloadViewing(viewing.id)
-    } catch {
-      setUpdError('Kunde inte spara')
+    } catch (err) {
+      setUpdError(err instanceof Error ? err.message : 'Kunde inte spara')
     } finally {
       setUpdSaving(false)
     }
@@ -563,7 +563,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
             <SignBox key={`item-${viewing.id}`} signatures={viewing.signatures} onSign={signAs(`/api/newsletter/${viewing.id}/sign`, viewing.id)} />
 
             {/* Uppdateringar – direkt i anslutning till huvudinlägget, senaste först */}
-            {((viewing.updates || []).length > 0 || isAdmin) && (
+            {((viewing.updates || []).length > 0 || isAdmin || updEdit) && (
               <div className="nbu">
                 <div className="nbu-head">
                   <span>Uppdateringar{(viewing.updates || []).length > 0 ? ` (${viewing.updates.length})` : ''}</span>

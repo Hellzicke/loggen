@@ -2,6 +2,12 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.30] - 2026-11-10
+
+### Fixat
+- Admin loggas inte längre ut efter 15 minuter. Inloggningen förnyas automatiskt i bakgrunden och gäller i upp till 7 dagar.
+- Om admininloggningen ändå går ut visas ett meddelande och inloggningen öppnas – det man skrivit ligger kvar.
+
 ## [1.4.29] - 2026-11-10
 
 ### Tillagt

@@ -130,26 +130,57 @@ export default function App() {
 
   const clearAdmin = useCallback(() => {
     localStorage.removeItem('adminToken')
+    localStorage.removeItem('adminRefreshToken')
     localStorage.removeItem('adminUsername')
     setAdminToken(null)
     setAdminUsername(null)
   }, [])
 
-  // Fetch med admin-token (centrala Auth). Vid utgången token töms admin-läget.
-  const adminFetch = useCallback(async (url: string, options: RequestInit = {}) => {
-    const token = adminToken || localStorage.getItem('adminToken')
-    const headers: Record<string, string> = { ...(options.headers as Record<string, string>) }
-    if (!(options.body instanceof FormData)) {
-      headers['Content-Type'] = 'application/json'
+  // Förnya admin-token via centrala Auth med sparad förnyelsetoken. Returnerar ny token eller null.
+  const refreshAdminToken = useCallback(async (): Promise<string | null> => {
+    const refreshToken = localStorage.getItem('adminRefreshToken')
+    if (!refreshToken) return null
+    try {
+      const res = await fetch('/api/admin/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      })
+      if (!res.ok) return null
+      const data = await res.json()
+      if (!data.accessToken) return null
+      localStorage.setItem('adminToken', data.accessToken)
+      if (data.refreshToken) localStorage.setItem('adminRefreshToken', data.refreshToken)
+      setAdminToken(data.accessToken)
+      return data.accessToken
+    } catch {
+      return null
     }
-    headers['Authorization'] = `Bearer ${token}`
-    const response = await fetch(url, { ...options, headers })
+  }, [])
+
+  // Fetch med admin-token (centrala Auth). Utgången token förnyas automatiskt och anropet görs om.
+  // Går det inte att förnya öppnas inloggningen – det man skrivit ligger kvar så att man kan spara igen.
+  const adminFetch = useCallback(async (url: string, options: RequestInit = {}) => {
+    const send = (token: string | null) => {
+      const headers: Record<string, string> = { ...(options.headers as Record<string, string>) }
+      if (!(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json'
+      }
+      headers['Authorization'] = `Bearer ${token}`
+      return fetch(url, { ...options, headers })
+    }
+    let response = await send(localStorage.getItem('adminToken') || adminToken)
+    if (response.status === 401 || response.status === 403) {
+      const fresh = await refreshAdminToken()
+      if (fresh) response = await send(fresh)
+    }
     if (response.status === 401 || response.status === 403) {
       clearAdmin()
-      throw new Error('Admin authentication required')
+      setShowAdminLogin(true)
+      throw new Error('Admininloggningen har gått ut. Logga in igen och tryck Spara – det du skrivit finns kvar.')
     }
     return response
-  }, [adminToken, clearAdmin])
+  }, [adminToken, clearAdmin, refreshAdminToken])
 
   const handleAdminLoginSuccess = (token: string, username: string) => {
     setAdminToken(token)
