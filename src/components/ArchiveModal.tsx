@@ -26,12 +26,6 @@ function formatMonthLabel(monthKey: string): string {
   return date.toLocaleDateString('sv-SE', { year: 'numeric', month: 'long' })
 }
 
-interface MonthGroup {
-  key: string
-  label: string
-  count: number
-}
-
 export default function ArchiveModal({ logs, onClose, onUnarchive }: ArchiveModalProps) {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
 

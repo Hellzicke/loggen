@@ -1,3 +1,4 @@
+import { adminRequest, clearAdminTokens } from '../adminAuth'
 import { useState, useEffect } from 'react'
 
 interface Overview {
@@ -130,37 +131,37 @@ export default function AdminPanel() {
       const headers = { 'Authorization': `Bearer ${token}` }
       
       if (activeTab === 'overview') {
-        const res = await fetch('/api/admin/overview', { headers })
+        const res = await adminRequest('/api/admin/overview', { headers })
         if (res.ok) {
           const data = await res.json()
           setOverview(data)
         }
       } else if (activeTab === 'logs') {
-        const res = await fetch('/api/admin/logs', { headers })
+        const res = await adminRequest('/api/admin/logs', { headers })
         if (res.ok) {
           const data = await res.json()
           setLogs(data)
         }
       } else if (activeTab === 'images') {
-        const res = await fetch('/api/admin/images', { headers })
+        const res = await adminRequest('/api/admin/images', { headers })
         if (res.ok) {
           const data = await res.json()
           setImages(data)
         }
       } else if (activeTab === 'meetings') {
-        const res = await fetch('/api/admin/meetings', { headers })
+        const res = await adminRequest('/api/admin/meetings', { headers })
         if (res.ok) {
           const data = await res.json()
           setMeetings(data)
         }
       } else if (activeTab === 'suggestions') {
-        const res = await fetch('/api/admin/suggestions', { headers })
+        const res = await adminRequest('/api/admin/suggestions', { headers })
         if (res.ok) {
           const data = await res.json()
           setSuggestions(data)
         }
       } else if (activeTab === 'stats') {
-        const res = await fetch('/api/admin/user-stats', { headers })
+        const res = await adminRequest('/api/admin/user-stats', { headers })
         if (res.ok) {
           const data = await res.json()
           setUserStats(data)
@@ -195,7 +196,7 @@ export default function AdminPanel() {
       await Promise.all(
         endpoints.map(async ([url, setter]) => {
           try {
-            const res = await fetch(url, { headers })
+            const res = await adminRequest(url, { headers })
             if (res.ok) {
               const data = await res.json()
               setter(data)
@@ -216,7 +217,7 @@ export default function AdminPanel() {
     setDeleting(logId)
     const token = getAuthToken()
     try {
-      const res = await fetch(`/api/admin/logs/${logId}`, {
+      const res = await adminRequest(`/api/admin/logs/${logId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -235,7 +236,7 @@ export default function AdminPanel() {
 
     const token = getAuthToken()
     try {
-      const res = await fetch(`/api/admin/images/${encodeURIComponent(filename)}`, {
+      const res = await adminRequest(`/api/admin/images/${encodeURIComponent(filename)}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -252,8 +253,7 @@ export default function AdminPanel() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('adminToken')
-    localStorage.removeItem('adminUsername')
+    clearAdminTokens()
     window.location.href = '/admin'
   }
 
@@ -310,7 +310,7 @@ export default function AdminPanel() {
       // When displayed later, toLocaleString will convert back to local time
       const scheduledAtISO = localDate.toISOString()
 
-      const res = await fetch(url, {
+      const res = await adminRequest(url, {
         method,
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -340,7 +340,7 @@ export default function AdminPanel() {
 
     const token = getAuthToken()
     try {
-      const res = await fetch(`/api/admin/meetings/${meetingId}`, {
+      const res = await adminRequest(`/api/admin/meetings/${meetingId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -365,7 +365,7 @@ export default function AdminPanel() {
 
     setDeleting(meeting.id)
     try {
-      const res = await fetch(`/api/admin/meetings/${meeting.id}`, {
+      const res = await adminRequest(`/api/admin/meetings/${meeting.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -782,7 +782,7 @@ export default function AdminPanel() {
                   </tr>
                 </thead>
                 <tbody>
-                  {userStats.users.map((user, index) => (
+                  {userStats.users.map((user) => (
                     <tr key={user.name}>
                       <td><strong>{user.name}</strong></td>
                       <td>{user.postsCreated}</td>
@@ -842,7 +842,7 @@ function AdminSuggestionsTab({ suggestions, setSuggestions, getAuthToken }: {
       if (decidedBy) body.decidedBy = decidedBy
       body.fixedInVersion = fixedInVersion
 
-      const res = await fetch(`/api/admin/suggestions/${suggestionId}`, {
+      const res = await adminRequest(`/api/admin/suggestions/${suggestionId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -868,7 +868,7 @@ function AdminSuggestionsTab({ suggestions, setSuggestions, getAuthToken }: {
     if (!confirm('Är du säker på att du vill ta bort detta förslag?')) return
     const token = getAuthToken()
     try {
-      const res = await fetch(`/api/admin/suggestions/${suggestionId}`, {
+      const res = await adminRequest(`/api/admin/suggestions/${suggestionId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })

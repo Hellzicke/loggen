@@ -11,6 +11,7 @@ import MeetingPoints from './components/MeetingPoints'
 import SuggestionBox from './components/SuggestionBox'
 import AdminLoginModal from './components/AdminLoginModal'
 import Newsletter from './components/Newsletter'
+import { adminRequest, clearAdminTokens } from './adminAuth'
 import PlatformSwitcher from './components/PlatformSwitcher'
 
 export interface ReadSignature {
@@ -74,8 +75,6 @@ export default function App() {
   const [archivedLogs, setArchivedLogs] = useState<LogMessage[]>([])
   const [version, setVersion] = useState('')
   const [loading, setLoading] = useState(true)
-  const [employees, setEmployees] = useState<Array<{ employeeId: string; name: string; onDuty?: boolean }>>([])
-  const [onDutyEmployeeIds, setOnDutyEmployeeIds] = useState<Set<string>>(new Set())
   const [showChangelog, setShowChangelog] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [showArchive, setShowArchive] = useState(false)
@@ -102,8 +101,8 @@ export default function App() {
   // Helper function to make authenticated fetch requests (memoized)
   const authenticatedFetch = useCallback(async (url: string, options: RequestInit = {}) => {
     const token = authToken || localStorage.getItem('authToken')
-    const headers: HeadersInit = {
-      ...(options.headers as HeadersInit),
+    const headers: Record<string, string> = {
+      ...(options.headers as Record<string, string>),
       'Authorization': `Bearer ${token}`,
     }
     
@@ -129,58 +128,26 @@ export default function App() {
   }, [authToken])
 
   const clearAdmin = useCallback(() => {
-    localStorage.removeItem('adminToken')
-    localStorage.removeItem('adminRefreshToken')
-    localStorage.removeItem('adminUsername')
+    clearAdminTokens()
     setAdminToken(null)
     setAdminUsername(null)
-  }, [])
-
-  // Förnya admin-token via centrala Auth med sparad förnyelsetoken. Returnerar ny token eller null.
-  const refreshAdminToken = useCallback(async (): Promise<string | null> => {
-    const refreshToken = localStorage.getItem('adminRefreshToken')
-    if (!refreshToken) return null
-    try {
-      const res = await fetch('/api/admin/refresh', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
-      })
-      if (!res.ok) return null
-      const data = await res.json()
-      if (!data.accessToken) return null
-      localStorage.setItem('adminToken', data.accessToken)
-      if (data.refreshToken) localStorage.setItem('adminRefreshToken', data.refreshToken)
-      setAdminToken(data.accessToken)
-      return data.accessToken
-    } catch {
-      return null
-    }
   }, [])
 
   // Fetch med admin-token (centrala Auth). Utgången token förnyas automatiskt och anropet görs om.
   // Går det inte att förnya öppnas inloggningen – det man skrivit ligger kvar så att man kan spara igen.
   const adminFetch = useCallback(async (url: string, options: RequestInit = {}) => {
-    const send = (token: string | null) => {
-      const headers: Record<string, string> = { ...(options.headers as Record<string, string>) }
-      if (!(options.body instanceof FormData)) {
-        headers['Content-Type'] = 'application/json'
-      }
-      headers['Authorization'] = `Bearer ${token}`
-      return fetch(url, { ...options, headers })
+    const headers: Record<string, string> = { ...(options.headers as Record<string, string>) }
+    if (!(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json'
     }
-    let response = await send(localStorage.getItem('adminToken') || adminToken)
-    if (response.status === 401 || response.status === 403) {
-      const fresh = await refreshAdminToken()
-      if (fresh) response = await send(fresh)
-    }
+    const response = await adminRequest(url, { ...options, headers })
     if (response.status === 401 || response.status === 403) {
       clearAdmin()
       setShowAdminLogin(true)
       throw new Error('Admininloggningen har gått ut. Logga in igen och tryck Spara – det du skrivit finns kvar.')
     }
     return response
-  }, [adminToken, clearAdmin, refreshAdminToken])
+  }, [clearAdmin])
 
   const handleAdminLoginSuccess = (token: string, username: string) => {
     setAdminToken(token)
@@ -231,20 +198,6 @@ export default function App() {
       .catch(console.error)
 
     fetchLogs()
-
-    // Hämta personallistan från schema (on-duty + off-duty)
-    fetch('/api/employees', {
-      headers: { 'X-API-Key': process.env.REACT_APP_SCHEMA_API_KEY || '' }
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.onDuty && data?.others) {
-          const onDutyIds = new Set(data.onDuty.map((e: any) => e.employeeId))
-          setOnDutyEmployeeIds(onDutyIds)
-          setEmployees([...data.onDuty, ...data.others])
-        }
-      })
-      .catch(console.error)
   }, [fetchLogs, isAuthenticated, adminToken])
 
   useEffect(() => {
@@ -316,17 +269,6 @@ export default function App() {
   const handleUnpinKeep = async (logId: number) => {
     await togglePin(logId)
     setUnpinPrompt(null)
-  }
-
-  const handleArchive = async (logId: number) => {
-    try {
-      const res = await authenticatedFetch(`/api/logs/${logId}/archive`, { method: 'POST' })
-      if (res.ok) {
-        setLogs(prev => prev.filter(log => log.id !== logId))
-      }
-    } catch (error) {
-      console.error('Failed to archive:', error)
-    }
   }
 
   const handleUnarchive = async (logId: number) => {

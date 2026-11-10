@@ -2,6 +2,14 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.33] - 2026-11-11
+
+### Fixat
+- Adminpanelen loggas inte längre ut efter 15 minuter. Inloggningen förnyas automatiskt och informationen laddas som vanligt.
+
+### Ändrat
+- Städat bort oanvänd kod och rättat typfel så att typkontrollen är helt ren.
+
 ## [1.4.32] - 2026-11-10
 
 ### Ändrat

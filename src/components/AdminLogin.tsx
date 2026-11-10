@@ -25,6 +25,8 @@ export default function AdminLogin({ onSuccess }: AdminLoginProps) {
       if (res.ok) {
         const data = await res.json()
         localStorage.setItem('adminToken', data.token)
+        if (data.refreshToken) localStorage.setItem('adminRefreshToken', data.refreshToken)
+        else localStorage.removeItem('adminRefreshToken')
         localStorage.setItem('adminUsername', data.username)
         onSuccess(data.token, data.username)
       } else {
