@@ -1816,6 +1816,7 @@ body:hover #root::before ~ .header {
   height: auto;
   border-radius: 8px;
 }
+.log-message img { cursor: zoom-in; }
 
 .log-title-row--toggle {
   cursor: pointer;

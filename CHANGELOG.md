@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.37] - 2026-11-11
+
+### Tillagt
+- Klick på en inklistrad bild i ett inlägg öppnar den i full storlek.
+
 ## [1.4.36] - 2026-11-11
 
 ### Fixat

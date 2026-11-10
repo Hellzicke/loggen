@@ -13,6 +13,8 @@ import AdminLoginModal from './components/AdminLoginModal'
 import Newsletter from './components/Newsletter'
 import { adminRequest, clearAdminTokens } from './adminAuth'
 import PlatformSwitcher from './components/PlatformSwitcher'
+import ImageModal from './components/ImageModal'
+import { createPortal } from 'react-dom'
 
 export interface ReadSignature {
   id: number
@@ -87,6 +89,19 @@ export default function App() {
   const [adminToken, setAdminToken] = useState<string | null>(() => localStorage.getItem('adminToken'))
   const [adminUsername, setAdminUsername] = useState<string | null>(() => localStorage.getItem('adminUsername'))
   const [showAdminLogin, setShowAdminLogin] = useState(false)
+  // Klick på inklistrad bild i ett inlägg (eller i Aktuellt) öppnar den i full storlek
+  const [inlineImage, setInlineImage] = useState<string | null>(null)
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      const img = (e.target as HTMLElement | null)?.closest?.('.log-message img') as HTMLImageElement | null
+      if (!img?.src) return
+      e.preventDefault()
+      e.stopPropagation()
+      setInlineImage(img.src)
+    }
+    document.addEventListener('click', onClick, true)
+    return () => document.removeEventListener('click', onClick, true)
+  }, [])
   const isAdmin = !!adminToken
 
   // Check authentication on mount
@@ -493,6 +508,7 @@ export default function App() {
         />
       )}
       <PlatformSwitcher />
+      {inlineImage && createPortal(<ImageModal imageUrl={inlineImage} onClose={() => setInlineImage(null)} />, document.body)}
       {showAdminLogin && (
         <AdminLoginModal
           onSuccess={handleAdminLoginSuccess}
