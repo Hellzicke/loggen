@@ -93,8 +93,8 @@ const monthLabel = (key: string) => {
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
-// Färg på läsgraden: grön ≥ 80 %, gul ≥ 50 %, annars röd
-const rateClass = (pct: number) => (pct >= 80 ? 'rate--good' : pct >= 50 ? 'rate--ok' : 'rate--low')
+// Anställd utan aktivitet under perioden (visas grå längst ner)
+const isInactive = (u: UserStats) => u.signaturesCount === 0 && u.postsCreated === 0 && u.commentsCount === 0
 
 export default function AdminPanel() {
   const [overview, setOverview] = useState<Overview | null>(null)
@@ -788,62 +788,66 @@ export default function AdminPanel() {
               <div className="ustats-warning">Personallistan kunde inte hämtas – alla namn visas.</div>
             )}
 
-            <div className="ustats-cards">
-              <div className="ustats-card">
-                <span className="ustats-card-value">{userStats.totalLogs}</span>
-                <span className="ustats-card-label">Inlägg</span>
+            <div className="overview-grid ustats-cards">
+              <div className="stat-card">
+                <h3>Inlägg under perioden</h3>
+                <div className="stat-value">{userStats.totalLogs}</div>
               </div>
-              <div className="ustats-card">
-                <span className="ustats-card-value">{userStats.users.length}</span>
-                <span className="ustats-card-label">Anställda</span>
+              <div className="stat-card">
+                <h3>Snitt läst</h3>
+                <div className="stat-value">{userStats.averagePercentage} %</div>
               </div>
-              <div className="ustats-card">
-                <span className={`ustats-card-value ${rateClass(userStats.averagePercentage)}`}>{userStats.averagePercentage} %</span>
-                <span className="ustats-card-label">Snitt läst</span>
+              <div className="stat-card">
+                <h3>Har läst allt</h3>
+                <div className="stat-value">
+                  {userStats.users.filter(u => userStats.totalLogs > 0 && u.signaturesCount >= userStats.totalLogs).length}
+                  <span className="ustats-of"> av {userStats.users.length}</span>
+                </div>
               </div>
-              <div className="ustats-card">
-                <span className="ustats-card-value">{userStats.totalComments}</span>
-                <span className="ustats-card-label">Kommentarer</span>
+              <div className="stat-card">
+                <h3>Kommentarer</h3>
+                <div className="stat-value">{userStats.totalComments}</div>
               </div>
             </div>
 
-            <div className="ustats-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Anställd</th>
-                    {userStats.months.map(m => (
-                      <th key={m.key} className="ustats-num">{monthLabel(m.key)}<span className="ustats-sub">{m.posts} inlägg</span></th>
-                    ))}
-                    <th className="ustats-total">Totalt läst</th>
-                    <th className="ustats-num">Inlägg</th>
-                    <th className="ustats-num">Komm.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {userStats.users.map((user) => (
-                    <tr key={user.name} className={user.signaturesCount === 0 && user.postsCreated === 0 && user.commentsCount === 0 ? 'ustats-inactive' : ''}>
-                      <td className="ustats-name">{user.name}</td>
-                      {user.monthly.map((m, i) => (
-                        <td key={userStats.months[i].key} className="ustats-num">
-                          {userStats.months[i].posts > 0
-                            ? <span className={`ustats-pill ${rateClass(m.percentage)}`} title={`${m.signed} av ${userStats.months[i].posts}`}>{m.percentage} %</span>
-                            : <span className="ustats-dash">–</span>}
-                        </td>
-                      ))}
-                      <td className="ustats-total">
-                        <div className="ustats-bar">
-                          <div className={`ustats-bar-fill ${rateClass(user.signaturesPercentage)}`} style={{ width: `${Math.min(user.signaturesPercentage, 100)}%` }} />
-                        </div>
-                        <span className="ustats-bar-text">{user.signaturesPercentage} %</span>
-                      </td>
-                      <td className="ustats-num">{user.postsCreated || <span className="ustats-dash">–</span>}</td>
-                      <td className="ustats-num">{user.commentsCount || <span className="ustats-dash">–</span>}</td>
-                    </tr>
+            <table className="ustats-table">
+              <thead>
+                <tr>
+                  <th>Anställd</th>
+                  <th className="ustats-col-read">Läst av periodens inlägg</th>
+                  {userStats.months.map(m => (
+                    <th key={m.key} className="ustats-num">{monthLabel(m.key)}</th>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                  <th className="ustats-num">Inlägg</th>
+                  <th className="ustats-num">Kommentarer</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...userStats.users]
+                  .sort((a, b) => Number(isInactive(a)) - Number(isInactive(b)))
+                  .map((user) => (
+                  <tr key={user.name} className={isInactive(user) ? 'ustats-inactive' : ''}>
+                    <td className="ustats-name">{user.name}</td>
+                    <td className="ustats-col-read">
+                      <div className="ustats-read">
+                        <div className="ustats-bar"><div className="ustats-bar-fill" style={{ width: `${Math.min(user.signaturesPercentage, 100)}%` }} /></div>
+                        <span className="ustats-read-text">
+                          {user.signaturesCount} av {userStats.totalLogs}
+                          <span className="ustats-read-pct"> · {user.signaturesPercentage} %</span>
+                        </span>
+                      </div>
+                    </td>
+                    {user.monthly.map((m, i) => (
+                      <td key={userStats.months[i].key} className="ustats-num ustats-month">
+                        {userStats.months[i].posts > 0 ? `${m.signed} av ${userStats.months[i].posts}` : '–'}
+                      </td>
+                    ))}
+                    <td className="ustats-num">{user.postsCreated || '–'}</td>
+                    <td className="ustats-num">{user.commentsCount || '–'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : null}
       </div>

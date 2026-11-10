@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.35] - 2026-11-11
+
+### Ändrat
+- Användarstatistiken har en lugnare och tydligare layout i samma stil som Översikt: "x av y" i stället för bara procent och en enda accentfärg.
+
 ## [1.4.34] - 2026-11-11
 
 ### Ändrat
