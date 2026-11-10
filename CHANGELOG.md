@@ -2,6 +2,12 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.34] - 2026-11-11
+
+### Ändrat
+- Användarstatistiken i adminpanelen visar alltid de tre senaste månaderna, per månad och totalt, med sammanfattningskort och färgad läsgrad.
+- Bara anställda i personallistan räknas – gamla handskrivna namn från manuell signering tas inte med.
+
 ## [1.4.33] - 2026-11-11
 
 ### Fixat

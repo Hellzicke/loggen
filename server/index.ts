@@ -742,86 +742,91 @@ app.post('/api/admin/meetings/:id/points/:pointId/move', authenticateToken, asyn
 })
 
 // Get user statistics (admin only)
+// Anställdas namn från personallistan i schemat (inkl. ansvariga). null om schemat inte nås.
+async function fetchEmployeeNames(): Promise<Set<string> | null> {
+  if (!SCHEMA_API_URL || !SCHEMA_API_KEY) return null
+  const base = SCHEMA_API_URL.replace(/\/$/, '')
+  const headers = { 'X-API-Key': SCHEMA_API_KEY }
+  try {
+    const [allRes, managersRes] = await Promise.all([
+      fetch(`${base}/api/employees`, { headers }),
+      fetch(`${base}/api/managers`, { headers }),
+    ])
+    if (!allRes.ok) return null
+    const all = await allRes.json() as Array<{ name: string }>
+    const managers = managersRes.ok ? await managersRes.json() as Array<{ name: string }> : []
+    return new Set([...all, ...(Array.isArray(managers) ? managers : [])]
+      .map(e => (e?.name || '').trim()).filter(Boolean))
+  } catch {
+    return null
+  }
+}
+
+// Användarstatistik för de tre senaste månaderna (innevarande + två föregående), per månad och totalt.
+// Bara namn som finns i personallistan räknas – gamla handskrivna namn från manuell signering tas inte med.
 app.get('/api/admin/user-stats', authenticateToken, async (_req, res) => {
   try {
-    // Get all unique users from different sources
-    const [allLogs, allSignatures, allComments] = await Promise.all([
-      prisma.logMessage.findMany({ select: { id: true, author: true } }),
-      prisma.readSignature.findMany({ select: { name: true, logId: true } }),
-      prisma.comment.findMany({ select: { author: true } })
+    const now = new Date()
+    const months = [2, 1, 0].map(back => {
+      const start = new Date(now.getFullYear(), now.getMonth() - back, 1)
+      const end = new Date(now.getFullYear(), now.getMonth() - back + 1, 1)
+      return { key: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`, start, end }
+    })
+    const periodStart = months[0].start
+    const monthOf = (d: Date) => months.findIndex(m => d >= m.start && d < m.end)
+
+    const [logs, signatures, comments, employeeNames] = await Promise.all([
+      prisma.logMessage.findMany({ where: { createdAt: { gte: periodStart } }, select: { id: true, author: true, createdAt: true } }),
+      prisma.readSignature.findMany({ where: { log: { createdAt: { gte: periodStart } } }, select: { name: true, logId: true } }),
+      prisma.comment.findMany({ where: { createdAt: { gte: periodStart }, deleted: false }, select: { author: true } }),
+      fetchEmployeeNames(),
     ])
 
-    const totalLogs = allLogs.length
-    const userStatsMap = new Map<string, {
-      name: string
-      postsCreated: number
-      signaturesCount: number
-      signaturesPercentage: number
-      commentsCount: number
-    }>()
+    // Inlägg per månad (nämnaren för läsgraden)
+    const logMonth = new Map(logs.map(l => [l.id, monthOf(l.createdAt)]))
+    const postsPerMonth = months.map((_, i) => logs.filter(l => logMonth.get(l.id) === i).length)
 
-    // Count posts created by each user
-    allLogs.forEach(log => {
-      const name = log.author
-      if (!userStatsMap.has(name)) {
-        userStatsMap.set(name, {
-          name,
-          postsCreated: 0,
-          signaturesCount: 0,
-          signaturesPercentage: 0,
-          commentsCount: 0
-        })
-      }
-      const stats = userStatsMap.get(name)!
-      stats.postsCreated++
+    type Row = { name: string; postsCreated: number; commentsCount: number; signedPerMonth: number[] }
+    const rows = new Map<string, Row>()
+    const row = (name: string) => {
+      const key = (name || '').trim()
+      if (!rows.has(key)) rows.set(key, { name: key, postsCreated: 0, commentsCount: 0, signedPerMonth: months.map(() => 0) })
+      return rows.get(key)!
+    }
+    // Alla anställda visas, även de utan aktivitet
+    employeeNames?.forEach(name => row(name))
+    logs.forEach(l => { row(l.author).postsCreated++ })
+    signatures.forEach(sig => {
+      const m = logMonth.get(sig.logId)
+      if (m !== undefined && m >= 0) row(sig.name).signedPerMonth[m]++
     })
+    comments.forEach(c => { row(c.author).commentsCount++ })
 
-    // Count signatures for each user
-    allSignatures.forEach(sig => {
-      const name = sig.name
-      if (!userStatsMap.has(name)) {
-        userStatsMap.set(name, {
-          name,
-          postsCreated: 0,
-          signaturesCount: 0,
-          signaturesPercentage: 0,
-          commentsCount: 0
-        })
-      }
-      const stats = userStatsMap.get(name)!
-      stats.signaturesCount++
-    })
-
-    // Count comments for each user
-    allComments.forEach(comment => {
-      const name = comment.author
-      if (!userStatsMap.has(name)) {
-        userStatsMap.set(name, {
-          name,
-          postsCreated: 0,
-          signaturesCount: 0,
-          signaturesPercentage: 0,
-          commentsCount: 0
-        })
-      }
-      const stats = userStatsMap.get(name)!
-      stats.commentsCount++
-    })
-
-    // Calculate percentages
-    const userStats = Array.from(userStatsMap.values()).map(stats => ({
-      ...stats,
-      signaturesPercentage: totalLogs > 0 
-        ? Math.round((stats.signaturesCount / totalLogs) * 100 * 100) / 100 
-        : 0
-    }))
-
-    // Sort by signatures count (most active first)
-    userStats.sort((a, b) => b.signaturesCount - a.signaturesCount)
+    const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0)
+    const totalPosts = logs.length
+    const users = [...rows.values()]
+      .filter(r => r.name && (!employeeNames || employeeNames.has(r.name)))
+      .map(r => {
+        const signed = r.signedPerMonth.reduce((a, b) => a + b, 0)
+        return {
+          name: r.name,
+          postsCreated: r.postsCreated,
+          commentsCount: r.commentsCount,
+          signaturesCount: signed,
+          signaturesPercentage: pct(signed, totalPosts),
+          monthly: r.signedPerMonth.map((n, i) => ({ signed: n, percentage: pct(n, postsPerMonth[i]) })),
+        }
+      })
+      .sort((a, b) => b.signaturesPercentage - a.signaturesPercentage || a.name.localeCompare(b.name, 'sv'))
 
     res.json({
-      totalLogs,
-      users: userStats
+      periodStart: periodStart.toISOString(),
+      months: months.map((m, i) => ({ key: m.key, posts: postsPerMonth[i] })),
+      totalLogs: totalPosts,
+      totalComments: comments.length,
+      filteredByEmployees: !!employeeNames,
+      averagePercentage: users.length ? Math.round(users.reduce((a, u) => a + u.signaturesPercentage, 0) / users.length) : 0,
+      users,
     })
   } catch (error) {
     console.error('Error fetching user stats:', error)
