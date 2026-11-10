@@ -4613,3 +4613,26 @@ select.suggestion-form-input {
 .nbm-file svg { color: var(--accent-hover); flex-shrink: 0; }
 .nbm-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nbm-file-size { font-size: 0.75rem; font-weight: 500; color: var(--text-muted); }
+
+/* Uppdateringar på punkter i Aktuellt */
+.nbp-new-count { font-size: 0.75rem; font-weight: 800; color: var(--accent); flex-shrink: 0; }
+.nbu { margin: 1rem 1.75rem 0; padding-top: 1rem; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.75rem; }
+.nbu-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); }
+.nbu-add {
+  font-family: inherit; font-size: 0.8125rem; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--accent-hover);
+  background: var(--accent-light); border: none; border-radius: 8px; padding: 0.375rem 0.75rem; cursor: pointer;
+}
+.nbu-add:hover { background: #bae6fd; }
+.nbu-card { border: 1px solid var(--border); border-radius: 12px; padding: 0.875rem 1rem; background: var(--bg-card); }
+.nbu-card--latest { border-color: #7dd3fc; box-shadow: 0 0 0 3px #e0f2fe; }
+.nbu-card--edit { background: var(--bg-primary); display: flex; flex-direction: column; gap: 0.5rem; }
+.nbu-meta { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+.nbu-latest { font-size: 0.6875rem; font-weight: 700; color: #fff; background: var(--accent); border-radius: 999px; padding: 0.0625rem 0.5rem; }
+.nbu-admin { margin-left: auto; display: flex; gap: 0.75rem; }
+.nbu-body { margin-top: 0.5rem; font-size: 0.9375rem; }
+.nbu-card .nbm-files { padding: 0; }
+.nbu-card .nbm-read { margin: 0.75rem 0 0; padding: 0.625rem 0.75rem; }
+.nbu-edit-actions { justify-content: flex-end; }
+.nb-link-btn { font-family: inherit; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); background: none; border: none; cursor: pointer; padding: 0; }
+.nb-link-btn:hover { color: var(--accent); }
+.nb-link-btn--danger:hover { color: #dc2626; }

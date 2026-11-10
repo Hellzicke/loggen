@@ -1756,6 +1756,14 @@ app.delete('/api/comments/:id', authenticateSharedPassword, async (req, res) => 
 const NEWSLETTER_SECTIONS = ['status', 'event', 'info']
 const NEWSLETTER_STATUSES = ['planerad', 'pågår', 'klar', 'pausad']
 
+// Bilagor: bara filer som laddats upp till /uploads/
+function sanitizeAttachments(list: any) {
+  return (Array.isArray(list) ? list : [])
+    .filter((a: any) => typeof a?.url === 'string' && a.url.startsWith('/uploads/'))
+    .slice(0, 20)
+    .map((a: any) => ({ url: a.url, originalName: String(a.originalName || a.url.split('/').pop()).slice(0, 200), mimeType: String(a.mimeType || ''), size: Number(a.size) || 0 }))
+}
+
 function parseNewsletterItem(body: any): { data?: any; error?: string } {
   const section = String(body.section || '')
   const title = String(body.title || '').trim()
@@ -1763,10 +1771,7 @@ function parseNewsletterItem(body: any): { data?: any; error?: string } {
   if (!title) return { error: 'Rubrik krävs' }
   const data: any = { section, title, body: String(body.body || ''), status: null, eventDate: null, eventEndDate: null, startTime: null, endTime: null }
   // Bilagor: bara filer som laddats upp till /uploads/
-  data.attachments = (Array.isArray(body.attachments) ? body.attachments : [])
-    .filter((a: any) => typeof a?.url === 'string' && a.url.startsWith('/uploads/'))
-    .slice(0, 20)
-    .map((a: any) => ({ url: a.url, originalName: String(a.originalName || a.url.split('/').pop()).slice(0, 200), mimeType: String(a.mimeType || ''), size: Number(a.size) || 0 }))
+  data.attachments = sanitizeAttachments(body.attachments)
   if (section === 'status') {
     if (!NEWSLETTER_STATUSES.includes(body.status)) return { error: 'Välj status' }
     data.status = body.status
@@ -1920,7 +1925,10 @@ app.get('/api/newsletter', authenticateSharedPassword, async (_req, res) => {
   try {
     const items = await prisma.newsletterItem.findMany({
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
-      include: { signatures: { orderBy: { createdAt: 'asc' } } },
+      include: {
+        signatures: { orderBy: { createdAt: 'asc' } },
+        updates: { orderBy: { createdAt: 'asc' }, include: { signatures: { orderBy: { createdAt: 'asc' } } } },
+      },
     })
     res.json(items)
   } catch (error) {
@@ -1930,6 +1938,65 @@ app.get('/api/newsletter', authenticateSharedPassword, async (_req, res) => {
 })
 
 // Läst-signatur på en punkt i Aktuellt (samma modell som för loggens inlägg)
+// ─── Uppdateringar på punkter i Aktuellt ───
+function parseNewsletterUpdate(body: any): { data?: any; error?: string } {
+  const html = String(body?.body || '')
+  const attachments = sanitizeAttachments(body?.attachments)
+  const hasText = html.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, '').trim().length > 0
+  if (!hasText && attachments.length === 0) return { error: 'Skriv en text eller bifoga en fil' }
+  return { data: { body: html, attachments } }
+}
+
+app.post('/api/admin/newsletter/:id/updates', authenticateToken, async (req, res) => {
+  const { data, error } = parseNewsletterUpdate(req.body)
+  if (error) return res.status(400).json({ error })
+  try {
+    const update = await prisma.newsletterUpdate.create({ data: { ...data, itemId: parseInt(req.params.id) } })
+    res.status(201).json(update)
+  } catch (err) {
+    console.error('Error creating newsletter update:', err)
+    res.status(500).json({ error: 'Failed to create update' })
+  }
+})
+
+app.put('/api/admin/newsletter/updates/:updateId', authenticateToken, async (req, res) => {
+  const { data, error } = parseNewsletterUpdate(req.body)
+  if (error) return res.status(400).json({ error })
+  try {
+    const update = await prisma.newsletterUpdate.update({ where: { id: parseInt(req.params.updateId) }, data })
+    res.json(update)
+  } catch (err) {
+    console.error('Error updating newsletter update:', err)
+    res.status(500).json({ error: 'Failed to update' })
+  }
+})
+
+app.delete('/api/admin/newsletter/updates/:updateId', authenticateToken, async (req, res) => {
+  try {
+    await prisma.newsletterUpdate.delete({ where: { id: parseInt(req.params.updateId) } })
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Error deleting newsletter update:', err)
+    res.status(500).json({ error: 'Failed to delete update' })
+  }
+})
+
+// Läst-signatur på en uppdatering
+app.post('/api/newsletter/updates/:updateId/sign', authenticateSharedPassword, async (req, res) => {
+  const name = String(req.body?.name || '').trim()
+  if (!name) return res.status(400).json({ error: 'Name is required' })
+  try {
+    const signature = await prisma.newsletterUpdateSignature.create({ data: { name, updateId: parseInt(req.params.updateId) } })
+    res.status(201).json(signature)
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      return res.status(409).json({ error: 'Already signed' })
+    }
+    console.error('Error signing newsletter update:', error)
+    res.status(500).json({ error: 'Failed to sign' })
+  }
+})
+
 app.post('/api/newsletter/:id/sign', authenticateSharedPassword, async (req, res) => {
   const name = String(req.body?.name || '').trim()
   if (!name) return res.status(400).json({ error: 'Name is required' })

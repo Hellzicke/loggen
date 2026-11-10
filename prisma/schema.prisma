@@ -170,6 +170,7 @@ model NewsletterItem {
   updatedAt    DateTime  @updatedAt
 
   signatures NewsletterSignature[]
+  updates    NewsletterUpdate[]
 
   @@index([section])
 }
@@ -183,4 +184,29 @@ model NewsletterSignature {
 
   @@unique([itemId, name])
   @@index([itemId])
+}
+
+// Uppdateringar som admin lägger till på en punkt i Aktuellt – visas direkt under huvudinlägget
+model NewsletterUpdate {
+  id          Int                         @id @default(autoincrement())
+  itemId      Int
+  item        NewsletterItem              @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  body        String                      @default("")
+  attachments Json                        @default("[]")
+  createdAt   DateTime                    @default(now())
+  updatedAt   DateTime                    @updatedAt
+  signatures  NewsletterUpdateSignature[]
+
+  @@index([itemId])
+}
+
+model NewsletterUpdateSignature {
+  id        Int              @id @default(autoincrement())
+  updateId  Int
+  update    NewsletterUpdate @relation(fields: [updateId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime         @default(now())
+
+  @@unique([updateId, name])
+  @@index([updateId])
 }

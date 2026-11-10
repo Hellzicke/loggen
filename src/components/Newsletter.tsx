@@ -22,12 +22,76 @@ export interface NewsletterItem {
   sortOrder: number
   createdAt: string
   updatedAt: string
-  signatures: Array<{ id: number; name: string; createdAt: string }>
+  signatures: Signature[]
+  updates: NewsletterUpdate[]
 }
 
+type Signature = { id: number; name: string; createdAt: string }
 type Attachment = { url: string; originalName: string; mimeType: string; size: number }
 
+export interface NewsletterUpdate {
+  id: number
+  itemId: number
+  body: string
+  attachments: Attachment[]
+  createdAt: string
+  updatedAt: string
+  signatures: Signature[]
+}
+
 const fmtSize = (bytes: number) => bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} kB`
+
+function FileList({ files }: { files: Attachment[] }) {
+  if (!files || files.length === 0) return null
+  return (
+    <div className="nbm-files">
+      {files.map((a, idx) => (
+        <a key={`${a.url}-${idx}`} href={a.url} target="_blank" rel="noreferrer" className="nbm-file">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" /></svg>
+          <span className="nbm-file-name">{a.originalName}</span>
+          {a.size > 0 && <span className="nbm-file-size">{fmtSize(a.size)}</span>}
+        </a>
+      ))}
+    </div>
+  )
+}
+
+// "Läst av" + signera, används för huvudinlägget och för varje uppdatering
+function SignBox({ signatures, onSign }: { signatures: Signature[]; onSign: (name: string) => Promise<string | null> }) {
+  const [signing, setSigning] = useState(false)
+  const [name, setName] = useState('')
+  const [error, setError] = useState('')
+  const submit = async () => {
+    if (!name.trim()) return
+    const err = await onSign(name.trim())
+    if (err) { setError(err); return }
+    setSigning(false)
+    setName('')
+    setError('')
+  }
+  return (
+    <div className="nbm-read">
+      <div className="nbm-read-list">
+        <span className="nbm-read-label">Läst av</span>
+        {(signatures || []).length === 0
+          ? <span className="nbm-read-none">ingen ännu</span>
+          : signatures.map(sig => <span key={sig.id} className="nbm-read-name">{sig.name}</span>)}
+      </div>
+      {signing ? (
+        <div className="nbm-sign-form">
+          <EmployeeNameInput value={name} onChange={setName} selectClassName="nb-input" inputClassName="nb-input" autoFocus onKeyDown={e => e.key === 'Enter' && submit()} />
+          <button className="nbm-btn nbm-btn--primary" onClick={submit} disabled={!name.trim()}>Signera</button>
+          <button className="nbm-btn nbm-btn--ghost" onClick={() => { setSigning(false); setError('') }}>Avbryt</button>
+        </div>
+      ) : (
+        <button className="nbm-sign-btn" onClick={() => setSigning(true)}>Signera som läst</button>
+      )}
+      {error && <div className="nb-error">{error}</div>}
+    </div>
+  )
+}
+
+const fmtDateTime = (value: string) => new Date(value).toLocaleString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace('.', '')
 
 type Fetcher = (url: string, options?: RequestInit) => Promise<Response>
 
@@ -118,9 +182,14 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
   const [seen, setSeen] = useState<Record<number, number>>(readSeen)
   const [open, setOpen] = useState(false) // hopfällt läge på smala skärmar
   const [viewing, setViewing] = useState<NewsletterItem | null>(null)
-  const [signing, setSigning] = useState(false)
-  const [signName, setSignName] = useState('')
-  const [signError, setSignError] = useState('')
+  // Uppdatering som admin skriver/redigerar i visningsrutan (id null = ny)
+  const [updEdit, setUpdEdit] = useState<{ id: number | null; body: string; attachments: Attachment[] } | null>(null)
+  const [updError, setUpdError] = useState<string | null>(null)
+  const [updSaving, setUpdSaving] = useState(false)
+  const [updUploading, setUpdUploading] = useState(false)
+  const [deleteUpdate, setDeleteUpdate] = useState<NewsletterUpdate | null>(null)
+  const updEditorRef = useRef<RichTextEditorRef>(null)
+  const updFileRef = useRef<HTMLInputElement>(null)
   const [edit, setEdit] = useState<EditState | null>(null)
   const [deleteItem, setDeleteItem] = useState<NewsletterItem | null>(null)
   const [showArchive, setShowArchive] = useState<Section | null>(null)
@@ -157,27 +226,40 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     }
   }
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<NewsletterItem[]> => {
     try {
       const res = await authenticatedFetch('/api/newsletter')
       const data = await res.json()
-      setItems(Array.isArray(data) ? data : [])
+      const list: NewsletterItem[] = Array.isArray(data) ? data : []
+      setItems(list)
+      return list
     } catch (err) {
       console.error('Failed to fetch newsletter:', err)
       setItems([])
+      return []
     }
   }, [authenticatedFetch])
+
+  // Läs om och visa den öppna punkten med färsk data
+  const reloadViewing = async (itemId: number) => {
+    const list = await load()
+    setViewing(list.find(i => i.id === itemId) || null)
+  }
 
   useEffect(() => { load() }, [load])
 
   if (!items) return null
 
   const isUnread = (item: NewsletterItem) => (seen[item.id] || 0) < new Date(item.updatedAt).getTime()
+  // Antal uppdateringar som tillkommit sedan punkten senast öppnades
+  const newUpdates = (item: NewsletterItem) =>
+    (item.updates || []).filter(u => new Date(u.createdAt).getTime() > (seen[item.id] || 0)).length
+  const latestUpdate = (item: NewsletterItem) => (item.updates || [])[item.updates.length - 1] || null
 
   const openItem = (item: NewsletterItem) => {
     setViewing(item)
-    setSigning(false)
-    setSignError('')
+    setUpdEdit(null)
+    setUpdError(null)
     const next = { ...seen, [item.id]: Date.now() }
     setSeen(next)
     try { localStorage.setItem(SEEN_KEY, JSON.stringify(next)) } catch {}
@@ -201,8 +283,12 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     .filter(i => i.section === 'info' && !isArchived(i))
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
 
-  const unreadCount = [...statusItems, ...eventItems, ...infoItems].filter(isUnread).length
-  const lastUpdated = items.reduce((max, i) => Math.max(max, new Date(i.updatedAt).getTime()), 0)
+  const unreadCount = [...statusItems, ...eventItems, ...infoItems].filter(i => isUnread(i) || newUpdates(i) > 0).length
+  const lastUpdated = items.reduce((max, i) => Math.max(
+    max,
+    new Date(i.updatedAt).getTime(),
+    ...(i.updates || []).map(u => new Date(u.createdAt).getTime()),
+  ), 0)
 
   const openNew = (section: Section) => {
     setError(null)
@@ -260,22 +346,64 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     }
   }
 
-  const signItem = async () => {
-    if (!viewing || !signName.trim()) return
-    setSignError('')
+  // Signera huvudinlägget eller en uppdatering; returnerar felmeddelande eller null
+  const signAs = (url: string, itemId: number) => async (name: string): Promise<string | null> => {
     try {
-      const res = await authenticatedFetch(`/api/newsletter/${viewing.id}/sign`, { method: 'POST', body: JSON.stringify({ name: signName.trim() }) })
-      if (res.status === 409) { setSignError('Du har redan signerat'); return }
-      if (!res.ok) { setSignError('Kunde inte signera'); return }
-      const signature = await res.json()
-      const updated = { ...viewing, signatures: [...(viewing.signatures || []), signature] }
-      setViewing(updated)
-      setItems(prev => prev && prev.map(i => i.id === updated.id ? updated : i))
-      setSigning(false)
-      setSignName('')
+      const res = await authenticatedFetch(url, { method: 'POST', body: JSON.stringify({ name }) })
+      if (res.status === 409) return 'Du har redan signerat'
+      if (!res.ok) return 'Kunde inte signera'
+      await reloadViewing(itemId)
+      return null
     } catch {
-      setSignError('Något gick fel')
+      return 'Något gick fel'
     }
+  }
+
+  const handleUpdateFiles = async (files: FileList | null) => {
+    if (!files || !updEdit) return
+    setUpdUploading(true)
+    setUpdError(null)
+    try {
+      const uploaded: Attachment[] = []
+      for (const file of Array.from(files)) uploaded.push(await uploadFile(file))
+      setUpdEdit(prev => prev && { ...prev, body: updEditorRef.current?.getValue() ?? prev.body, attachments: [...prev.attachments, ...uploaded] })
+    } catch (err) {
+      setUpdError(err instanceof Error ? err.message : 'Uppladdningen misslyckades')
+    } finally {
+      setUpdUploading(false)
+      if (updFileRef.current) updFileRef.current.value = ''
+    }
+  }
+
+  const saveUpdate = async () => {
+    if (!viewing || !updEdit) return
+    setUpdSaving(true)
+    setUpdError(null)
+    try {
+      const payload = JSON.stringify({ body: updEditorRef.current?.getValue() || '', attachments: updEdit.attachments })
+      const res = updEdit.id
+        ? await adminFetch(`/api/admin/newsletter/updates/${updEdit.id}`, { method: 'PUT', body: payload })
+        : await adminFetch(`/api/admin/newsletter/${viewing.id}/updates`, { method: 'POST', body: payload })
+      const data = await res.json()
+      if (!res.ok) { setUpdError(data.error || 'Kunde inte spara'); return }
+      setUpdEdit(null)
+      await reloadViewing(viewing.id)
+    } catch {
+      setUpdError('Kunde inte spara')
+    } finally {
+      setUpdSaving(false)
+    }
+  }
+
+  const confirmDeleteUpdate = async () => {
+    if (!deleteUpdate) return
+    try {
+      await adminFetch(`/api/admin/newsletter/updates/${deleteUpdate.id}`, { method: 'DELETE' })
+      await reloadViewing(deleteUpdate.itemId)
+    } catch (err) {
+      console.error('Failed to delete update:', err)
+    }
+    setDeleteUpdate(null)
   }
 
   const confirmDelete = async () => {
@@ -288,6 +416,22 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     }
     setDeleteItem(null)
     setViewing(null)
+  }
+
+  // Läst-antal: senaste uppdateringen om sådan finns (nollställs vid ny uppdatering), annars huvudinlägget.
+  // Nya uppdateringar visas som (n) i stället för den blå pricken.
+  const rowMarkers = (item: NewsletterItem) => {
+    const latest = latestUpdate(item)
+    const readCount = (latest ? latest.signatures : item.signatures)?.length || 0
+    const fresh = newUpdates(item)
+    return (
+      <>
+        {readCount > 0 && <span className="nbp-read" title={`Läst av ${readCount}`}>✓{readCount}</span>}
+        {fresh > 0
+          ? <span className="nbp-new-count" title={`${fresh} ${fresh === 1 ? 'ny uppdatering' : 'nya uppdateringar'}`}>({fresh})</span>
+          : isUnread(item) && <span className="nbp-unread" aria-label="Nytt" />}
+      </>
+    )
   }
 
   const group = (section: Section, list: NewsletterItem[], render: (item: NewsletterItem) => JSX.Element) => (
@@ -304,8 +448,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
           : list.map(item => (
             <button key={item.id} className="nbp-row" onClick={() => openItem(item)}>
               {render(item)}
-              {(item.signatures?.length || 0) > 0 && <span className="nbp-read" title={`Läst av ${item.signatures.length}`}>✓{item.signatures.length}</span>}
-              {isUnread(item) && <span className="nbp-unread" aria-label="Nytt" />}
+              {rowMarkers(item)}
             </button>
           ))}
       </div>
@@ -416,42 +559,73 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
                   : <div className="nbm-text">{viewing.body}</div>}
               </div>
             )}
-            {(viewing.attachments || []).length > 0 && (
-              <div className="nbm-files">
-                {viewing.attachments.map((a, idx) => (
-                  <a key={`${a.url}-${idx}`} href={a.url} target="_blank" rel="noreferrer" className="nbm-file">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" /></svg>
-                    <span className="nbm-file-name">{a.originalName}</span>
-                    {a.size > 0 && <span className="nbm-file-size">{fmtSize(a.size)}</span>}
-                  </a>
+            <FileList files={viewing.attachments} />
+            <SignBox key={`item-${viewing.id}`} signatures={viewing.signatures} onSign={signAs(`/api/newsletter/${viewing.id}/sign`, viewing.id)} />
+
+            {/* Uppdateringar – direkt i anslutning till huvudinlägget, senaste först */}
+            {((viewing.updates || []).length > 0 || isAdmin) && (
+              <div className="nbu">
+                <div className="nbu-head">
+                  <span>Uppdateringar{(viewing.updates || []).length > 0 ? ` (${viewing.updates.length})` : ''}</span>
+                  {isAdmin && !updEdit && (
+                    <button className="nbu-add" onClick={() => { setUpdError(null); setUpdEdit({ id: null, body: '', attachments: [] }) }}>+ Lägg till uppdatering</button>
+                  )}
+                </div>
+
+                {updEdit && (
+                  <div className="nbu-card nbu-card--edit">
+                    {updError && <div className="nb-error">{updError}</div>}
+                    <RichTextEditor key={updEdit.id ?? 'new'} ref={updEditorRef} initialValue={updEdit.body} />
+                    <input ref={updFileRef} type="file" multiple style={{ display: 'none' }} onChange={e => handleUpdateFiles(e.target.files)} />
+                    <div className="attachment-upload-area">
+                      <button type="button" className="attachment-upload-btn" onClick={() => updFileRef.current?.click()} disabled={updUploading}>
+                        {updUploading ? 'Laddar upp...' : '+ Ladda upp fil'}
+                      </button>
+                      {updEdit.attachments.length > 0 && (
+                        <div className="attachments-list">
+                          {updEdit.attachments.map((a, idx) => (
+                            <div key={`${a.url}-${idx}`} className="attachment-item">
+                              <a href={a.url} target="_blank" rel="noreferrer" className="attachment-link">{a.originalName}</a>
+                              <button type="button" className="attachment-remove" title="Ta bort fil"
+                                onClick={() => setUpdEdit(prev => prev && { ...prev, body: updEditorRef.current?.getValue() ?? prev.body, attachments: prev.attachments.filter((_, i) => i !== idx) })}>
+                                &times;
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="nbm-actions nbu-edit-actions">
+                      <button className="nbm-btn nbm-btn--ghost" onClick={() => setUpdEdit(null)}>Avbryt</button>
+                      <button className="nbm-btn nbm-btn--primary" onClick={saveUpdate} disabled={updSaving}>{updSaving ? 'Sparar...' : 'Spara uppdatering'}</button>
+                    </div>
+                  </div>
+                )}
+
+                {[...(viewing.updates || [])].reverse().map((u, idx) => (
+                  <div key={u.id} className={`nbu-card${idx === 0 ? ' nbu-card--latest' : ''}`}>
+                    <div className="nbu-meta">
+                      {idx === 0 && <span className="nbu-latest">Senaste</span>}
+                      <span>Uppdatering {fmtDateTime(u.createdAt)}</span>
+                      {isAdmin && (
+                        <span className="nbu-admin">
+                          <button className="nb-link-btn" onClick={() => {
+                            setUpdError(null)
+                            setUpdEdit({ id: u.id, body: u.body, attachments: u.attachments || [] })
+                          }}>Redigera</button>
+                          <button className="nb-link-btn nb-link-btn--danger" onClick={() => setDeleteUpdate(u)}>Ta bort</button>
+                        </span>
+                      )}
+                    </div>
+                    {u.body && (looksLikeHtml(u.body)
+                      ? <div className="log-message nbu-body" dangerouslySetInnerHTML={{ __html: u.body }} />
+                      : <div className="nbm-text nbu-body">{u.body}</div>)}
+                    <FileList files={u.attachments} />
+                    <SignBox key={`upd-${u.id}`} signatures={u.signatures} onSign={signAs(`/api/newsletter/updates/${u.id}/sign`, viewing.id)} />
+                  </div>
                 ))}
               </div>
             )}
-            <div className="nbm-read">
-              <div className="nbm-read-list">
-                <span className="nbm-read-label">Läst av</span>
-                {(viewing.signatures || []).length === 0
-                  ? <span className="nbm-read-none">ingen ännu</span>
-                  : viewing.signatures.map(sig => <span key={sig.id} className="nbm-read-name">{sig.name}</span>)}
-              </div>
-              {signing ? (
-                <div className="nbm-sign-form">
-                  <EmployeeNameInput
-                    value={signName}
-                    onChange={setSignName}
-                    selectClassName="nb-input"
-                    inputClassName="nb-input"
-                    autoFocus
-                    onKeyDown={e => e.key === 'Enter' && signItem()}
-                  />
-                  <button className="nbm-btn nbm-btn--primary" onClick={signItem} disabled={!signName.trim()}>Signera</button>
-                  <button className="nbm-btn nbm-btn--ghost" onClick={() => { setSigning(false); setSignError('') }}>Avbryt</button>
-                </div>
-              ) : (
-                <button className="nbm-sign-btn" onClick={() => setSigning(true)}>Signera som läst</button>
-              )}
-              {signError && <div className="nb-error">{signError}</div>}
-            </div>
             <div className="nbm-footer">
               <span>Uppdaterad {fmtLong(viewing.updatedAt)}</span>
               {isAdmin && (
@@ -556,6 +730,17 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
             </div>
           </div>
         </div>
+      )}
+
+      {deleteUpdate && (
+        <ConfirmModal
+          title="Ta bort uppdatering"
+          message={`Ta bort uppdateringen från ${fmtDateTime(deleteUpdate.createdAt)}?`}
+          confirmText="Ta bort"
+          cancelText="Avbryt"
+          onConfirm={confirmDeleteUpdate}
+          onCancel={() => setDeleteUpdate(null)}
+        />
       )}
 
       {deleteItem && (

@@ -2,6 +2,12 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.29] - 2026-11-10
+
+### Tillagt
+- Admin kan lägga till uppdateringar på punkter i Aktuellt i verksamheten. De visas direkt under huvudinlägget med den senaste överst och har egen läst-signering.
+- Nya uppdateringar visas som (antal) i panelen. Läst-antalet i panelen gäller den senaste uppdateringen.
+
 ## [1.4.28] - 2026-11-04
 
 ### Tillagt
