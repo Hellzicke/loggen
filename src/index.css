@@ -1809,6 +1809,14 @@ body:hover #root::before ~ .header {
   white-space: pre-wrap;
 }
 
+/* Inklistrade bilder anpassas till inläggets (och editorns) bredd */
+.log-message img,
+.rich-editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
 .log-title-row--toggle {
   cursor: pointer;
   user-select: none;

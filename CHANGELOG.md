@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.36] - 2026-11-11
+
+### Fixat
+- Inklistrade bilder i inlägg anpassas till inläggets bredd.
+
 ## [1.4.35] - 2026-11-11
 
 ### Ändrat
