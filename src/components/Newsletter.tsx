@@ -421,7 +421,8 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     const readCount = (latest ? latest.signatures : item.signatures)?.length || 0
     return (
       <>
-        {readCount > 0 && <span className="nbp-read" title={`Läst av ${readCount}`}>✓{readCount}</span>}
+        {/* Läst-kolumnen finns alltid så att raderna ligger i linje */}
+        <span className="nbp-read" title={readCount > 0 ? `Läst av ${readCount}` : undefined}>{readCount > 0 ? `✓${readCount}` : ''}</span>
       </>
     )
   }
@@ -471,7 +472,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
         {group('status', statusItems, item => (
           <>
             {rowTitle(item)}
-            <span className={`nbp-status nbp-status--${item.status}`}>{STATUS_LABELS[item.status as Status]}</span>
+            <span className="nbp-col-status"><span className={`nbp-status nbp-status--${item.status}`}>{STATUS_LABELS[item.status as Status]}</span></span>
           </>
         ))}
         {archiveLink('status')}
@@ -485,7 +486,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
         {group('info', infoItems, item => (
           <>
             {rowTitle(item)}
-            {item.completedAt && <span className="nbp-status nbp-status--klar">Klar</span>}
+            <span className="nbp-col-status">{item.completedAt && <span className="nbp-status nbp-status--klar">Klar</span>}</span>
           </>
         ))}
         {archiveLink('info')}

@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.32] - 2026-11-10
+
+### Ändrat
+- Aktuellt i verksamheten är bredare och alla sektioner visar sina uppgifter i jämna kolumner.
+
 ## [1.4.31] - 2026-11-10
 
 ### Ändrat
