@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import ConfirmModal from './ConfirmModal'
 import EmployeeNameInput from './EmployeeNameInput'
+import SuggestionWizard from './SuggestionWizard'
 
 interface SuggestionVote {
   id: number
@@ -67,11 +68,13 @@ const TYPE_COLORS: Record<string, string> = {
   funktion: '#42b883',
 }
 
+// Aktivitet, Investering och Arbetsrutin väljs i guiden; övriga finns kvar för äldre förslag
 const CATEGORIES = [
+  { value: 'aktivitet', label: 'Aktivitet' },
+  { value: 'investering', label: 'Investering' },
+  { value: 'rutin', label: 'Arbetsrutin' },
   { value: 'förbättring', label: 'Förbättring' },
   { value: 'inköp', label: 'Inköp' },
-  { value: 'rutin', label: 'Ny rutin' },
-  { value: 'aktivitet', label: 'Aktivitet' },
   { value: 'övrigt', label: 'Övrigt' },
 ]
 
@@ -167,6 +170,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
   const [mDecision, setMDecision] = useState('')
   const [mFixedInVersion, setMFixedInVersion] = useState('')
   const [savingAdmin, setSavingAdmin] = useState(false)
+  const [openId, setOpenId] = useState<number | null>(null)
 
   const fetchSuggestions = useCallback(async () => {
     try {
@@ -286,7 +290,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
     }
   }
 
-  const handleCreate = async (title: string, description: string, author: string, category: string, type: string, system: string | null) => {
+  const handleCreate = async (title: string, description: string, author: string, category: string, type: string, system: string | null): Promise<boolean> => {
     try {
       const res = await authenticatedFetch('/api/suggestions', {
         method: 'POST',
@@ -296,10 +300,12 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
         const suggestion = await res.json()
         setSuggestions(prev => [suggestion, ...prev])
         setShowForm(false)
+        return true
       }
     } catch (error) {
       console.error('Failed to create suggestion:', error)
     }
+    return false
   }
 
   const openManage = (s: Suggestion) => {
@@ -369,6 +375,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
     })
     .filter(s => filterCategory === 'all' || s.category === filterCategory)
     .sort((a, b) => {
+      if (filter === 'förslag') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       const statusOrder: Record<string, number> = { open: 0, in_review: 1, decided: 2, locked: 3 }
       const orderDiff = (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0)
       if (orderDiff !== 0) return orderDiff
@@ -380,6 +387,274 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
   const countComments = (comments: SuggestionComment[]): number =>
     comments.reduce((total, c) => total + 1 + (c.replies?.length || 0), 0)
 
+  const renderCard = (suggestion: Suggestion) => {
+    const commentCount = countComments(suggestion.comments)
+    const isExpanded = expandedComments.has(suggestion.id)
+    const isLocked = !!suggestion.lockedAt
+    const myVote = currentVoter.trim()
+      ? suggestion.votes.find(v => v.name === currentVoter.trim())?.value
+      : undefined
+    const upCount = suggestion.votes.filter(v => (v.value ?? 1) === 1).length
+    const downCount = suggestion.votes.filter(v => v.value === -1).length
+    const isPrompted = votePromptFor?.suggestionId === suggestion.id
+
+    return (
+      <article key={suggestion.id} className={`suggestion-item suggestion-item--${suggestion.status}`}>
+        <div className="suggestion-item-header">
+          <div
+            className="log-avatar"
+            style={{ background: getAvatarColor(suggestion.author) }}
+          >
+            {getInitials(suggestion.author)}
+          </div>
+          <div className="suggestion-item-info">
+            <span className="log-author">{suggestion.author}</span>
+            <span className="log-date">{formatDate(suggestion.createdAt)}</span>
+          </div>
+          <span
+            className="suggestion-status-badge"
+            style={{ background: TYPE_COLORS[suggestion.type] || '#667eea' }}
+          >
+            {TYPE_LABELS[suggestion.type] || 'Förslag'}
+          </span>
+          {suggestion.system && (
+            <span className="suggestion-system-badge">
+              {suggestion.system}
+            </span>
+          )}
+          <span
+            className="suggestion-status-badge"
+            style={{ background: STATUS_COLORS[suggestion.status] || '#8a8d91' }}
+          >
+            {STATUS_LABELS[suggestion.status] || suggestion.status}
+          </span>
+          {suggestion.type === 'förslag' && (
+            <span className="suggestion-category-badge">
+              {getCategoryLabel(suggestion.category)}
+            </span>
+          )}
+          {suggestion.fixedInVersion && (
+            <span className="suggestion-fixed-badge" title={`Fixad i version ${suggestion.fixedInVersion}`}>
+              ✓ Fixad i v{suggestion.fixedInVersion}
+            </span>
+          )}
+        </div>
+
+        <div className="suggestion-item-content">
+          <h3 className="suggestion-item-title">{suggestion.title}</h3>
+          <div className="suggestion-item-description" dangerouslySetInnerHTML={{ __html: suggestion.description.replace(/\n/g, '<br/>') }} />
+        </div>
+
+        {suggestion.decision && (
+          <div className="suggestion-decision">
+            <div className="suggestion-decision-label">Beslut</div>
+            <div className="suggestion-decision-text">{suggestion.decision}</div>
+            {suggestion.decidedBy && (
+              <div className="suggestion-decision-meta">
+                — {suggestion.decidedBy}{suggestion.decidedAt ? `, ${formatDate(suggestion.decidedAt)}` : ''}
+              </div>
+            )}
+          </div>
+        )}
+
+        {isAdmin && (
+          <div className="suggestion-admin-bar">
+            <button className="interaction-btn" onClick={() => openManage(suggestion)}>
+              {managingId === suggestion.id ? 'Stäng hantering' : 'Hantera'}
+            </button>
+            <button
+              className="interaction-btn interaction-btn--danger"
+              onClick={() => setDeleteConfirm(suggestion.id)}
+            >
+              Ta bort
+            </button>
+          </div>
+        )}
+
+        {isAdmin && managingId === suggestion.id && (
+          <div className="admin-suggestion-action-panel">
+            <div className="suggestion-form-row">
+              <div className="input-group" style={{ flex: 1 }}>
+                <label>Status</label>
+                <select value={mStatus} onChange={e => setMStatus(e.target.value)} className="suggestion-form-select">
+                  {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div className="input-group" style={{ flex: 1 }}>
+                <label>Beslutsfattare</label>
+                <input
+                  type="text"
+                  value={mDecidedBy}
+                  onChange={e => setMDecidedBy(e.target.value)}
+                  placeholder="Namn"
+                  className="suggestion-form-input"
+                  style={{ marginBottom: 0 }}
+                />
+              </div>
+            </div>
+            <div className="input-group">
+              <label>{suggestion.type === 'förslag' ? 'Beslut / Kommentar' : 'Svar / Kommentar'}</label>
+              <textarea
+                value={mDecision}
+                onChange={e => setMDecision(e.target.value)}
+                placeholder={suggestion.type === 'förslag' ? "T.ex. 'Det beslutades att...'" : "T.ex. 'Åtgärdat' eller status"}
+                className="suggestion-form-textarea"
+                rows={2}
+                style={{ marginBottom: 0 }}
+              />
+            </div>
+            {(suggestion.type === 'bugg' || suggestion.type === 'funktion') && (
+              <div className="input-group">
+                <label>Fixad i version (visas som grön badge)</label>
+                <input
+                  type="text"
+                  value={mFixedInVersion}
+                  onChange={e => setMFixedInVersion(e.target.value)}
+                  placeholder="T.ex. 1.2.3"
+                  className="suggestion-form-input"
+                  style={{ marginBottom: 0 }}
+                />
+              </div>
+            )}
+            <div className="admin-meeting-form-actions" style={{ marginTop: '0.5rem' }}>
+              <button className="admin-meeting-cancel-btn" onClick={() => setManagingId(null)}>Avbryt</button>
+              <button className="admin-meeting-save-btn" onClick={() => handleAdminSave(suggestion.id)} disabled={savingAdmin}>
+                {savingAdmin ? 'Sparar...' : 'Spara'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Voting (endast för förslag, inte bugg/funktion) */}
+        {suggestion.type === 'förslag' && (
+        <>
+        <div className="suggestion-vote-section">
+          <button
+            className={`suggestion-vote-btn ${myVote === 1 ? 'voted voted--up' : ''}`}
+            onClick={() => handleVoteClick(suggestion.id, 1)}
+            disabled={isLocked}
+            title={myVote === 1 ? 'Ta bort röst' : 'Rösta för förslaget'}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill={myVote === 1 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+              <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
+            </svg>
+            <span>{upCount}</span>
+          </button>
+          <button
+            className={`suggestion-vote-btn suggestion-vote-btn--down ${myVote === -1 ? 'voted voted--down' : ''}`}
+            onClick={() => handleVoteClick(suggestion.id, -1)}
+            disabled={isLocked}
+            title={myVote === -1 ? 'Ta bort röst' : 'Rösta emot förslaget'}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill={myVote === -1 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" style={{ transform: 'rotate(180deg)' }}>
+              <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
+            </svg>
+            <span>{downCount}</span>
+          </button>
+          {suggestion.votes.length > 0 && (
+            <span className="suggestion-voters">
+              {suggestion.votes.map(v => `${v.name}${v.value === -1 ? ' (emot)' : ''}`).join(', ')}
+            </span>
+          )}
+        </div>
+        {isPrompted && (
+          <div className="suggestion-vote-prompt">
+            <label>
+              {votePromptFor?.value === 1 ? 'Rösta FÖR' : 'Rösta EMOT'} — ditt namn:
+            </label>
+            <EmployeeNameInput
+              value={promptName}
+              onChange={setPromptName}
+              selectClassName="vote-name-input"
+              inputClassName="vote-name-input"
+              autoFocus
+              onKeyDown={e => {
+                if (e.key === 'Enter') confirmPromptVote()
+                if (e.key === 'Escape') setVotePromptFor(null)
+              }}
+            />
+            <button
+              type="button"
+              className="comment-submit"
+              onClick={confirmPromptVote}
+              disabled={!promptName.trim()}
+            >
+              Rösta
+            </button>
+            <button
+              type="button"
+              className="comment-cancel"
+              onClick={() => setVotePromptFor(null)}
+            >
+              Avbryt
+            </button>
+          </div>
+        )}
+        </>
+        )}
+
+        {/* Comments */}
+        <div className="log-divider"></div>
+        <div className="log-interactions">
+          {!isLocked && (
+            <button
+              className="interaction-btn"
+              onClick={() => setCommentingId(commentingId === suggestion.id ? null : suggestion.id)}
+            >
+              Kommentera
+            </button>
+          )}
+          {commentCount > 0 && (
+            <button
+              className="interaction-btn"
+              onClick={() => {
+                setExpandedComments(prev => {
+                  const next = new Set(prev)
+                  if (next.has(suggestion.id)) next.delete(suggestion.id)
+                  else next.add(suggestion.id)
+                  return next
+                })
+              }}
+            >
+              {isExpanded ? 'Dölj' : 'Visa'} {commentCount} {commentCount === 1 ? 'kommentar' : 'kommentarer'}
+            </button>
+          )}
+        </div>
+
+        {commentingId === suggestion.id && (
+          <SuggestionCommentForm
+            onSubmit={(message, author) => {
+              handleComment(suggestion.id, message, author)
+              setCommentingId(null)
+            }}
+            onCancel={() => setCommentingId(null)}
+          />
+        )}
+
+        {isExpanded && suggestion.comments.length > 0 && (
+          <div className="comments-section">
+            {suggestion.comments.map(comment => (
+              <SuggestionCommentItem
+                key={comment.id}
+                comment={comment}
+                suggestionId={suggestion.id}
+                isLocked={isLocked}
+                onReply={(message, author) => handleComment(suggestion.id, message, author, comment.id)}
+                onDelete={(commentId, parentId) => handleDeleteComment(suggestion.id, commentId, parentId)}
+              />
+            ))}
+          </div>
+        )}
+
+        {isLocked && (
+          <div className="suggestion-locked-notice">
+            Detta förslag är låst och kan inte längre kommenteras.
+          </div>
+        )}
+      </article>
+    )
+  }
+
   if (loading) return <div className="loading">Laddar...</div>
 
   return (
@@ -387,9 +662,11 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
       <div className="suggestion-header-bar">
         <div className="suggestion-actions-left">
           {filter !== 'förslag-arkiv' && (
+            filter === 'förslag' ? null : (
             <button className="suggestion-create-btn" onClick={() => setShowForm(true)}>
-              {filter === 'bugg' ? '+ Rapportera bugg' : filter === 'funktion' ? '+ Önska funktion' : '+ Nytt förslag'}
+              {filter === 'bugg' ? '+ Rapportera bugg' : '+ Önska funktion'}
             </button>
+            )
           )}
           <select
             className="suggestion-filter"
@@ -418,7 +695,23 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
         </div>
       </div>
 
-      {showForm && (
+      {/* Förslag: guide som startar med en stor knapp */}
+      {filter === 'förslag' && (showForm
+        ? <SuggestionWizard
+            onSubmit={(title, description, author, category) => handleCreate(title, description, author, category, 'förslag', null)}
+            onClose={() => setShowForm(false)}
+          />
+        : (
+          <button className="sw-start" onClick={() => setShowForm(true)}>
+            <span className="sw-start-plus">+</span>
+            <span>
+              <span className="sw-start-title">Lämna ett förslag</span>
+              <span className="sw-start-sub">Aktivitet, investering eller arbetsrutin</span>
+            </span>
+          </button>
+        ))}
+
+      {showForm && filter !== 'förslag' && (
         <CreateSuggestionForm
           onSubmit={handleCreate}
           onCancel={() => setShowForm(false)}
@@ -427,279 +720,50 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
         />
       )}
 
-      {sortedSuggestions.length === 0 && !showArchivedView && (
+      {filter === 'förslag' && (() => {
+        const active = sortedSuggestions.filter(s => s.status === 'open' || s.status === 'in_review')
+        const handled = sortedSuggestions
+          .filter(s => s.status === 'decided' || s.status === 'locked')
+          .sort((a, b) => new Date(b.decidedAt || b.createdAt).getTime() - new Date(a.decidedAt || a.createdAt).getTime())
+        const renderRow = (s: Suggestion) => (
+          <div key={s.id} className={`sl-item${openId === s.id ? ' sl-item--open' : ''}`}>
+            <button className="sl-row" onClick={() => setOpenId(openId === s.id ? null : s.id)}>
+              <span className={`sl-cat sl-cat--${s.category}`}>{getCategoryLabel(s.category)}</span>
+              <span className="sl-title">{s.title}</span>
+              {s.status !== 'open' && (
+                <span className="sl-status" style={{ color: STATUS_COLORS[s.status] }}>{STATUS_LABELS[s.status]}</span>
+              )}
+              <span className="sl-meta">{s.author} · {new Date(s.createdAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}</span>
+              <span className="sl-chevron">{openId === s.id ? '▾' : '▸'}</span>
+            </button>
+            {openId === s.id && <div className="sl-detail">{renderCard(s)}</div>}
+          </div>
+        )
+        return (
+          <>
+            <section className="sl-section">
+              <h3 className="sl-heading">Aktiva förslag <span className="sl-count">{active.length}</span></h3>
+              {active.length === 0
+                ? <div className="sl-empty">Inga aktiva förslag</div>
+                : <div className="sl-list">{active.map(renderRow)}</div>}
+            </section>
+            <section className="sl-section">
+              <h3 className="sl-heading">Hanterade förslag <span className="sl-count">{handled.length}</span></h3>
+              {handled.length === 0
+                ? <div className="sl-empty">Inga hanterade förslag</div>
+                : <div className="sl-list">{handled.map(renderRow)}</div>}
+            </section>
+          </>
+        )
+      })()}
+
+      {sortedSuggestions.length === 0 && !showArchivedView && filter !== 'förslag' && (
         <div className="empty-state">
           <p>{filter === 'bugg' ? 'Inga buggrapporter ännu.' : filter === 'funktion' ? 'Inga funktionsönskemål ännu.' : 'Inga förslag ännu. Var först med att lämna ett!'}</p>
         </div>
       )}
 
-      {(showArchivedView ? archivedFiltered : sortedSuggestions).map(suggestion => {
-        const commentCount = countComments(suggestion.comments)
-        const isExpanded = expandedComments.has(suggestion.id)
-        const isLocked = !!suggestion.lockedAt
-        const myVote = currentVoter.trim()
-          ? suggestion.votes.find(v => v.name === currentVoter.trim())?.value
-          : undefined
-        const upCount = suggestion.votes.filter(v => (v.value ?? 1) === 1).length
-        const downCount = suggestion.votes.filter(v => v.value === -1).length
-        const isPrompted = votePromptFor?.suggestionId === suggestion.id
-
-        return (
-          <article key={suggestion.id} className={`suggestion-item suggestion-item--${suggestion.status}`}>
-            <div className="suggestion-item-header">
-              <div
-                className="log-avatar"
-                style={{ background: getAvatarColor(suggestion.author) }}
-              >
-                {getInitials(suggestion.author)}
-              </div>
-              <div className="suggestion-item-info">
-                <span className="log-author">{suggestion.author}</span>
-                <span className="log-date">{formatDate(suggestion.createdAt)}</span>
-              </div>
-              <span
-                className="suggestion-status-badge"
-                style={{ background: TYPE_COLORS[suggestion.type] || '#667eea' }}
-              >
-                {TYPE_LABELS[suggestion.type] || 'Förslag'}
-              </span>
-              {suggestion.system && (
-                <span className="suggestion-system-badge">
-                  {suggestion.system}
-                </span>
-              )}
-              <span
-                className="suggestion-status-badge"
-                style={{ background: STATUS_COLORS[suggestion.status] || '#8a8d91' }}
-              >
-                {STATUS_LABELS[suggestion.status] || suggestion.status}
-              </span>
-              {suggestion.type === 'förslag' && (
-                <span className="suggestion-category-badge">
-                  {getCategoryLabel(suggestion.category)}
-                </span>
-              )}
-              {suggestion.fixedInVersion && (
-                <span className="suggestion-fixed-badge" title={`Fixad i version ${suggestion.fixedInVersion}`}>
-                  ✓ Fixad i v{suggestion.fixedInVersion}
-                </span>
-              )}
-            </div>
-
-            <div className="suggestion-item-content">
-              <h3 className="suggestion-item-title">{suggestion.title}</h3>
-              <div className="suggestion-item-description" dangerouslySetInnerHTML={{ __html: suggestion.description.replace(/\n/g, '<br/>') }} />
-            </div>
-
-            {suggestion.decision && (
-              <div className="suggestion-decision">
-                <div className="suggestion-decision-label">Beslut</div>
-                <div className="suggestion-decision-text">{suggestion.decision}</div>
-                {suggestion.decidedBy && (
-                  <div className="suggestion-decision-meta">
-                    — {suggestion.decidedBy}{suggestion.decidedAt ? `, ${formatDate(suggestion.decidedAt)}` : ''}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {isAdmin && (
-              <div className="suggestion-admin-bar">
-                <button className="interaction-btn" onClick={() => openManage(suggestion)}>
-                  {managingId === suggestion.id ? 'Stäng hantering' : 'Hantera'}
-                </button>
-                <button
-                  className="interaction-btn interaction-btn--danger"
-                  onClick={() => setDeleteConfirm(suggestion.id)}
-                >
-                  Ta bort
-                </button>
-              </div>
-            )}
-
-            {isAdmin && managingId === suggestion.id && (
-              <div className="admin-suggestion-action-panel">
-                <div className="suggestion-form-row">
-                  <div className="input-group" style={{ flex: 1 }}>
-                    <label>Status</label>
-                    <select value={mStatus} onChange={e => setMStatus(e.target.value)} className="suggestion-form-select">
-                      {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                  </div>
-                  <div className="input-group" style={{ flex: 1 }}>
-                    <label>Beslutsfattare</label>
-                    <input
-                      type="text"
-                      value={mDecidedBy}
-                      onChange={e => setMDecidedBy(e.target.value)}
-                      placeholder="Namn"
-                      className="suggestion-form-input"
-                      style={{ marginBottom: 0 }}
-                    />
-                  </div>
-                </div>
-                <div className="input-group">
-                  <label>{suggestion.type === 'förslag' ? 'Beslut / Kommentar' : 'Svar / Kommentar'}</label>
-                  <textarea
-                    value={mDecision}
-                    onChange={e => setMDecision(e.target.value)}
-                    placeholder={suggestion.type === 'förslag' ? "T.ex. 'Det beslutades att...'" : "T.ex. 'Åtgärdat' eller status"}
-                    className="suggestion-form-textarea"
-                    rows={2}
-                    style={{ marginBottom: 0 }}
-                  />
-                </div>
-                {(suggestion.type === 'bugg' || suggestion.type === 'funktion') && (
-                  <div className="input-group">
-                    <label>Fixad i version (visas som grön badge)</label>
-                    <input
-                      type="text"
-                      value={mFixedInVersion}
-                      onChange={e => setMFixedInVersion(e.target.value)}
-                      placeholder="T.ex. 1.2.3"
-                      className="suggestion-form-input"
-                      style={{ marginBottom: 0 }}
-                    />
-                  </div>
-                )}
-                <div className="admin-meeting-form-actions" style={{ marginTop: '0.5rem' }}>
-                  <button className="admin-meeting-cancel-btn" onClick={() => setManagingId(null)}>Avbryt</button>
-                  <button className="admin-meeting-save-btn" onClick={() => handleAdminSave(suggestion.id)} disabled={savingAdmin}>
-                    {savingAdmin ? 'Sparar...' : 'Spara'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Voting (endast för förslag, inte bugg/funktion) */}
-            {suggestion.type === 'förslag' && (
-            <>
-            <div className="suggestion-vote-section">
-              <button
-                className={`suggestion-vote-btn ${myVote === 1 ? 'voted voted--up' : ''}`}
-                onClick={() => handleVoteClick(suggestion.id, 1)}
-                disabled={isLocked}
-                title={myVote === 1 ? 'Ta bort röst' : 'Rösta för förslaget'}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill={myVote === 1 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-                  <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
-                </svg>
-                <span>{upCount}</span>
-              </button>
-              <button
-                className={`suggestion-vote-btn suggestion-vote-btn--down ${myVote === -1 ? 'voted voted--down' : ''}`}
-                onClick={() => handleVoteClick(suggestion.id, -1)}
-                disabled={isLocked}
-                title={myVote === -1 ? 'Ta bort röst' : 'Rösta emot förslaget'}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill={myVote === -1 ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" style={{ transform: 'rotate(180deg)' }}>
-                  <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
-                </svg>
-                <span>{downCount}</span>
-              </button>
-              {suggestion.votes.length > 0 && (
-                <span className="suggestion-voters">
-                  {suggestion.votes.map(v => `${v.name}${v.value === -1 ? ' (emot)' : ''}`).join(', ')}
-                </span>
-              )}
-            </div>
-            {isPrompted && (
-              <div className="suggestion-vote-prompt">
-                <label>
-                  {votePromptFor?.value === 1 ? 'Rösta FÖR' : 'Rösta EMOT'} — ditt namn:
-                </label>
-                <EmployeeNameInput
-                  value={promptName}
-                  onChange={setPromptName}
-                  selectClassName="vote-name-input"
-                  inputClassName="vote-name-input"
-                  autoFocus
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') confirmPromptVote()
-                    if (e.key === 'Escape') setVotePromptFor(null)
-                  }}
-                />
-                <button
-                  type="button"
-                  className="comment-submit"
-                  onClick={confirmPromptVote}
-                  disabled={!promptName.trim()}
-                >
-                  Rösta
-                </button>
-                <button
-                  type="button"
-                  className="comment-cancel"
-                  onClick={() => setVotePromptFor(null)}
-                >
-                  Avbryt
-                </button>
-              </div>
-            )}
-            </>
-            )}
-
-            {/* Comments */}
-            <div className="log-divider"></div>
-            <div className="log-interactions">
-              {!isLocked && (
-                <button
-                  className="interaction-btn"
-                  onClick={() => setCommentingId(commentingId === suggestion.id ? null : suggestion.id)}
-                >
-                  Kommentera
-                </button>
-              )}
-              {commentCount > 0 && (
-                <button
-                  className="interaction-btn"
-                  onClick={() => {
-                    setExpandedComments(prev => {
-                      const next = new Set(prev)
-                      if (next.has(suggestion.id)) next.delete(suggestion.id)
-                      else next.add(suggestion.id)
-                      return next
-                    })
-                  }}
-                >
-                  {isExpanded ? 'Dölj' : 'Visa'} {commentCount} {commentCount === 1 ? 'kommentar' : 'kommentarer'}
-                </button>
-              )}
-            </div>
-
-            {commentingId === suggestion.id && (
-              <SuggestionCommentForm
-                onSubmit={(message, author) => {
-                  handleComment(suggestion.id, message, author)
-                  setCommentingId(null)
-                }}
-                onCancel={() => setCommentingId(null)}
-              />
-            )}
-
-            {isExpanded && suggestion.comments.length > 0 && (
-              <div className="comments-section">
-                {suggestion.comments.map(comment => (
-                  <SuggestionCommentItem
-                    key={comment.id}
-                    comment={comment}
-                    suggestionId={suggestion.id}
-                    isLocked={isLocked}
-                    onReply={(message, author) => handleComment(suggestion.id, message, author, comment.id)}
-                    onDelete={(commentId, parentId) => handleDeleteComment(suggestion.id, commentId, parentId)}
-                  />
-                ))}
-              </div>
-            )}
-
-            {isLocked && (
-              <div className="suggestion-locked-notice">
-                Detta förslag är låst och kan inte längre kommenteras.
-              </div>
-            )}
-          </article>
-        )
-      })}
+      {(showArchivedView ? archivedFiltered : filter === 'förslag' ? [] : sortedSuggestions).map(renderCard)}
 
       {deleteConfirm && (
         <ConfirmModal

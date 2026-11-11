@@ -2,6 +2,12 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.38] - 2026-11-11
+
+### Ändrat
+- Förslagslådan: ny guide "Lämna ett förslag" med stora knappar för Aktivitet, Investering (över 20 000 kr) och Arbetsrutin.
+- Förslagsöversikten visar aktiva och hanterade förslag som listor med rubrik och kategori, sorterade efter datum.
+
 ## [1.4.37] - 2026-11-11
 
 ### Tillagt
