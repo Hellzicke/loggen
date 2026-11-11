@@ -742,15 +742,40 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
         const active = sortedSuggestions.filter(s => s.status === 'open' || s.status === 'in_review')
         const handled = [...sortedSuggestions.filter(s => s.status === 'decided' || s.status === 'locked'), ...archivedFiltered]
           .sort((a, b) => new Date(b.decidedAt || b.createdAt).getTime() - new Date(a.decidedAt || a.createdAt).getTime())
-        const noOutcome = handled.filter(s => !OUTCOMES.some(o => o.value === s.outcome))
-        // En kolumn per läge: aktiva, sedan ett per utfall
-        const columns = [
-          { key: 'active', label: 'Aktiva förslag', items: active, icon: <path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z" /> },
-          { key: 'genomförs', label: 'Ska genomföras', items: handled.filter(s => s.outcome === 'genomförs'), icon: <path d="M5 12h14M13 6l6 6-6 6" /> },
-          { key: 'genomfört', label: 'Genomfört', items: handled.filter(s => s.outcome === 'genomfört'), icon: <path d="M20 6L9 17l-5-5" /> },
-          { key: 'avslag', label: 'Genomförs inte', items: handled.filter(s => s.outcome === 'avslag'), icon: <path d="M18 6L6 18M6 6l12 12" /> },
-          ...(noOutcome.length > 0 ? [{ key: 'beslutat', label: 'Beslutat', items: noOutcome, icon: <path d="M12 8v4M12 16h.01M12 2a10 10 0 100 20 10 10 0 000-20z" /> }] : []),
-        ]
+        // En kolumn per kategori; aktiva överst, beslutade under. Huvudkategorierna visas alltid, äldre bara om de har förslag
+        const columns = CATEGORIES
+          .map(cat => ({
+            key: cat.value,
+            label: cat.label,
+            active: active.filter(s => categoryOf(s) === cat.value),
+            handled: handled.filter(s => categoryOf(s) === cat.value),
+          }))
+          .filter(col => ['aktivitet', 'investering', 'rutin'].includes(col.key) || col.active.length + col.handled.length > 0)
+        const stateOf = (s: Suggestion) => {
+          if (s.status === 'in_review') return { key: 'review', label: 'Under behandling' }
+          if (s.status === 'open') return null
+          const o = OUTCOMES.find(x => x.value === s.outcome)
+          return o ? { key: o.value, label: o.label } : { key: 'beslutat', label: 'Beslutat' }
+        }
+        const card = (s: Suggestion) => {
+          const ups = s.votes.filter(v => (v.value ?? 1) === 1).length
+          const comments = countComments(s.comments)
+          const state = stateOf(s)
+          const isActive = s.status === 'open' || s.status === 'in_review'
+          return (
+            <button key={s.id} className={`sl-card${isActive ? '' : ' sl-card--handled'}`} onClick={() => setOpenId(s.id)}>
+              <span className="sl-card-title">{s.title}</span>
+              <span className="sl-card-meta">
+                {state && <span className={`sl-state sl-state--${state.key}`}>{state.label}</span>}
+                <span className="sl-card-info">
+                  {ups > 0 && <span>👍 {ups}</span>}
+                  {comments > 0 && <span>💬 {comments}</span>}
+                  <span>{fmt(isActive ? s.createdAt : (s.decidedAt || s.createdAt))}</span>
+                </span>
+              </span>
+            </button>
+          )
+        }
         const opened = [...sortedSuggestions, ...archivedFiltered].find(s => s.id === openId)
         return (
           <>
@@ -758,32 +783,14 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
               {columns.map(col => (
                 <div key={col.key} className={`sl-col sl-col--${col.key}`}>
                   <div className="sl-col-head">
-                    <span className="sl-col-icon">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">{col.icon}</svg>
-                    </span>
+                    <span className="sl-col-dot" />
                     <span className="sl-col-title">{col.label}</span>
-                    <span className="sl-col-count">{col.items.length}</span>
+                    <span className="sl-col-count">{col.active.length + col.handled.length}</span>
                   </div>
-                  {col.items.length === 0
-                    ? <div className="sl-empty">Inget just nu</div>
-                    : col.items.map(s => {
-                      const ups = s.votes.filter(v => (v.value ?? 1) === 1).length
-                      const comments = countComments(s.comments)
-                      return (
-                        <button key={s.id} className="sl-card" onClick={() => setOpenId(s.id)}>
-                          <span className="sl-card-title">{s.title}</span>
-                          <span className="sl-card-meta">
-                            <span className={`sl-cat sl-cat--${categoryOf(s)}`}>{getCategoryLabel(categoryOf(s))}</span>
-                            {s.status === 'in_review' && <span className="sl-review">Under behandling</span>}
-                            <span className="sl-card-info">
-                              {ups > 0 && <span>👍 {ups}</span>}
-                              {comments > 0 && <span>💬 {comments}</span>}
-                              <span>{fmt(col.key === 'active' ? s.createdAt : (s.decidedAt || s.createdAt))}</span>
-                            </span>
-                          </span>
-                        </button>
-                      )
-                    })}
+                  {col.active.length === 0 && <div className="sl-empty">Inga aktiva förslag</div>}
+                  {col.active.map(card)}
+                  {col.handled.length > 0 && <div className="sl-divider">Beslutade</div>}
+                  {col.handled.map(card)}
                 </div>
               ))}
             </div>

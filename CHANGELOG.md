@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.43] - 2026-11-11
+
+### Ändrat
+- Förslagsöversikten har en kolumn per kategori. Aktiva förslag ligger överst och beslutade under. Statusen visas som etikett på varje kort.
+
 ## [1.4.42] - 2026-11-11
 
 ### Ändrat
