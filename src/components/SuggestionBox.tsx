@@ -70,13 +70,11 @@ const TYPE_COLORS: Record<string, string> = {
   funktion: '#42b883',
 }
 
-// Aktivitet, Investering och Arbetsrutin väljs i guiden; övriga finns kvar för äldre förslag
+// Äldre kategorier (förbättring, inköp m.fl.) visas som Övrigt
 const CATEGORIES = [
   { value: 'aktivitet', label: 'Aktivitet' },
   { value: 'investering', label: 'Investering' },
   { value: 'rutin', label: 'Arbetsrutin' },
-  { value: 'förbättring', label: 'Förbättring' },
-  { value: 'inköp', label: 'Inköp' },
   { value: 'övrigt', label: 'Övrigt' },
 ]
 
@@ -155,7 +153,7 @@ function getAvatarColor(name: string): string {
 }
 
 function getCategoryLabel(value: string): string {
-  return CATEGORIES.find(c => c.value === value)?.label || value
+  return CATEGORIES.find(c => c.value === value)?.label || 'Övrigt'
 }
 
 export default function SuggestionBox({ authenticatedFetch, filter = 'förslag', isAdmin = false, adminFetch }: SuggestionBoxProps) {
@@ -178,8 +176,10 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
   const [mDecision, setMDecision] = useState('')
   const [mFixedInVersion, setMFixedInVersion] = useState('')
   const [mOutcome, setMOutcome] = useState('')
+  const [mCategory, setMCategory] = useState('')
   const [savingAdmin, setSavingAdmin] = useState(false)
   const [openId, setOpenId] = useState<number | null>(null)
+  const [agendaMsg, setAgendaMsg] = useState<{ id: number; text: string } | null>(null)
 
   const fetchSuggestions = useCallback(async () => {
     try {
@@ -325,6 +325,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
     setMDecision(s.decision || '')
     setMFixedInVersion(s.fixedInVersion || '')
     setMOutcome(s.outcome || '')
+    setMCategory(CATEGORIES.some(c => c.value === s.category) ? s.category : 'övrigt')
   }
 
   const applyUpdated = (updated: Suggestion) => {
@@ -344,6 +345,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
           decidedBy: mDecidedBy || undefined,
           fixedInVersion: mFixedInVersion,
           outcome: mOutcome,
+          category: mCategory,
         }),
       })
       if (res.ok) {
@@ -354,6 +356,24 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
       console.error('Failed to update suggestion:', error)
     }
     setSavingAdmin(false)
+  }
+
+  const handleToMeeting = async (suggestionId: number) => {
+    if (!adminFetch) return
+    try {
+      const res = await adminFetch(`/api/admin/suggestions/${suggestionId}/to-meeting`, { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        applyUpdated(data.suggestion)
+        const when = new Date(data.meeting.scheduledAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })
+        setAgendaMsg({ id: suggestionId, text: `Tillagt på agendan för ${data.meeting.title} (${when})` })
+      } else {
+        setAgendaMsg({ id: suggestionId, text: data.error || 'Kunde inte lägga till på mötet' })
+      }
+    } catch (error) {
+      console.error('Failed to move suggestion to meeting:', error)
+      setAgendaMsg({ id: suggestionId, text: 'Kunde inte lägga till på mötet' })
+    }
   }
 
   const handleAdminDelete = async (suggestionId: number) => {
@@ -477,12 +497,18 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
             <button className="interaction-btn" onClick={() => openManage(suggestion)}>
               {managingId === suggestion.id ? 'Stäng hantering' : 'Hantera'}
             </button>
+            {suggestion.type === 'förslag' && (
+              <button className="interaction-btn" onClick={() => handleToMeeting(suggestion.id)}>
+                Till nästa möte
+              </button>
+            )}
             <button
               className="interaction-btn interaction-btn--danger"
               onClick={() => setDeleteConfirm(suggestion.id)}
             >
               Ta bort
             </button>
+            {agendaMsg?.id === suggestion.id && <span className="suggestion-agenda-msg">{agendaMsg.text}</span>}
           </div>
         )}
 
@@ -518,6 +544,14 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
                 style={{ marginBottom: 0 }}
               />
             </div>
+            {suggestion.type === 'förslag' && (
+              <div className="input-group">
+                <label>Kategori</label>
+                <select value={mCategory} onChange={e => setMCategory(e.target.value)} className="suggestion-form-select">
+                  {CATEGORIES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            )}
             {suggestion.type === 'förslag' && (
               <div className="input-group">
                 <label>Utfall</label>
@@ -722,7 +756,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
             <span className="sw-start-plus">+</span>
             <span>
               <span className="sw-start-title">Lämna ett förslag</span>
-              <span className="sw-start-sub">Aktivitet, investering eller arbetsrutin</span>
+              <span className="sw-start-sub">Aktivitet, investering, arbetsrutin eller övrigt</span>
             </span>
           </button>
         ))}
@@ -742,7 +776,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
         const active = sortedSuggestions.filter(s => s.status === 'open' || s.status === 'in_review')
         const handled = [...sortedSuggestions.filter(s => s.status === 'decided' || s.status === 'locked'), ...archivedFiltered]
           .sort((a, b) => new Date(b.decidedAt || b.createdAt).getTime() - new Date(a.decidedAt || a.createdAt).getTime())
-        // En kolumn per kategori; aktiva överst, beslutade under. Huvudkategorierna visas alltid, äldre bara om de har förslag
+        // En kolumn per kategori; aktiva överst, beslutade under. alla kategorier visas alltid
         const columns = CATEGORIES
           .map(cat => ({
             key: cat.value,
@@ -750,7 +784,6 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
             active: active.filter(s => categoryOf(s) === cat.value),
             handled: handled.filter(s => categoryOf(s) === cat.value),
           }))
-          .filter(col => ['aktivitet', 'investering', 'rutin'].includes(col.key) || col.active.length + col.handled.length > 0)
         const stateOf = (s: Suggestion) => {
           if (s.status === 'in_review') return { key: 'review', label: 'Under behandling' }
           if (s.status === 'open') return null

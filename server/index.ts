@@ -1694,7 +1694,7 @@ app.delete('/api/suggestions/comments/:id', authenticateSharedPassword, async (r
 // Admin: Update suggestion status / decision / lock
 app.put('/api/admin/suggestions/:id', authenticateToken, async (req, res) => {
   const suggestionId = parseInt(req.params.id)
-  const { status, decision, decidedBy, fixedInVersion, outcome } = req.body
+  const { status, decision, decidedBy, fixedInVersion, outcome, category } = req.body
 
   try {
     const current = await prisma.suggestion.findUnique({ where: { id: suggestionId } })
@@ -1707,6 +1707,7 @@ app.put('/api/admin/suggestions/:id', authenticateToken, async (req, res) => {
     if (decision !== undefined) updateData.decision = decision
     if (decidedBy) updateData.decidedBy = decidedBy
     if (fixedInVersion !== undefined) updateData.fixedInVersion = fixedInVersion || null
+    if (['aktivitet', 'investering', 'rutin', 'övrigt'].includes(category)) updateData.category = category
     if (outcome !== undefined) updateData.outcome = ['genomförs', 'genomfört', 'avslag'].includes(outcome) ? outcome : null
     if (status === 'decided' || status === 'locked') {
       if (!current.decidedAt && (status === 'decided' || decision)) {
@@ -1729,6 +1730,37 @@ app.put('/api/admin/suggestions/:id', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error updating suggestion:', error)
     res.status(500).json({ error: 'Failed to update suggestion' })
+  }
+})
+
+// Admin: Lägg förslaget som punkt på nästa möte (samma urval som /api/meetings/next)
+app.post('/api/admin/suggestions/:id/to-meeting', authenticateToken, async (req, res) => {
+  const suggestionId = parseInt(req.params.id)
+  try {
+    const suggestion = await prisma.suggestion.findUnique({ where: { id: suggestionId } })
+    if (!suggestion) return res.status(404).json({ error: 'Suggestion not found' })
+
+    const meeting = await prisma.meeting.findFirst({ where: { archived: false, scheduledAt: { gte: new Date() } }, orderBy: { scheduledAt: 'asc' } })
+      || await prisma.meeting.findFirst({ where: { archived: false }, orderBy: { scheduledAt: 'asc' } })
+    if (!meeting) return res.status(404).json({ error: 'Det finns inget kommande möte' })
+
+    await prisma.meetingPoint.create({
+      data: {
+        title: suggestion.title,
+        description: `Från förslagslådan:\n\n${suggestion.description}`,
+        author: suggestion.author,
+        meetingId: meeting.id
+      }
+    })
+    const updated = await prisma.suggestion.update({
+      where: { id: suggestionId },
+      data: suggestion.status === 'open' ? { status: 'in_review' } : {},
+      include: SUGGESTION_INCLUDE
+    })
+    res.json({ suggestion: updated, meeting: { id: meeting.id, title: meeting.title, scheduledAt: meeting.scheduledAt } })
+  } catch (error) {
+    console.error('Error moving suggestion to meeting:', error)
+    res.status(500).json({ error: 'Failed to move suggestion to meeting' })
   }
 })
 

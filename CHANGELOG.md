@@ -2,6 +2,15 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.44] - 2026-11-11
+
+### Ändrat
+- Förslagslådan har fyra kategorier: Aktivitet, Investering, Arbetsrutin och Övrigt. Äldre kategorier visas som Övrigt. Övrigt finns nu även i guiden.
+
+### Tillagt
+- Admin kan ändra kategori på ett förslag under Hantera.
+- Knappen "Till nästa möte" lägger förslaget som punkt på nästa mötes agenda.
+
 ## [1.4.43] - 2026-11-11
 
 ### Ändrat

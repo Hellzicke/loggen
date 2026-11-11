@@ -21,6 +21,12 @@ const KINDS = [
     hint: 'Ändra eller införa ett arbetssätt',
     icon: <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3 8-8" /><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2h9" /></svg>,
   },
+  {
+    value: 'övrigt',
+    label: 'Övrigt',
+    hint: 'Allt annat du vill föreslå',
+    icon: <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M8 12h.01M12 12h.01M16 12h.01" /></svg>,
+  },
 ] as const
 
 type Kind = typeof KINDS[number]['value']
