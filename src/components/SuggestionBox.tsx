@@ -163,7 +163,6 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
   const [archivedSuggestions, setArchivedSuggestions] = useState<Suggestion[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [filterCategory, setFilterCategory] = useState<string>('all')
   const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set())
   const [commentingId, setCommentingId] = useState<number | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
@@ -385,7 +384,6 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
       if (filter === 'funktion') return s.type === 'funktion'
       return s.type === 'förslag' || !s.type
     })
-    .filter(s => filterCategory === 'all' || s.category === filterCategory)
     .sort((a, b) => {
       if (filter === 'förslag') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       const statusOrder: Record<string, number> = { open: 0, in_review: 1, decided: 2, locked: 3 }
@@ -685,7 +683,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
 
   return (
     <div className="suggestion-box">
-      {(filter !== 'förslag' || currentVoter) && (
+      {((filter !== 'förslag' && filter !== 'förslag-arkiv') || currentVoter) && (
       <div className="suggestion-header-bar">
         <div className="suggestion-actions-left">
           {filter !== 'förslag-arkiv' && filter !== 'förslag' && (
@@ -694,18 +692,6 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
               {filter === 'bugg' ? '+ Rapportera bugg' : '+ Önska funktion'}
             </button>
             )
-          )}
-          {filter !== 'förslag' && (
-          <select
-            className="suggestion-filter"
-            value={filterCategory}
-            onChange={e => setFilterCategory(e.target.value)}
-          >
-            <option value="all">Alla kategorier</option>
-            {CATEGORIES.map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
           )}
         </div>
         <div className="suggestion-actions-right">

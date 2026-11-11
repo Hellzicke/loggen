@@ -99,42 +99,13 @@ export default function Header({ version, onVersionClick, onArchiveClick, archiv
             )}
           </div>
 
-          <div className={`nav-item-wrapper ${openMenu === 'förslagslåda' ? 'nav-item-wrapper--open' : ''}`}>
+          <div className="nav-item-wrapper">
             <button
               className={`nav-item ${activeView === 'förslagslåda' ? 'active' : ''}`}
-              onClick={() => setOpenMenu(openMenu === 'förslagslåda' ? null : 'förslagslåda')}
-              aria-expanded={openMenu === 'förslagslåda'}
-              aria-haspopup="true"
+              onClick={() => { onViewChange('förslagslåda'); onSuggestionFilterChange?.('förslag'); setOpenMenu(null) }}
             >
               Förslagslåda
-              <svg className={`nav-arrow ${openMenu === 'förslagslåda' ? 'nav-arrow--open' : ''}`} width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
             </button>
-            {openMenu === 'förslagslåda' && (
-              <div className="nav-dropdown" role="menu">
-                <button
-                  className={`nav-dropdown-item ${activeView === 'förslagslåda' && suggestionFilter === 'förslag' ? 'nav-dropdown-item--current' : ''}`}
-                  onClick={() => { onViewChange('förslagslåda'); onSuggestionFilterChange?.('förslag'); setOpenMenu(null) }}
-                  role="menuitem"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" />
-                  </svg>
-                  <span>Aktiva förslag</span>
-                </button>
-                <button
-                  className={`nav-dropdown-item ${activeView === 'förslagslåda' && suggestionFilter === 'förslag-arkiv' ? 'nav-dropdown-item--current' : ''}`}
-                  onClick={() => { onViewChange('förslagslåda'); onSuggestionFilterChange?.('förslag-arkiv'); setOpenMenu(null) }}
-                  role="menuitem"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />
-                  </svg>
-                  <span>Arkiv</span>
-                </button>
-              </div>
-            )}
           </div>
 
           <div className={`nav-item-wrapper ${openMenu === 'mötespunkter' ? 'nav-item-wrapper--open' : ''}`}>

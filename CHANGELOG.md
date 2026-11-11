@@ -2,6 +2,12 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.41] - 2026-11-11
+
+### Ändrat
+- Kategoriväljaren i förslagslådan är borttagen.
+- Förslagslådan i menyn öppnar förslagen direkt utan undermeny.
+
 ## [1.4.40] - 2026-11-11
 
 ### Ändrat
