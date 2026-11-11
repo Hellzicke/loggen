@@ -433,7 +433,7 @@ export default function App() {
         onAdminLoginClick={() => setShowAdminLogin(true)}
         onAdminLogout={clearAdmin}
       />
-      <main className="main">
+      <main className={`main${activeView === 'förslagslåda' ? ' main--wide' : ''}`}>
         {activeView === 'logg' && (
           <>
             {/* Aktuellt från Micke – alla läser, bara admin redigerar */}

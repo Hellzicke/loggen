@@ -1,6 +1,6 @@
 {
   "name": "loggen",
-  "version": "1.4.41",
+  "version": "1.4.42",
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",

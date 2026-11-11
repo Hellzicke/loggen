@@ -439,7 +439,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
             {STATUS_LABELS[suggestion.status] || suggestion.status}
           </span>
           {suggestion.outcome && (
-            <span className={`suggestion-outcome-badge sl-group--${suggestion.outcome}`}>
+            <span className={`suggestion-outcome-badge sl-col--${suggestion.outcome}`}>
               {OUTCOMES.find(o => o.value === suggestion.outcome)?.label}
             </span>
           )}
@@ -737,56 +737,56 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
       )}
 
       {filter === 'förslag' && (() => {
-        const fmt = (d: string) => new Date(d).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })
+        const fmt = (d: string) => new Date(d).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
+        const categoryOf = (s: Suggestion) => CATEGORIES.some(c => c.value === s.category) ? s.category : 'övrigt'
         const active = sortedSuggestions.filter(s => s.status === 'open' || s.status === 'in_review')
         const handled = [...sortedSuggestions.filter(s => s.status === 'decided' || s.status === 'locked'), ...archivedFiltered]
           .sort((a, b) => new Date(b.decidedAt || b.createdAt).getTime() - new Date(a.decidedAt || a.createdAt).getTime())
-        // Aktiva grupperas per kategori (okänd kategori räknas som Övrigt), beslutade per utfall
-        const categoryOf = (s: Suggestion) => CATEGORIES.some(c => c.value === s.category) ? s.category : 'övrigt'
-        const activeGroups = CATEGORIES
-          .map(c => ({ key: c.value, label: c.label, items: active.filter(s => categoryOf(s) === c.value) }))
-          .filter(g => g.items.length > 0)
-        const handledGroups = [
-          ...OUTCOMES.map(o => ({ key: o.value, label: o.label, items: handled.filter(s => s.outcome === o.value) })),
-          { key: 'beslutat', label: 'Övrigt beslutat', items: handled.filter(s => !OUTCOMES.some(o => o.value === s.outcome)) },
-        ].filter(g => g.items.length > 0)
-
-        const row = (s: Suggestion, isHandled: boolean) => {
-          const comments = countComments(s.comments)
-          const ups = s.votes.filter(v => (v.value ?? 1) === 1).length
-          return (
-            <button key={s.id} className="sl-row" onClick={() => setOpenId(s.id)}>
-              <span className="sl-row-main">
-                <span className="sl-title">{s.title}</span>
-                <span className="sl-meta">
-                  {isHandled && <span className={`sl-cat sl-cat--${categoryOf(s)}`}>{getCategoryLabel(categoryOf(s))}</span>}
-                  <span>{s.author}</span>
-                  <span>{fmt(isHandled ? (s.decidedAt || s.createdAt) : s.createdAt)}</span>
-                  {ups > 0 && <span>👍 {ups}</span>}
-                  {comments > 0 && <span>💬 {comments}</span>}
-                </span>
-              </span>
-              {s.status === 'in_review' && <span className="sl-state">Under behandling</span>}
-            </button>
-          )
-        }
-        const section = (title: string, count: number, empty: string, groups: { key: string; label: string; items: Suggestion[] }[], isHandled: boolean) => (
-          <section className="sl-section">
-            <h2 className="sl-section-title">{title}<span className="sl-section-count">{count}</span></h2>
-            {groups.length === 0 && <div className="sl-empty">{empty}</div>}
-            {groups.map(g => (
-              <div key={g.key} className={`sl-group sl-group--${g.key}`}>
-                <div className="sl-group-head"><span className="sl-dot" />{g.label}<span className="sl-group-count">{g.items.length}</span></div>
-                {g.items.map(s => row(s, isHandled))}
-              </div>
-            ))}
-          </section>
-        )
+        const noOutcome = handled.filter(s => !OUTCOMES.some(o => o.value === s.outcome))
+        // En kolumn per läge: aktiva, sedan ett per utfall
+        const columns = [
+          { key: 'active', label: 'Aktiva förslag', items: active, icon: <path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z" /> },
+          { key: 'genomförs', label: 'Ska genomföras', items: handled.filter(s => s.outcome === 'genomförs'), icon: <path d="M5 12h14M13 6l6 6-6 6" /> },
+          { key: 'genomfört', label: 'Genomfört', items: handled.filter(s => s.outcome === 'genomfört'), icon: <path d="M20 6L9 17l-5-5" /> },
+          { key: 'avslag', label: 'Genomförs inte', items: handled.filter(s => s.outcome === 'avslag'), icon: <path d="M18 6L6 18M6 6l12 12" /> },
+          ...(noOutcome.length > 0 ? [{ key: 'beslutat', label: 'Beslutat', items: noOutcome, icon: <path d="M12 8v4M12 16h.01M12 2a10 10 0 100 20 10 10 0 000-20z" /> }] : []),
+        ]
         const opened = [...sortedSuggestions, ...archivedFiltered].find(s => s.id === openId)
         return (
           <>
-            {section('Aktiva förslag', active.length, 'Inga aktiva förslag', activeGroups, false)}
-            {section('Beslutade förslag', handled.length, 'Inga beslutade förslag', handledGroups, true)}
+            <div className="sl-board">
+              {columns.map(col => (
+                <div key={col.key} className={`sl-col sl-col--${col.key}`}>
+                  <div className="sl-col-head">
+                    <span className="sl-col-icon">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">{col.icon}</svg>
+                    </span>
+                    <span className="sl-col-title">{col.label}</span>
+                    <span className="sl-col-count">{col.items.length}</span>
+                  </div>
+                  {col.items.length === 0
+                    ? <div className="sl-empty">Inget just nu</div>
+                    : col.items.map(s => {
+                      const ups = s.votes.filter(v => (v.value ?? 1) === 1).length
+                      const comments = countComments(s.comments)
+                      return (
+                        <button key={s.id} className="sl-card" onClick={() => setOpenId(s.id)}>
+                          <span className="sl-card-title">{s.title}</span>
+                          <span className="sl-card-meta">
+                            <span className={`sl-cat sl-cat--${categoryOf(s)}`}>{getCategoryLabel(categoryOf(s))}</span>
+                            {s.status === 'in_review' && <span className="sl-review">Under behandling</span>}
+                            <span className="sl-card-info">
+                              {ups > 0 && <span>👍 {ups}</span>}
+                              {comments > 0 && <span>💬 {comments}</span>}
+                              <span>{fmt(col.key === 'active' ? s.createdAt : (s.decidedAt || s.createdAt))}</span>
+                            </span>
+                          </span>
+                        </button>
+                      )
+                    })}
+                </div>
+              ))}
+            </div>
             {opened && createPortal(
               <div className="nbm-overlay" onMouseDown={e => { if (e.target === e.currentTarget) setOpenId(null) }}>
                 <div className="sl-modal">

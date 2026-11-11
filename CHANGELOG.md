@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.42] - 2026-11-11
+
+### Ändrat
+- Förslagsöversikten visas som kolumner sida vid sida: Aktiva förslag, Ska genomföras, Genomfört och Genomförs inte, med kategori på varje kort.
+
 ## [1.4.41] - 2026-11-11
 
 ### Ändrat
