@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import ConfirmModal from './ConfirmModal'
 import EmployeeNameInput from './EmployeeNameInput'
 import SuggestionWizard from './SuggestionWizard'
@@ -362,8 +363,8 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
   const showArchivedView = filter === 'förslag-arkiv'
 
   useEffect(() => {
-    if (showArchivedView) fetchArchivedSuggestions()
-  }, [showArchivedView, fetchArchivedSuggestions])
+    if (showArchivedView || filter === 'förslag') fetchArchivedSuggestions()
+  }, [showArchivedView, filter, fetchArchivedSuggestions])
 
   const archivedFiltered = archivedSuggestions.filter(s => s.type === 'förslag' || !s.type)
 
@@ -722,37 +723,49 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
 
       {filter === 'förslag' && (() => {
         const active = sortedSuggestions.filter(s => s.status === 'open' || s.status === 'in_review')
-        const handled = sortedSuggestions
-          .filter(s => s.status === 'decided' || s.status === 'locked')
+        // Hanterade: beslutade/låsta samt arkiverade, senast hanterade först
+        const handled = [...sortedSuggestions.filter(s => s.status === 'decided' || s.status === 'locked'), ...archivedFiltered]
+          .filter(s => filterCategory === 'all' || s.category === filterCategory)
           .sort((a, b) => new Date(b.decidedAt || b.createdAt).getTime() - new Date(a.decidedAt || a.createdAt).getTime())
-        const renderRow = (s: Suggestion) => (
-          <div key={s.id} className={`sl-item${openId === s.id ? ' sl-item--open' : ''}`}>
-            <button className="sl-row" onClick={() => setOpenId(openId === s.id ? null : s.id)}>
-              <span className={`sl-cat sl-cat--${s.category}`}>{getCategoryLabel(s.category)}</span>
-              <span className="sl-title">{s.title}</span>
-              {s.status !== 'open' && (
-                <span className="sl-status" style={{ color: STATUS_COLORS[s.status] }}>{STATUS_LABELS[s.status]}</span>
-              )}
-              <span className="sl-meta">{s.author} · {new Date(s.createdAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}</span>
-              <span className="sl-chevron">{openId === s.id ? '▾' : '▸'}</span>
-            </button>
-            {openId === s.id && <div className="sl-detail">{renderCard(s)}</div>}
+        const fmt = (d: string) => new Date(d).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
+        const group = (key: string, title: string, icon: JSX.Element, list: Suggestion[], dateOf: (s: Suggestion) => string) => (
+          <div className={`sl-group sl-group--${key}`}>
+            <div className="sl-group-head">
+              <span className="sl-group-icon">{icon}</span>
+              <span className="sl-group-title">{title}</span>
+              {list.length > 0 && <span className="sl-group-count">{list.length}</span>}
+            </div>
+            {list.length === 0
+              ? <div className="sl-empty">Inget just nu</div>
+              : list.map(s => (
+                <button key={s.id} className="sl-row" onClick={() => setOpenId(s.id)}>
+                  <span className="sl-date">{fmt(dateOf(s))}</span>
+                  <span className="sl-title">{s.title}</span>
+                  <span className={`sl-cat sl-cat--${s.category}`}>{getCategoryLabel(s.category)}</span>
+                </button>
+              ))}
           </div>
         )
+        const opened = [...sortedSuggestions, ...archivedFiltered].find(s => s.id === openId)
         return (
           <>
-            <section className="sl-section">
-              <h3 className="sl-heading">Aktiva förslag <span className="sl-count">{active.length}</span></h3>
-              {active.length === 0
-                ? <div className="sl-empty">Inga aktiva förslag</div>
-                : <div className="sl-list">{active.map(renderRow)}</div>}
-            </section>
-            <section className="sl-section">
-              <h3 className="sl-heading">Hanterade förslag <span className="sl-count">{handled.length}</span></h3>
-              {handled.length === 0
-                ? <div className="sl-empty">Inga hanterade förslag</div>
-                : <div className="sl-list">{handled.map(renderRow)}</div>}
-            </section>
+            <div className="sl-groups">
+              {group('active', 'Aktiva förslag',
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z" /></svg>,
+                active, s => s.createdAt)}
+              {group('handled', 'Hanterade förslag',
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>,
+                handled, s => s.decidedAt || s.createdAt)}
+            </div>
+            {opened && createPortal(
+              <div className="nbm-overlay" onMouseDown={e => { if (e.target === e.currentTarget) setOpenId(null) }}>
+                <div className="sl-modal">
+                  <button className="nbm-close sl-modal-close" onClick={() => setOpenId(null)} aria-label="Stäng">×</button>
+                  {renderCard(opened)}
+                </div>
+              </div>,
+              document.body
+            )}
           </>
         )
       })()}

@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.39] - 2026-11-11
+
+### Ändrat
+- Förslagsöversikten: Aktiva och Hanterade förslag i två sektioner sida vid sida med datum, rubrik och kategori. Klick öppnar förslaget i en ruta.
+
 ## [1.4.38] - 2026-11-11
 
 ### Ändrat
