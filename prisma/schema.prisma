@@ -116,6 +116,7 @@ model Suggestion {
   fixedInVersion String?
   status         String              @default("open")
   decision       String?
+  outcome        String?
   decidedBy      String?
   decidedAt      DateTime?
   lockedAt       DateTime?

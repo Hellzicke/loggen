@@ -33,6 +33,7 @@ export interface Suggestion {
   fixedInVersion: string | null
   status: string
   decision: string | null
+  outcome: string | null
   decidedBy: string | null
   decidedAt: string | null
   lockedAt: string | null
@@ -77,6 +78,13 @@ const CATEGORIES = [
   { value: 'förbättring', label: 'Förbättring' },
   { value: 'inköp', label: 'Inköp' },
   { value: 'övrigt', label: 'Övrigt' },
+]
+
+// Utfall för beslutade förslag
+const OUTCOMES = [
+  { value: 'genomförs', label: 'Ska genomföras' },
+  { value: 'genomfört', label: 'Genomfört' },
+  { value: 'avslag', label: 'Genomförs inte' },
 ]
 
 const STATUS_LABELS: Record<string, string> = {
@@ -170,6 +178,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
   const [mDecidedBy, setMDecidedBy] = useState('')
   const [mDecision, setMDecision] = useState('')
   const [mFixedInVersion, setMFixedInVersion] = useState('')
+  const [mOutcome, setMOutcome] = useState('')
   const [savingAdmin, setSavingAdmin] = useState(false)
   const [openId, setOpenId] = useState<number | null>(null)
 
@@ -316,6 +325,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
     setMDecidedBy(s.decidedBy || '')
     setMDecision(s.decision || '')
     setMFixedInVersion(s.fixedInVersion || '')
+    setMOutcome(s.outcome || '')
   }
 
   const applyUpdated = (updated: Suggestion) => {
@@ -334,6 +344,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
           decision: mDecision,
           decidedBy: mDecidedBy || undefined,
           fixedInVersion: mFixedInVersion,
+          outcome: mOutcome,
         }),
       })
       if (res.ok) {
@@ -429,6 +440,11 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
           >
             {STATUS_LABELS[suggestion.status] || suggestion.status}
           </span>
+          {suggestion.outcome && (
+            <span className={`suggestion-outcome-badge sl-group--${suggestion.outcome}`}>
+              {OUTCOMES.find(o => o.value === suggestion.outcome)?.label}
+            </span>
+          )}
           {suggestion.type === 'förslag' && (
             <span className="suggestion-category-badge">
               {getCategoryLabel(suggestion.category)}
@@ -504,6 +520,15 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
                 style={{ marginBottom: 0 }}
               />
             </div>
+            {suggestion.type === 'förslag' && (
+              <div className="input-group">
+                <label>Utfall</label>
+                <select value={mOutcome} onChange={e => setMOutcome(e.target.value)} className="suggestion-form-select">
+                  <option value="">Inget utfall</option>
+                  {OUTCOMES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            )}
             {(suggestion.type === 'bugg' || suggestion.type === 'funktion') && (
               <div className="input-group">
                 <label>Fixad i version (visas som grön badge)</label>
@@ -660,15 +685,17 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
 
   return (
     <div className="suggestion-box">
+      {(filter !== 'förslag' || currentVoter) && (
       <div className="suggestion-header-bar">
         <div className="suggestion-actions-left">
-          {filter !== 'förslag-arkiv' && (
-            filter === 'förslag' ? null : (
+          {filter !== 'förslag-arkiv' && filter !== 'förslag' && (
+            (
             <button className="suggestion-create-btn" onClick={() => setShowForm(true)}>
               {filter === 'bugg' ? '+ Rapportera bugg' : '+ Önska funktion'}
             </button>
             )
           )}
+          {filter !== 'förslag' && (
           <select
             className="suggestion-filter"
             value={filterCategory}
@@ -679,6 +706,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}
           </select>
+          )}
         </div>
         <div className="suggestion-actions-right">
           {currentVoter && (
@@ -695,6 +723,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
           )}
         </div>
       </div>
+      )}
 
       {/* Förslag: guide som startar med en stor knapp */}
       {filter === 'förslag' && (showForm
@@ -722,41 +751,56 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
       )}
 
       {filter === 'förslag' && (() => {
+        const fmt = (d: string) => new Date(d).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })
         const active = sortedSuggestions.filter(s => s.status === 'open' || s.status === 'in_review')
-        // Hanterade: beslutade/låsta samt arkiverade, senast hanterade först
         const handled = [...sortedSuggestions.filter(s => s.status === 'decided' || s.status === 'locked'), ...archivedFiltered]
-          .filter(s => filterCategory === 'all' || s.category === filterCategory)
           .sort((a, b) => new Date(b.decidedAt || b.createdAt).getTime() - new Date(a.decidedAt || a.createdAt).getTime())
-        const fmt = (d: string) => new Date(d).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
-        const group = (key: string, title: string, icon: JSX.Element, list: Suggestion[], dateOf: (s: Suggestion) => string) => (
-          <div className={`sl-group sl-group--${key}`}>
-            <div className="sl-group-head">
-              <span className="sl-group-icon">{icon}</span>
-              <span className="sl-group-title">{title}</span>
-              {list.length > 0 && <span className="sl-group-count">{list.length}</span>}
-            </div>
-            {list.length === 0
-              ? <div className="sl-empty">Inget just nu</div>
-              : list.map(s => (
-                <button key={s.id} className="sl-row" onClick={() => setOpenId(s.id)}>
-                  <span className="sl-date">{fmt(dateOf(s))}</span>
-                  <span className="sl-title">{s.title}</span>
-                  <span className={`sl-cat sl-cat--${s.category}`}>{getCategoryLabel(s.category)}</span>
-                </button>
-              ))}
-          </div>
+        // Aktiva grupperas per kategori (okänd kategori räknas som Övrigt), beslutade per utfall
+        const categoryOf = (s: Suggestion) => CATEGORIES.some(c => c.value === s.category) ? s.category : 'övrigt'
+        const activeGroups = CATEGORIES
+          .map(c => ({ key: c.value, label: c.label, items: active.filter(s => categoryOf(s) === c.value) }))
+          .filter(g => g.items.length > 0)
+        const handledGroups = [
+          ...OUTCOMES.map(o => ({ key: o.value, label: o.label, items: handled.filter(s => s.outcome === o.value) })),
+          { key: 'beslutat', label: 'Övrigt beslutat', items: handled.filter(s => !OUTCOMES.some(o => o.value === s.outcome)) },
+        ].filter(g => g.items.length > 0)
+
+        const row = (s: Suggestion, isHandled: boolean) => {
+          const comments = countComments(s.comments)
+          const ups = s.votes.filter(v => (v.value ?? 1) === 1).length
+          return (
+            <button key={s.id} className="sl-row" onClick={() => setOpenId(s.id)}>
+              <span className="sl-row-main">
+                <span className="sl-title">{s.title}</span>
+                <span className="sl-meta">
+                  {isHandled && <span className={`sl-cat sl-cat--${categoryOf(s)}`}>{getCategoryLabel(categoryOf(s))}</span>}
+                  <span>{s.author}</span>
+                  <span>{fmt(isHandled ? (s.decidedAt || s.createdAt) : s.createdAt)}</span>
+                  {ups > 0 && <span>👍 {ups}</span>}
+                  {comments > 0 && <span>💬 {comments}</span>}
+                </span>
+              </span>
+              {s.status === 'in_review' && <span className="sl-state">Under behandling</span>}
+            </button>
+          )
+        }
+        const section = (title: string, count: number, empty: string, groups: { key: string; label: string; items: Suggestion[] }[], isHandled: boolean) => (
+          <section className="sl-section">
+            <h2 className="sl-section-title">{title}<span className="sl-section-count">{count}</span></h2>
+            {groups.length === 0 && <div className="sl-empty">{empty}</div>}
+            {groups.map(g => (
+              <div key={g.key} className={`sl-group sl-group--${g.key}`}>
+                <div className="sl-group-head"><span className="sl-dot" />{g.label}<span className="sl-group-count">{g.items.length}</span></div>
+                {g.items.map(s => row(s, isHandled))}
+              </div>
+            ))}
+          </section>
         )
         const opened = [...sortedSuggestions, ...archivedFiltered].find(s => s.id === openId)
         return (
           <>
-            <div className="sl-groups">
-              {group('active', 'Aktiva förslag',
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z" /></svg>,
-                active, s => s.createdAt)}
-              {group('handled', 'Hanterade förslag',
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>,
-                handled, s => s.decidedAt || s.createdAt)}
-            </div>
+            {section('Aktiva förslag', active.length, 'Inga aktiva förslag', activeGroups, false)}
+            {section('Beslutade förslag', handled.length, 'Inga beslutade förslag', handledGroups, true)}
             {opened && createPortal(
               <div className="nbm-overlay" onMouseDown={e => { if (e.target === e.currentTarget) setOpenId(null) }}>
                 <div className="sl-modal">

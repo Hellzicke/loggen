@@ -2,6 +2,14 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.40] - 2026-11-11
+
+### Ändrat
+- Förslagsöversikten: aktiva förslag grupperas per kategori och beslutade per utfall (Ska genomföras, Genomfört, Genomförs inte). Raderna visar hela rubriken.
+
+### Tillagt
+- Nytt fält Utfall när admin hanterar ett förslag.
+
 ## [1.4.39] - 2026-11-11
 
 ### Ändrat

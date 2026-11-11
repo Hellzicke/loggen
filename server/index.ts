@@ -1694,7 +1694,7 @@ app.delete('/api/suggestions/comments/:id', authenticateSharedPassword, async (r
 // Admin: Update suggestion status / decision / lock
 app.put('/api/admin/suggestions/:id', authenticateToken, async (req, res) => {
   const suggestionId = parseInt(req.params.id)
-  const { status, decision, decidedBy, fixedInVersion } = req.body
+  const { status, decision, decidedBy, fixedInVersion, outcome } = req.body
 
   try {
     const current = await prisma.suggestion.findUnique({ where: { id: suggestionId } })
@@ -1707,6 +1707,7 @@ app.put('/api/admin/suggestions/:id', authenticateToken, async (req, res) => {
     if (decision !== undefined) updateData.decision = decision
     if (decidedBy) updateData.decidedBy = decidedBy
     if (fixedInVersion !== undefined) updateData.fixedInVersion = fixedInVersion || null
+    if (outcome !== undefined) updateData.outcome = ['genomförs', 'genomfört', 'avslag'].includes(outcome) ? outcome : null
     if (status === 'decided' || status === 'locked') {
       if (!current.decidedAt && (status === 'decided' || decision)) {
         updateData.decidedAt = new Date()
