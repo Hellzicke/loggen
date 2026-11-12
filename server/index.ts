@@ -1694,7 +1694,7 @@ app.delete('/api/suggestions/comments/:id', authenticateSharedPassword, async (r
 // Admin: Update suggestion status / decision / lock
 app.put('/api/admin/suggestions/:id', authenticateToken, async (req, res) => {
   const suggestionId = parseInt(req.params.id)
-  const { status, decision, decidedBy, fixedInVersion, outcome, category } = req.body
+  const { status, decision, decidedBy, fixedInVersion, outcome, category, archived } = req.body
 
   try {
     const current = await prisma.suggestion.findUnique({ where: { id: suggestionId } })
@@ -1708,6 +1708,10 @@ app.put('/api/admin/suggestions/:id', authenticateToken, async (req, res) => {
     if (decidedBy) updateData.decidedBy = decidedBy
     if (fixedInVersion !== undefined) updateData.fixedInVersion = fixedInVersion || null
     if (['aktivitet', 'investering', 'rutin', 'övrigt'].includes(category)) updateData.category = category
+    if (typeof archived === 'boolean') {
+      updateData.archived = archived
+      updateData.archivedAt = archived ? new Date() : null
+    }
     if (outcome !== undefined) updateData.outcome = ['genomförs', 'genomfört', 'avslag'].includes(outcome) ? outcome : null
     if (status === 'decided' || status === 'locked') {
       if (!current.decidedAt && (status === 'decided' || decision)) {
@@ -1974,8 +1978,26 @@ repairEscapedNewsletterBodies().catch(err => console.error('Newsletter repair er
 syncAllEventsToSchema().catch(err => console.error('Initial schema sync error:', err))
 setInterval(() => syncAllEventsToSchema().catch(err => console.error('Schema sync error:', err)), 60 * 60 * 1000)
 
+// Fastanställdas namn från schemat (cachas 5 min). null om schemat inte nås – då arkiveras inget.
+let fullTimeCache: { names: string[]; at: number } | null = null
+async function fetchFullTimeNames(): Promise<string[] | null> {
+  if (fullTimeCache && Date.now() - fullTimeCache.at < 5 * 60 * 1000) return fullTimeCache.names
+  if (!SCHEMA_API_URL || !SCHEMA_API_KEY) return null
+  try {
+    const r = await fetch(`${SCHEMA_API_URL.replace(/\/$/, '')}/api/employees`, { headers: { 'X-API-Key': SCHEMA_API_KEY } })
+    if (!r.ok) return null
+    const all = await r.json() as Array<{ name: string; isFullTime?: boolean }>
+    const names = all.filter(e => e?.isFullTime && e.name?.trim()).map(e => e.name.trim())
+    fullTimeCache = { names, at: Date.now() }
+    return names
+  } catch {
+    return null
+  }
+}
+
 app.get('/api/newsletter', authenticateSharedPassword, async (_req, res) => {
   try {
+    const fullTime = await fetchFullTimeNames()
     const items = await prisma.newsletterItem.findMany({
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
       include: {
@@ -1983,7 +2005,14 @@ app.get('/api/newsletter', authenticateSharedPassword, async (_req, res) => {
         updates: { orderBy: { createdAt: 'asc' }, include: { signatures: { orderBy: { createdAt: 'asc' } } } },
       },
     })
-    res.json(items)
+    // allRead: alla fastanställda har signerat senaste uppdateringen (eller punkten om den saknar uppdateringar)
+    const withRead = items.map(item => {
+      const latest = item.updates[item.updates.length - 1]
+      const signed = new Set((latest ? latest.signatures : item.signatures).map(sig => sig.name.trim().toLowerCase()))
+      const allRead = !!fullTime && fullTime.length > 0 && fullTime.every(n => signed.has(n.toLowerCase()))
+      return { ...item, allRead }
+    })
+    res.json(withRead)
   } catch (error) {
     console.error('Error fetching newsletter:', error)
     res.status(500).json({ error: 'Failed to fetch newsletter' })

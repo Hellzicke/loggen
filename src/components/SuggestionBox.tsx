@@ -179,6 +179,7 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
   const [mCategory, setMCategory] = useState('')
   const [savingAdmin, setSavingAdmin] = useState(false)
   const [openId, setOpenId] = useState<number | null>(null)
+  const [openArchives, setOpenArchives] = useState<Set<string>>(new Set())
   const [agendaMsg, setAgendaMsg] = useState<{ id: number; text: string } | null>(null)
 
   const fetchSuggestions = useCallback(async () => {
@@ -376,6 +377,23 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
     }
   }
 
+  // Manuell arkivering: flyttar förslaget mellan aktuella och arkiverade
+  const handleArchiveToggle = async (s: Suggestion) => {
+    if (!adminFetch) return
+    try {
+      const res = await adminFetch(`/api/admin/suggestions/${s.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ archived: !s.archived }),
+      })
+      if (!res.ok) return
+      const updated: Suggestion = await res.json()
+      setSuggestions(prev => updated.archived ? prev.filter(x => x.id !== updated.id) : [updated, ...prev.filter(x => x.id !== updated.id)])
+      setArchivedSuggestions(prev => updated.archived ? [updated, ...prev.filter(x => x.id !== updated.id)] : prev.filter(x => x.id !== updated.id))
+    } catch (error) {
+      console.error('Failed to archive suggestion:', error)
+    }
+  }
+
   const handleAdminDelete = async (suggestionId: number) => {
     if (!adminFetch) return
     try {
@@ -500,6 +518,11 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
             {suggestion.type === 'förslag' && (
               <button className="interaction-btn" onClick={() => handleToMeeting(suggestion.id)}>
                 Till nästa möte
+              </button>
+            )}
+            {suggestion.type === 'förslag' && (
+              <button className="interaction-btn" onClick={() => handleArchiveToggle(suggestion)}>
+                {suggestion.archived ? 'Återställ från arkiv' : 'Arkivera'}
               </button>
             )}
             <button
@@ -776,13 +799,17 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
         const active = sortedSuggestions.filter(s => s.status === 'open' || s.status === 'in_review')
         const handled = [...sortedSuggestions.filter(s => s.status === 'decided' || s.status === 'locked'), ...archivedFiltered]
           .sort((a, b) => new Date(b.decidedAt || b.createdAt).getTime() - new Date(a.decidedAt || a.createdAt).getTime())
+        // Beslut äldre än en månad (eller arkiverade) hamnar i kolumnens arkiv
+        const monthAgo = new Date(); monthAgo.setMonth(monthAgo.getMonth() - 1)
+        const isOldDecision = (s: Suggestion) => s.archived || new Date(s.decidedAt || s.createdAt) < monthAgo
         // En kolumn per kategori; aktiva överst, beslutade under. alla kategorier visas alltid
         const columns = CATEGORIES
           .map(cat => ({
             key: cat.value,
             label: cat.label,
             active: active.filter(s => categoryOf(s) === cat.value),
-            handled: handled.filter(s => categoryOf(s) === cat.value),
+            handled: handled.filter(s => categoryOf(s) === cat.value && !isOldDecision(s)),
+            archived: handled.filter(s => categoryOf(s) === cat.value && isOldDecision(s)),
           }))
         const stateOf = (s: Suggestion) => {
           if (s.status === 'in_review') return { key: 'review', label: 'Under behandling' }
@@ -818,12 +845,25 @@ export default function SuggestionBox({ authenticatedFetch, filter = 'förslag',
                   <div className="sl-col-head">
                     <span className="sl-col-dot" />
                     <span className="sl-col-title">{col.label}</span>
-                    <span className="sl-col-count">{col.active.length + col.handled.length}</span>
+                    <span className="sl-col-count">{col.active.length + col.handled.length + col.archived.length}</span>
                   </div>
                   {col.active.length === 0 && <div className="sl-empty">Inga aktiva förslag</div>}
                   {col.active.map(card)}
-                  {col.handled.length > 0 && <div className="sl-divider">Beslutade</div>}
+                  {(col.handled.length > 0 || col.archived.length > 0) && <div className="sl-divider">Beslutade</div>}
                   {col.handled.map(card)}
+                  {col.archived.length > 0 && (
+                    <button
+                      className="sl-archive-link"
+                      onClick={() => setOpenArchives(prev => {
+                        const next = new Set(prev)
+                        if (next.has(col.key)) next.delete(col.key); else next.add(col.key)
+                        return next
+                      })}
+                    >
+                      {openArchives.has(col.key) ? 'Dölj arkiv' : `Arkiv (${col.archived.length})`}
+                    </button>
+                  )}
+                  {openArchives.has(col.key) && col.archived.map(card)}
                 </div>
               ))}
             </div>

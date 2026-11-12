@@ -24,6 +24,7 @@ export interface NewsletterItem {
   updatedAt: string
   signatures: Signature[]
   updates: NewsletterUpdate[]
+  allRead?: boolean
 }
 
 type Signature = { id: number; name: string; createdAt: string }
@@ -252,19 +253,24 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     setUpdError(null)
   }
 
-  // Klara statusar och informationspunkter ligger kvar i en vecka och hamnar sedan i arkivet
-  const isArchived = (i: NewsletterItem) =>
-    i.section !== 'event' && !!i.completedAt && Date.now() - new Date(i.completedAt).getTime() > ARCHIVE_AFTER_MS
+  // Händelser arkiveras när de passerat. Klara statusar och informationspunkter först när en vecka gått
+  // och alla fastanställda har läst.
+  const isPastEvent = (i: NewsletterItem) => !i.eventDate || new Date(i.eventEndDate || i.eventDate).getTime() < startOfToday()
+  const isArchived = (i: NewsletterItem) => i.section === 'event'
+    ? isPastEvent(i)
+    : !!i.completedAt && !!i.allRead && Date.now() - new Date(i.completedAt).getTime() > ARCHIVE_AFTER_MS
   const archivedIn = (section: Section) => items
     .filter(i => i.section === section && isArchived(i))
-    .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())
+    .sort((a, b) => section === 'event'
+      ? new Date(b.eventDate || b.createdAt).getTime() - new Date(a.eventDate || a.createdAt).getTime()
+      : new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())
   const archivedItems = showArchive ? archivedIn(showArchive) : []
   const statusItems = items
     .filter(i => i.section === 'status' && !isArchived(i))
     .sort((a, b) => STATUS_ORDER.indexOf(a.status as Status) - STATUS_ORDER.indexOf(b.status as Status)
       || new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
   const eventItems = items
-    .filter(i => i.section === 'event' && i.eventDate && new Date(i.eventEndDate || i.eventDate).getTime() >= startOfToday())
+    .filter(i => i.section === 'event' && !isArchived(i))
     .sort((a, b) => new Date(a.eventDate!).getTime() - new Date(b.eventDate!).getTime())
   const infoItems = items
     .filter(i => i.section === 'info' && !isArchived(i))
@@ -452,7 +458,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     const count = archivedIn(section).length
     return count > 0 && (
       <button className="nbp-archive-link" onClick={() => setShowArchive(section)}>
-        Arkiv – {SECTION_TITLES[section].toLowerCase()} ({count})
+        Arkiv – {section === 'event' ? 'tidigare händelser' : SECTION_TITLES[section].toLowerCase()} ({count})
       </button>
     )
   }
@@ -483,6 +489,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
             {rowTitle(item)}
           </>
         ))}
+        {archiveLink('event')}
         {group('info', infoItems, item => (
           <>
             {rowTitle(item)}
@@ -505,7 +512,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
               {archivedItems.map(item => (
                 <button key={item.id} className="nba-row" onClick={() => openItem(item)}>
                   <span className="nba-title">{item.title}</span>
-                  <span className="nba-date">Klar {fmtShort(item.completedAt!)}</span>
+                  <span className="nba-date">{item.section === 'event' ? (item.eventDate ? fmtRange(item.eventDate, item.eventEndDate) : '') : `Klar ${fmtShort(item.completedAt!)}`}</span>
                 </button>
               ))}
             </div>

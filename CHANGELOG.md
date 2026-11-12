@@ -2,6 +2,16 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.45] - 2026-11-12
+
+### Ändrat
+- Aktuellt i verksamheten: klara statusar och informationspunkter arkiveras bara när en vecka gått och alla fastanställda har signerat att de läst.
+- Förslagslådan: beslutade förslag äldre än en månad från beslutsdatum flyttas till kolumnens arkiv.
+
+### Tillagt
+- Arkiv för passerade händelser i Aktuellt i verksamheten. Tidigare doldes de bara.
+- Admin kan arkivera och återställa förslag manuellt.
+
 ## [1.4.44] - 2026-11-11
 
 ### Ändrat

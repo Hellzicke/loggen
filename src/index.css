@@ -4707,3 +4707,5 @@ select.suggestion-form-input {
 .suggestion-outcome-badge.sl-col--genomfört { background: #dbeafe; color: #1d4ed8; }
 .suggestion-outcome-badge.sl-col--avslag { background: #fee2e2; color: #b91c1c; }
 .suggestion-agenda-msg { align-self: center; font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); }
+.sl-archive-link { display: block; margin: 0.5rem 0.5rem 0; padding: 0; border: none; background: none; font-family: inherit; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
+.sl-archive-link:hover { color: var(--accent-hover); }
