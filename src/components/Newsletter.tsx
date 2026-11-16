@@ -25,6 +25,7 @@ export interface NewsletterItem {
   signatures: Signature[]
   updates: NewsletterUpdate[]
   allRead?: boolean
+  allReadAt?: string | null
 }
 
 type Signature = { id: number; name: string; createdAt: string }
@@ -253,12 +254,13 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     setUpdError(null)
   }
 
-  // Händelser arkiveras när de passerat. Klara statusar och informationspunkter först när en vecka gått
-  // och alla fastanställda har läst.
+  // Händelser arkiveras när de passerat. Klara statusar och informationspunkter en vecka efter att
+  // alla fastanställda läst (eller efter klarmarkeringen, om den kom sist).
   const isPastEvent = (i: NewsletterItem) => !i.eventDate || new Date(i.eventEndDate || i.eventDate).getTime() < startOfToday()
   const isArchived = (i: NewsletterItem) => i.section === 'event'
     ? isPastEvent(i)
-    : !!i.completedAt && !!i.allRead && Date.now() - new Date(i.completedAt).getTime() > ARCHIVE_AFTER_MS
+    : !!i.completedAt && !!i.allReadAt
+      && Date.now() - Math.max(new Date(i.completedAt).getTime(), new Date(i.allReadAt).getTime()) > ARCHIVE_AFTER_MS
   const archivedIn = (section: Section) => items
     .filter(i => i.section === section && isArchived(i))
     .sort((a, b) => section === 'event'

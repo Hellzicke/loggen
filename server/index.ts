@@ -2005,12 +2005,17 @@ app.get('/api/newsletter', authenticateSharedPassword, async (_req, res) => {
         updates: { orderBy: { createdAt: 'asc' }, include: { signatures: { orderBy: { createdAt: 'asc' } } } },
       },
     })
-    // allRead: alla fastanställda har signerat senaste uppdateringen (eller punkten om den saknar uppdateringar)
+    // allRead: alla fastanställda har signerat senaste uppdateringen (eller punkten om den saknar uppdateringar).
+    // allReadAt: när den sista fastanställda signerade – arkiveringens veckofrist räknas därifrån.
     const withRead = items.map(item => {
       const latest = item.updates[item.updates.length - 1]
-      const signed = new Set((latest ? latest.signatures : item.signatures).map(sig => sig.name.trim().toLowerCase()))
-      const allRead = !!fullTime && fullTime.length > 0 && fullTime.every(n => signed.has(n.toLowerCase()))
-      return { ...item, allRead }
+      const sigs = latest ? latest.signatures : item.signatures
+      const signedAt = new Map(sigs.map(sig => [sig.name.trim().toLowerCase(), sig.createdAt]))
+      const allRead = !!fullTime && fullTime.length > 0 && fullTime.every(n => signedAt.has(n.toLowerCase()))
+      const allReadAt = allRead
+        ? new Date(Math.max(...fullTime!.map(n => signedAt.get(n.toLowerCase())!.getTime())))
+        : null
+      return { ...item, allRead, allReadAt }
     })
     res.json(withRead)
   } catch (error) {

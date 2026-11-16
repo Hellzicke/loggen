@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.46] - 2026-11-16
+
+### Ändrat
+- Aktuellt i verksamheten: veckan före arkivering räknas från när den sista fastanställda signerade, eller från klarmarkeringen om den kom senare.
+
 ## [1.4.45] - 2026-11-12
 
 ### Ändrat
