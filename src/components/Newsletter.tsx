@@ -25,7 +25,6 @@ export interface NewsletterItem {
   signatures: Signature[]
   updates: NewsletterUpdate[]
   allRead?: boolean
-  allReadAt?: string | null
   missingReaders?: string[] | null
 }
 
@@ -255,13 +254,16 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     setUpdError(null)
   }
 
-  // Händelser arkiveras när de passerat. Klara statusar och informationspunkter en vecka efter att
-  // alla fastanställda läst (eller efter klarmarkeringen, om den kom sist).
+  // Händelser arkiveras när de passerat. Klara statusar och informationspunkter arkiveras en vecka efter
+  // klarmarkeringen eller senaste uppdateringen (det som kom sist), och först när alla fastanställda läst.
+  const archiveAt = (i: NewsletterItem) => {
+    const latest = latestUpdate(i)
+    return Math.max(new Date(i.completedAt!).getTime(), latest ? new Date(latest.createdAt).getTime() : 0) + ARCHIVE_AFTER_MS
+  }
   const isPastEvent = (i: NewsletterItem) => !i.eventDate || new Date(i.eventEndDate || i.eventDate).getTime() < startOfToday()
   const isArchived = (i: NewsletterItem) => i.section === 'event'
     ? isPastEvent(i)
-    : !!i.completedAt && !!i.allReadAt
-      && Date.now() - Math.max(new Date(i.completedAt).getTime(), new Date(i.allReadAt).getTime()) > ARCHIVE_AFTER_MS
+    : !!i.completedAt && !!i.allRead && Date.now() > archiveAt(i)
   const archivedIn = (section: Section) => items
     .filter(i => i.section === section && isArchived(i))
     .sort((a, b) => section === 'event'
@@ -539,7 +541,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
                       ? 'Personallistan kunde inte hämtas'
                       : viewing.missingReaders.length > 0
                         ? `Väntar på läsning: ${viewing.missingReaders.join(', ')}`
-                        : `Arkiveras ${fmtShort(new Date(Math.max(new Date(viewing.completedAt).getTime(), new Date(viewing.allReadAt!).getTime()) + ARCHIVE_AFTER_MS).toISOString())}`}
+                        : `Arkiveras ${fmtShort(new Date(archiveAt(viewing)).toISOString())}`}
                   </span>
                 )}
                 {viewing.eventDate && (

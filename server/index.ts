@@ -2006,17 +2006,13 @@ app.get('/api/newsletter', authenticateSharedPassword, async (_req, res) => {
       },
     })
     // allRead: alla fastanställda har signerat senaste uppdateringen (eller punkten om den saknar uppdateringar).
-    // allReadAt: när den sista fastanställda signerade – arkiveringens veckofrist räknas därifrån.
     const withRead = items.map(item => {
       const latest = item.updates[item.updates.length - 1]
       const sigs = latest ? latest.signatures : item.signatures
-      const signedAt = new Map(sigs.map(sig => [sig.name.trim().toLowerCase(), sig.createdAt]))
-      const allRead = !!fullTime && fullTime.length > 0 && fullTime.every(n => signedAt.has(n.toLowerCase()))
-      const allReadAt = allRead
-        ? new Date(Math.max(...fullTime!.map(n => signedAt.get(n.toLowerCase())!.getTime())))
-        : null
-      const missingReaders = fullTime ? fullTime.filter(n => !signedAt.has(n.toLowerCase())) : null
-      return { ...item, allRead, allReadAt, missingReaders }
+      const signed = new Set(sigs.map(sig => sig.name.trim().toLowerCase()))
+      const allRead = !!fullTime && fullTime.length > 0 && fullTime.every(n => signed.has(n.toLowerCase()))
+      const missingReaders = fullTime ? fullTime.filter(n => !signed.has(n.toLowerCase())) : null
+      return { ...item, allRead, missingReaders }
     })
     res.json(withRead)
   } catch (error) {
