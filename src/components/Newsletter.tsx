@@ -26,6 +26,7 @@ export interface NewsletterItem {
   updates: NewsletterUpdate[]
   allRead?: boolean
   allReadAt?: string | null
+  missingReaders?: string[] | null
 }
 
 type Signature = { id: number; name: string; createdAt: string }
@@ -532,6 +533,15 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
               <div className="nbm-chips">
                 {viewing.status && <span className={`nbm-chip nbm-chip--status nbm-chip--${viewing.status}`}>{STATUS_LABELS[viewing.status]}{viewing.status === 'klar' && viewing.completedAt ? ` ${fmtShort(viewing.completedAt)}` : ''}</span>}
                 {viewing.section === 'info' && viewing.completedAt && <span className="nbm-chip nbm-chip--status nbm-chip--klar">Klar {fmtShort(viewing.completedAt)}</span>}
+                {viewing.section !== 'event' && viewing.completedAt && (
+                  <span className="nbm-chip">
+                    {viewing.missingReaders == null
+                      ? 'Personallistan kunde inte hämtas'
+                      : viewing.missingReaders.length > 0
+                        ? `Väntar på läsning: ${viewing.missingReaders.join(', ')}`
+                        : `Arkiveras ${fmtShort(new Date(Math.max(new Date(viewing.completedAt).getTime(), new Date(viewing.allReadAt!).getTime()) + ARCHIVE_AFTER_MS).toISOString())}`}
+                  </span>
+                )}
                 {viewing.eventDate && (
                   <span className="nbm-chip">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>

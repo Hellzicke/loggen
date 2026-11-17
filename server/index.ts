@@ -2015,7 +2015,8 @@ app.get('/api/newsletter', authenticateSharedPassword, async (_req, res) => {
       const allReadAt = allRead
         ? new Date(Math.max(...fullTime!.map(n => signedAt.get(n.toLowerCase())!.getTime())))
         : null
-      return { ...item, allRead, allReadAt }
+      const missingReaders = fullTime ? fullTime.filter(n => !signedAt.has(n.toLowerCase())) : null
+      return { ...item, allRead, allReadAt, missingReaders }
     })
     res.json(withRead)
   } catch (error) {

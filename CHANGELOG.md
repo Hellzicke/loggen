@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.47] - 2026-11-17
+
+### Tillagt
+- Aktuellt i verksamheten: klara punkter visar när de arkiveras, eller vilka fastanställda som ännu inte läst.
+
 ## [1.4.46] - 2026-11-16
 
 ### Ändrat
