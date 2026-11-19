@@ -42,6 +42,13 @@ const Icons = {
       <circle cx="12" cy="17" r="0.8" fill="currentColor" stroke="none" />
     </svg>
   ),
+  users: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="8" r="3.5" stroke="currentColor" />
+      <path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5" stroke="currentColor" />
+      <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14c2.1.7 3.5 2.9 3.5 6" stroke="currentColor" opacity="0.4" />
+    </svg>
+  ),
   clock: (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="9" stroke="currentColor" />
@@ -71,6 +78,7 @@ const PLATFORMS = [
   { label: 'Personal', desc: 'Schema & bemanning', url: 'https://schema.redcodeteam.com', icon: Icons.calendar, color: '#14b8a6', colorDark: '#0d9488' },
   { label: 'Simschema', desc: 'Skolsim & bokning', url: 'https://poolportalen.redcodeteam.com/simschema', icon: Icons.waves, color: '#8b5cf6', colorDark: '#7c3aed' },
   { label: 'Loggen', desc: 'Information & möten', url: 'https://loggen.redcodeteam.com', icon: Icons.loggen, color: '#6366f1', colorDark: '#4f46e5', current: true },
+  { label: 'Besök', desc: 'Besöksräknare', url: 'https://besok.alvhogsborg.se', icon: Icons.users, color: '#10b981', colorDark: '#059669' },
   // hidden: dolda i menyn tills modulerna är i bruk — flagga av för att visa igen.
   { label: 'Incident', desc: 'Tillbud & rapporter', url: 'https://incidentrapport.redcodeteam.com', icon: Icons.alert, color: '#f97316', colorDark: '#ea580c', hidden: true },
   { label: 'Öppettider', desc: 'Tider & helgdagar', url: 'https://oppettider.redcodeteam.com', icon: Icons.clock, color: '#c4632a', colorDark: '#a85222', hidden: true },

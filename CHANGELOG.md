@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.49] - 2026-11-19
+
+### Tillagt
+- Besök (besöksräknaren) finns nu i Snabbmenyn.
+
 ## [1.4.48] - 2026-11-17
 
 ### Fixat
