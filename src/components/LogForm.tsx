@@ -1,6 +1,7 @@
 import { useState, FormEvent, useRef, useEffect } from 'react'
 import type { LogAttachment, LogMessage } from '../App'
 import RichTextEditor, { RichTextEditorRef } from './RichTextEditor'
+import { fitImage, MAX_IMAGE_BYTES } from './fitImage'
 
 interface LogFormProps {
   onSuccess: (log: LogMessage) => void
@@ -71,16 +72,17 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
   }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const picked = e.target.files?.[0]
+    if (!picked) return
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Bilden är för stor (max 2 MB)')
+    setUploading(true)
+    const file = await fitImage(picked)
+    if (file.size > MAX_IMAGE_BYTES) {
+      alert('Bilden är för stor (max 2 MB) och kunde inte krympas')
+      setUploading(false)
       e.target.value = ''
       return
     }
-
-    setUploading(true)
     const formData = new FormData()
     formData.append('image', file)
 

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect, memo } from 'react'
 import type { LogAttachment, LogMessage, ReadSignature, Comment, Reaction } from '../App'
 import ImageModal from './ImageModal'
 import EmployeeNameInput from './EmployeeNameInput'
+import { fitImage, MAX_IMAGE_BYTES } from './fitImage'
 
 interface LogListProps {
   logs: LogMessage[]
@@ -274,16 +275,17 @@ function EditForm({ initialTitle, initialMessage, initialImageUrl, initialAttach
   }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const picked = e.target.files?.[0]
+    if (!picked) return
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Bilden är för stor (max 2 MB)')
+    setUploading(true)
+    const file = await fitImage(picked)
+    if (file.size > MAX_IMAGE_BYTES) {
+      alert('Bilden är för stor (max 2 MB) och kunde inte krympas')
+      setUploading(false)
       e.target.value = ''
       return
     }
-
-    setUploading(true)
     const formData = new FormData()
     formData.append('image', file)
 

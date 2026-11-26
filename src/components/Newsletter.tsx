@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import RichTextEditor, { type RichTextEditorRef } from './RichTextEditor'
 import ConfirmModal from './ConfirmModal'
 import EmployeeNameInput from './EmployeeNameInput'
+import { fitImage } from './fitImage'
 
 type Section = 'status' | 'event' | 'info'
 type Status = 'planerad' | 'pågår' | 'klar' | 'pausad'
@@ -196,8 +197,9 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
   const [uploading, setUploading] = useState(false)
 
   // Bilder går via bilduppladdningen, dokument via bilageuppladdningen (samma som loggens inlägg)
-  const uploadFile = async (file: File) => {
-    const isImage = file.type.startsWith('image/')
+  const uploadFile = async (picked: File) => {
+    const isImage = picked.type.startsWith('image/')
+    const file = isImage ? await fitImage(picked) : picked
     const form = new FormData()
     form.append(isImage ? 'image' : 'file', file)
     const res = await authenticatedFetch(isImage ? '/api/upload' : '/api/attachments/upload', { method: 'POST', body: form })

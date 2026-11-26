@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.50] - 2026-11-26
+
+### Tillagt
+- Bilder större än 2 MB krymps automatiskt vid uppladdning (inlägg, Aktuellt) i stället för att stoppas.
+
 ## [1.4.49] - 2026-11-19
 
 ### Tillagt
