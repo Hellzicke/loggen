@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import RichTextEditor, { type RichTextEditorRef } from './RichTextEditor'
 import ConfirmModal from './ConfirmModal'
 import EmployeeNameInput from './EmployeeNameInput'
-import { fitImage } from './fitImage'
+import { fitImage, ATTACHMENT_ACCEPT } from './fitImage'
 
 type Section = 'status' | 'event' | 'info'
 type Status = 'planerad' | 'pågår' | 'klar' | 'pausad'
@@ -203,7 +203,10 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
     const form = new FormData()
     form.append(isImage ? 'image' : 'file', file)
     const res = await authenticatedFetch(isImage ? '/api/upload' : '/api/attachments/upload', { method: 'POST', body: form })
-    if (!res.ok) throw new Error(`Filen ${file.name} kunde inte laddas upp`)
+    if (!res.ok) {
+      const err = await res.json().catch(() => null)
+      throw new Error(`${file.name}: ${err?.error || 'kunde inte laddas upp'}`)
+    }
     const data = await res.json()
     return { url: data.url, originalName: data.originalName || file.name, mimeType: data.mimeType || file.type, size: data.size || file.size }
   }
@@ -586,7 +589,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
                   <div className="nbu-card nbu-card--edit">
                     {updError && <div className="nb-error">{updError}</div>}
                     <RichTextEditor key={updEdit.id ?? 'new'} ref={updEditorRef} initialValue={updEdit.body} />
-                    <input ref={updFileRef} type="file" multiple style={{ display: 'none' }} onChange={e => handleUpdateFiles(e.target.files)} />
+                    <input ref={updFileRef} type="file" multiple accept={`image/*,${ATTACHMENT_ACCEPT}`} style={{ display: 'none' }} onChange={e => handleUpdateFiles(e.target.files)} />
                     <div className="attachment-upload-area">
                       <button type="button" className="attachment-upload-btn" onClick={() => updFileRef.current?.click()} disabled={updUploading}>
                         {updUploading ? 'Laddar upp...' : '+ Ladda upp fil'}
@@ -711,7 +714,7 @@ export default function Newsletter({ authenticatedFetch, adminFetch, isAdmin }: 
               {edit.section !== 'event' && (
                 <>
                   <label className="nb-label">Filer</label>
-                  <input ref={fileInputRef} type="file" multiple style={{ display: 'none' }} onChange={e => handleFiles(e.target.files)} />
+                  <input ref={fileInputRef} type="file" multiple accept={`image/*,${ATTACHMENT_ACCEPT}`} style={{ display: 'none' }} onChange={e => handleFiles(e.target.files)} />
                   <div className="attachment-upload-area">
                     <button type="button" className="attachment-upload-btn" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
                       {uploading ? 'Laddar upp...' : '+ Ladda upp fil'}

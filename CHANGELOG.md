@@ -2,6 +2,11 @@
 
 Alla ändringar i projektet dokumenteras här.
 
+## [1.4.51] - 2026-11-26
+
+### Ändrat
+- Bilagor begränsas till PDF, Word och Excel, max 5 MB (tidigare även zip, PowerPoint och textfiler upp till 25 MB). Tydligt felmeddelande när en fil stoppas.
+
 ## [1.4.50] - 2026-11-26
 
 ### Tillagt

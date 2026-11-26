@@ -63,26 +63,26 @@ const imageUpload = multer({
   }
 })
 
+// Bilagor: bara PDF, Word och Excel, max 5 MB (bilder går via bilduppladdningen)
 const ALLOWED_ATTACHMENT_MIME_TYPES = new Set([
   'application/pdf',
-  'text/plain',
-  'application/zip',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation', // pptx
   'application/msword', // doc
   'application/vnd.ms-excel', // xls
-  'application/vnd.ms-powerpoint' // ppt
 ])
+const ALLOWED_ATTACHMENT_EXTENSIONS = new Set(['.pdf', '.doc', '.docx', '.xls', '.xlsx'])
+const MAX_ATTACHMENT_MB = 5
 
 const attachmentUpload = multer({
   storage,
-  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB limit
+  limits: { fileSize: MAX_ATTACHMENT_MB * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (ALLOWED_ATTACHMENT_MIME_TYPES.has(file.mimetype)) {
+    const ext = (file.originalname.match(/\.[^.]+$/)?.[0] || '').toLowerCase()
+    if (ALLOWED_ATTACHMENT_EXTENSIONS.has(ext) && ALLOWED_ATTACHMENT_MIME_TYPES.has(file.mimetype)) {
       cb(null, true)
     } else {
-      cb(new Error('File type not allowed'))
+      cb(new Error('Filtypen är inte tillåten. Bara PDF, Word och Excel kan laddas upp.'))
     }
   }
 })
@@ -1013,7 +1013,19 @@ app.post('/api/upload', authenticateSharedPassword, uploadImage, (req, res) => {
 })
 
 // Upload attachment and return metadata + URL (not yet linked to a log)
-app.post('/api/attachments/upload', authenticateSharedPassword, attachmentUpload.single('file'), (req, res) => {
+const uploadAttachment = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  attachmentUpload.single('file')(req, res, (err: unknown) => {
+    if (err) {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: `Filen är för stor (max ${MAX_ATTACHMENT_MB} MB)` })
+      }
+      return res.status(400).json({ error: (err as Error).message || 'Kunde inte ladda upp filen' })
+    }
+    next()
+  })
+}
+
+app.post('/api/attachments/upload', authenticateSharedPassword, uploadAttachment, (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' })
   }

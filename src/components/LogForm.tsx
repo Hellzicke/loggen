@@ -1,7 +1,7 @@
 import { useState, FormEvent, useRef, useEffect } from 'react'
 import type { LogAttachment, LogMessage } from '../App'
 import RichTextEditor, { RichTextEditorRef } from './RichTextEditor'
-import { fitImage, MAX_IMAGE_BYTES } from './fitImage'
+import { fitImage, MAX_IMAGE_BYTES, ATTACHMENT_ACCEPT } from './fitImage'
 
 interface LogFormProps {
   onSuccess: (log: LogMessage) => void
@@ -346,6 +346,7 @@ export default function LogForm({ onSuccess, onClose }: LogFormProps) {
                 ref={attachmentInputRef}
                 id="attachment"
                 type="file"
+                accept={ATTACHMENT_ACCEPT}
                 onChange={handleAttachmentUpload}
                 style={{ display: 'none' }}
               />

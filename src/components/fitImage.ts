@@ -1,6 +1,8 @@
 // Krymper en bild i webbläsaren så att den ryms inom serverns gräns (2 MB) innan uppladdning.
 // Bilder som redan ryms, och GIF/SVG (animation/vektor), skickas oförändrade.
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024
+// Tillåtna bilagor (servern kontrollerar samma sak, max 5 MB)
+export const ATTACHMENT_ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx'
 const MAX_EDGE = 2560
 
 export async function fitImage(file: File, maxBytes = MAX_IMAGE_BYTES): Promise<File> {

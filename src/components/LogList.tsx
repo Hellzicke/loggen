@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect, memo } from 'react'
 import type { LogAttachment, LogMessage, ReadSignature, Comment, Reaction } from '../App'
 import ImageModal from './ImageModal'
 import EmployeeNameInput from './EmployeeNameInput'
-import { fitImage, MAX_IMAGE_BYTES } from './fitImage'
+import { fitImage, MAX_IMAGE_BYTES, ATTACHMENT_ACCEPT } from './fitImage'
 
 interface LogListProps {
   logs: LogMessage[]
@@ -459,6 +459,7 @@ function EditForm({ initialTitle, initialMessage, initialImageUrl, initialAttach
           <input
             ref={attachmentInputRef}
             type="file"
+            accept={ATTACHMENT_ACCEPT}
             onChange={handleAttachmentUpload}
             style={{ display: 'none' }}
           />
